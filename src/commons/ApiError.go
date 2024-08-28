@@ -1,0 +1,29 @@
+package commons
+
+import "fmt"
+
+type ApiError interface {
+	error
+}
+
+type apiErrorImpl struct {
+	Status  int16
+	Message string
+	Cause   error
+}
+
+func ApiErrorFromCause(status int16, message string, cause error) ApiError {
+	return &apiErrorImpl{
+		Status: status,
+		Message: message,
+		Cause: cause,
+	}
+}
+
+func (e *apiErrorImpl) Error() string {
+	message := e.Message
+	if e.Cause != nil {
+		message = fmt.Sprintf("%s -> %s", message, e.Cause)
+	}
+	return fmt.Sprintf("[%d]: %s", e.Status, message)
+}

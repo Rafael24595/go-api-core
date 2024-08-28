@@ -1,11 +1,11 @@
 package domain
 
 import (
-	"go-api/src/domain/body"
-	"go-api/src/domain/cookie"
+	"go-api-core/src/domain/body"
+	"go-api-core/src/domain/cookie"
 )
 
-type Operation struct {
+type Request struct {
 	Id      string         `json:"_id"`
 	Name    string         `json:"name"`
 	Method  string         `json:"method"`
