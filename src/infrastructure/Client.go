@@ -60,8 +60,24 @@ func makeResponse(start int64, end int64, resp *http.Response) (*domain.Response
 		return nil, commons.ApiErrorFromCause(500, "Failed to read response", err)
     }
 
-	headers := domain.Headers{}
-	cookies := cookie.Cookies{}
+	headers := domain.Headers{
+		Headers: resp.Header,
+	}
+
+	cookies := cookie.Cookies{
+		Cookies: make(map[string]string),
+	}
+	
+	setCookie := headers.Headers["Set-Cookie"]
+	if len(setCookie) > 0 {
+		for _, c := range setCookie {
+			parsed, err := cookie.CookieFromString(c)
+			if err != nil {
+				return nil, err
+			}
+			cookies.Cookies[parsed.Code] = parsed.String()
+		}
+	}
 
 	bodyData := body.Body{
 		ContentType: body.None,

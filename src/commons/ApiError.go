@@ -12,6 +12,10 @@ type apiErrorImpl struct {
 	Cause   error
 }
 
+func ApiErrorFrom(status int16, message string) ApiError {
+	return ApiErrorFromCause(status, message, nil)
+}
+
 func ApiErrorFromCause(status int16, message string, cause error) ApiError {
 	return &apiErrorImpl{
 		Status: status,
