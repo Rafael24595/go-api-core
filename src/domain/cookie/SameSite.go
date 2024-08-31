@@ -6,25 +6,16 @@ import (
 	"strings"
 )
 
-type SameSite int
+type SameSite string
 
 const (
-	Strict SameSite = iota
-	Lax
-	None
+	Strict SameSite = "Strict"
+	Lax    SameSite = "Lax"
+	None   SameSite = "None"
 )
 
 func (s SameSite) String() string {
-	switch s {
-	case Strict:
-		return "Strict"
-	case Lax:
-		return "Lax"
-	case None:
-		return "None"
-	default:
-		return "Unknown"
-	}
+	return string(s)
 }
 
 func SameSiteFromString(value string) (*SameSite, commons.ApiError) {

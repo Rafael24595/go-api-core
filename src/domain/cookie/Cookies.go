@@ -1,5 +1,5 @@
 package cookie
 
 type Cookies struct {
-	Cookies map[string]string `json:"headers"`
+	Cookies map[string]Cookie `json:"cookies"`
 }
