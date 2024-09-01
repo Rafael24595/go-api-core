@@ -2,8 +2,9 @@ package domain
 
 import (
 	"fmt"
-	"go-api-core/src/commons"
 	"strings"
+
+	"github.com/Rafael24595/go-api-core/src/commons"
 )
 
 type HttpMethod string

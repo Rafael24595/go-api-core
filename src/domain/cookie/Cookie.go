@@ -2,9 +2,10 @@ package cookie
 
 import (
 	"fmt"
-	"go-api-core/src/commons"
 	"strconv"
 	"strings"
+
+	"github.com/Rafael24595/go-api-core/src/commons"
 )
 
 type Cookie struct {
@@ -31,9 +32,9 @@ func CookieFromString(cookieString string) (*Cookie, error) {
 	value := strings.TrimSpace(codeValue[1])
 
 	cookie := &Cookie{
-		Code: code,
-		Value: value,
-		Secure: false,
+		Code:     code,
+		Value:    value,
+		Secure:   false,
 		HttpOnly: false,
 	}
 
@@ -69,7 +70,7 @@ func CookieFromString(cookieString string) (*Cookie, error) {
 			if value != "" {
 				sameSite, err := SameSiteFromString(value)
 				if err != nil {
-					return nil,  commons.ApiErrorFromCause(422, fmt.Sprintf("Unknown SameSite value: '%s'", value), err)
+					return nil, commons.ApiErrorFromCause(422, fmt.Sprintf("Unknown SameSite value: '%s'", value), err)
 				}
 				cookie.SameSite = *sameSite
 			}

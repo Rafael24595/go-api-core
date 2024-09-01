@@ -2,13 +2,14 @@ package infrastructure
 
 import (
 	"bytes"
-	"go-api-core/src/commons"
-	"go-api-core/src/domain"
-	"go-api-core/src/domain/body"
-	"go-api-core/src/domain/cookie"
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/Rafael24595/go-api-core/src/commons"
+	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/body"
+	"github.com/Rafael24595/go-api-core/src/domain/cookie"
 )
 
 type HttpClient struct {
@@ -25,13 +26,13 @@ func (c *HttpClient) Fetch(request domain.Request) (*domain.Response, commons.Ap
 	}
 
 	client := &http.Client{}
-	
+
 	start := time.Now().UnixMilli()
-    resp, err := client.Do(req)
+	resp, err := client.Do(req)
 	end := time.Now().UnixMilli()
-    if err != nil {
-        return nil, commons.ApiErrorFromCause(500, "Cannot execute HTTP request", err)
-    }
+	if err != nil {
+		return nil, commons.ApiErrorFromCause(500, "Cannot execute HTTP request", err)
+	}
 
 	response, err := c.makeResponse(start, end, request, *resp)
 	if err != nil {
@@ -54,26 +55,26 @@ func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, commo
 	if err != nil {
 		return nil, commons.ApiErrorFromCause(500, "Cannot build HTTP request", err)
 	}
-	
+
 	return req, nil
 }
 
 func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, resp http.Response) (*domain.Response, commons.ApiError) {
 	defer resp.Body.Close()
 
-    bodyResponse, err := io.ReadAll(resp.Body)
-    if err != nil {
+	bodyResponse, err := io.ReadAll(resp.Body)
+	if err != nil {
 		return nil, commons.ApiErrorFromCause(500, "Failed to read response", err)
-    }
+	}
 
 	headers := domain.Headers{
 		Headers: resp.Header,
 	}
-	
+
 	cookies := cookie.Cookies{
 		Cookies: make(map[string]cookie.Cookie),
 	}
-	
+
 	setCookie := headers.Headers["Set-Cookie"]
 	if len(setCookie) > 0 {
 		for _, c := range setCookie {
@@ -87,17 +88,17 @@ func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, re
 
 	bodyData := body.Body{
 		ContentType: body.None,
-		Bytes: bodyResponse,
+		Bytes:       bodyResponse,
 	}
 
 	return &domain.Response{
 		Request: req.Id,
-		Date: start,
-		Time: end - start,
-		Status: int16(resp.StatusCode),
+		Date:    start,
+		Time:    end - start,
+		Status:  int16(resp.StatusCode),
 		Headers: headers,
 		Cookies: cookies,
-		Body: bodyData,
-		Size: len(bodyResponse),
+		Body:    bodyData,
+		Size:    len(bodyResponse),
 	}, nil
 }
