@@ -1,8 +1,8 @@
 package domain
 
 import (
-	"go-api-core/src/domain/body"
-	"go-api-core/src/domain/cookie"
+	"github.com/Rafael24595/go-api-core/src/domain/body"
+	"github.com/Rafael24595/go-api-core/src/domain/cookie"
 )
 
 type Request struct {
