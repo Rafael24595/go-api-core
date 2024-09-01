@@ -8,12 +8,18 @@ import (
 	"go-api-core/src/domain/cookie"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 )
 
-func Fetch(request domain.Request) (*domain.Response, commons.ApiError) {
-	req, err := makeRequest(request)
+type HttpClient struct {
+}
+
+func Client() *HttpClient {
+	return &HttpClient{}
+}
+
+func (c *HttpClient) Fetch(request domain.Request) (*domain.Response, commons.ApiError) {
+	req, err := c.makeRequest(request)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +33,7 @@ func Fetch(request domain.Request) (*domain.Response, commons.ApiError) {
         return nil, commons.ApiErrorFromCause(500, "Cannot execute HTTP request", err)
     }
 
-	response, err := makeResponse(start, end, resp)
+	response, err := c.makeResponse(start, end, request, *resp)
 	if err != nil {
 		return nil, err
 	}
@@ -35,8 +41,8 @@ func Fetch(request domain.Request) (*domain.Response, commons.ApiError) {
 	return response, nil
 }
 
-func makeRequest(operation domain.Request) (*http.Request, commons.ApiError) {
-	method := strings.ToUpper(operation.Method)
+func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, commons.ApiError) {
+	method := operation.Method.String()
 	url := operation.Uri
 
 	var body io.Reader
@@ -52,7 +58,7 @@ func makeRequest(operation domain.Request) (*http.Request, commons.ApiError) {
 	return req, nil
 }
 
-func makeResponse(start int64, end int64, resp *http.Response) (*domain.Response, commons.ApiError) {
+func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, resp http.Response) (*domain.Response, commons.ApiError) {
 	defer resp.Body.Close()
 
     bodyResponse, err := io.ReadAll(resp.Body)
@@ -60,8 +66,24 @@ func makeResponse(start int64, end int64, resp *http.Response) (*domain.Response
 		return nil, commons.ApiErrorFromCause(500, "Failed to read response", err)
     }
 
-	headers := domain.Headers{}
-	cookies := cookie.Cookies{}
+	headers := domain.Headers{
+		Headers: resp.Header,
+	}
+	
+	cookies := cookie.Cookies{
+		Cookies: make(map[string]cookie.Cookie),
+	}
+	
+	setCookie := headers.Headers["Set-Cookie"]
+	if len(setCookie) > 0 {
+		for _, c := range setCookie {
+			parsed, err := cookie.CookieFromString(c)
+			if err != nil {
+				return nil, err
+			}
+			cookies.Cookies[parsed.Code] = *parsed
+		}
+	}
 
 	bodyData := body.Body{
 		ContentType: body.None,
@@ -69,10 +91,13 @@ func makeResponse(start int64, end int64, resp *http.Response) (*domain.Response
 	}
 
 	return &domain.Response{
+		Request: req.Id,
 		Date: start,
 		Time: end - start,
+		Status: int16(resp.StatusCode),
 		Headers: headers,
 		Cookies: cookies,
 		Body: bodyData,
+		Size: len(bodyResponse),
 	}, nil
 }

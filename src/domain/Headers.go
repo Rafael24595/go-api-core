@@ -1,5 +1,5 @@
 package domain
 
 type Headers struct {
-	Headers map[string]string `json:"headers"`
+	Headers map[string][]string `json:"headers"`
 }

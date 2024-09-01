@@ -8,7 +8,7 @@ import (
 type Request struct {
 	Id      string         `json:"_id"`
 	Name    string         `json:"name"`
-	Method  string         `json:"method"`
+	Method  HttpMethod     `json:"method"`
 	Uri     string         `json:"uri"`
 	Headers Headers        `json:"headers"`
 	Cookies cookie.Cookies `json:"cookies"`

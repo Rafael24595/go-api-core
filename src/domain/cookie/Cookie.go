@@ -1,6 +1,11 @@
 package cookie
 
-import "fmt"
+import (
+	"fmt"
+	"go-api-core/src/commons"
+	"strconv"
+	"strings"
+)
 
 type Cookie struct {
 	Code       string
@@ -12,6 +17,68 @@ type Cookie struct {
 	Secure     bool
 	HttpOnly   bool
 	SameSite   SameSite
+}
+
+func CookieFromString(cookieString string) (*Cookie, error) {
+	parts := strings.Split(cookieString, ";")
+
+	codeValue := strings.SplitN(strings.TrimSpace(parts[0]), "=", 2)
+	if len(codeValue) != 2 {
+		return nil, commons.ApiErrorFrom(422, "Invalid cookie format")
+	}
+
+	code := strings.TrimSpace(codeValue[0])
+	value := strings.TrimSpace(codeValue[1])
+
+	cookie := &Cookie{
+		Code: code,
+		Value: value,
+		Secure: false,
+		HttpOnly: false,
+	}
+
+	for _, part := range parts[1:] {
+		keyValue := strings.SplitN(strings.TrimSpace(part), "=", 2)
+		key := strings.ToLower(strings.TrimSpace(keyValue[0]))
+
+		var value string
+		if len(keyValue) > 1 {
+			value = strings.TrimSpace(keyValue[1])
+		}
+
+		switch key {
+		case "secure":
+			cookie.Secure = true
+		case "httponly":
+			cookie.HttpOnly = true
+		case "expires":
+			cookie.Expiration = value
+		case "domain":
+			cookie.Domain = value
+		case "path":
+			cookie.Path = value
+		case "max-age":
+			if value != "" {
+				maxAge, err := strconv.Atoi(value)
+				if err != nil {
+					return nil, commons.ApiErrorFromCause(422, "Invalid Max-Age value", err)
+				}
+				cookie.MaxAge = maxAge
+			}
+		case "samesite":
+			if value != "" {
+				sameSite, err := SameSiteFromString(value)
+				if err != nil {
+					return nil,  commons.ApiErrorFromCause(422, fmt.Sprintf("Unknown SameSite value: '%s'", value), err)
+				}
+				cookie.SameSite = *sameSite
+			}
+		default:
+			return nil, commons.ApiErrorFrom(422, fmt.Sprintf("Unknown field code: '%s'", key))
+		}
+	}
+
+	return cookie, nil
 }
 
 func (c *Cookie) String() string {
