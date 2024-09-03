@@ -1,11 +1,15 @@
 package body
 
-type ContentType int
+type ContentType string
 
 const (
-	None ContentType = iota
-	Text
-	Form
-	Json
-	Xml
+	None ContentType = "None"
+	Text ContentType = "Text"
+	Form ContentType = "Form"
+	Json ContentType = "Json"
+	Xml  ContentType = "Xml"
 )
+
+func (s ContentType) String() string {
+	return string(s)
+}
