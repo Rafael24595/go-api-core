@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/Rafael24595/go-api-core/src/commons/collection"
@@ -30,13 +31,17 @@ func (s *CsvSerializer) Serialize(value any) {
 
 	for _, k := range keys {
 		v := s.Structures[k]
-		root := ""
+		pattern := "///"
 		if k == t {
-			root = " *ROOT"
+			pattern = "/**"
 		}
-		fmt.Printf("\n///%s %s\n", root, k)
+		fmt.Printf("\n%s %s\n", pattern, k)
 		for i, e := range v {
-			fmt.Printf("%v-> %s\n", i, e)
+			index := strconv.FormatInt(int64(i - 1), 10)
+			if i == 0 {
+				index = "H"
+			}
+			fmt.Printf("%v-> %s\n", index, e)
 		}
 	}
 
@@ -46,28 +51,41 @@ func (s *CsvSerializer) Serialize(value any) {
 func (s *CsvSerializer) serialize(value any) string {
 	val := reflect.ValueOf(value)
 
-	row := []string{}
+	row := ""
 
 	switch val.Kind() {
 	case reflect.Struct:
+		strRow := []string{}
 		for i := 0; i < val.NumField(); i++ {
 			value := val.Field(i).Interface()
 			if !isCommonType(value) {
 				value = s.serialize(value)
+			} else {
+				value = sprintf("%v", value)
 			}
 
-			row = append(row, fmt.Sprintf("%v", value))
+			strRow = append(strRow, fmt.Sprintf("%v", value))
 		}
+		row = fmt.Sprintf("%v:", strings.Join(strRow, ";"))
 	case reflect.Map:
 		mapRow := []string{}
-		for _, key := range val.MapKeys() {
-			value := val.MapIndex(key).Interface()
+		for _, k := range val.MapKeys() {
+			key := k.Interface()
+			if !isCommonType(key) {
+				key = s.serialize(key)
+			} else {
+				key = sprintf("%v", key)
+			}
+				
+			value := val.MapIndex(k).Interface()
 			if !isCommonType(value) {
 				value = s.serialize(value)
+			} else {
+				value = sprintf("%v", value)
 			}
-			mapRow = append(mapRow, fmt.Sprintf("%s=%v", key, value))
+			mapRow = append(mapRow, fmt.Sprintf("%v=%v", key, value))
 		}
-		row = append(row, fmt.Sprintf("%v", strings.Join(mapRow, "#")))
+		row = fmt.Sprintf("%v", strings.Join(mapRow, ","))
 	case reflect.Slice, reflect.Array:
 		arrayRow := []string{}
 		for i := 0; i < val.Len(); i++ {
@@ -75,23 +93,21 @@ func (s *CsvSerializer) serialize(value any) string {
 			if !isCommonType(value) {
 				value = s.serialize(value)
 			}
-			arrayRow = append(arrayRow, fmt.Sprintf("%v", value))
+			arrayRow = append(arrayRow, sprintf("%v", value))
 		}
-		row = append(row, fmt.Sprintf("%v", strings.Join(arrayRow, ",")))
+		row = fmt.Sprintf("%v.", strings.Join(arrayRow, ","))
 	default:
-		row = append(row, fmt.Sprintf("%v", value))
+		row = sprintf("%v", value)
 	}
 
 	t := s.key(val)
 
 	_, exists := s.Structures[t]
 	if !exists {
-		headers, isStruct := s.headers(value)
-		if isStruct {
-			s.Structures[t] = append(s.Structures[t], headers)
-		}
+		headers, _ := s.headers(value)
+		s.Structures[t] = append(s.Structures[t], headers)
 	}
-	s.Structures[t] = append(s.Structures[t], strings.Join(row, ";"))
+	s.Structures[t] = append(s.Structures[t], row)
 
 	return fmt.Sprintf("$%s_%v", t, len(s.Structures[t])-1)
 }
@@ -99,9 +115,9 @@ func (s *CsvSerializer) serialize(value any) string {
 func (s *CsvSerializer) key(val reflect.Value) string {
 	switch val.Kind() {
 	case reflect.Map:
-		return "common_map"
+		return "common-map"
 	case reflect.Slice, reflect.Array:
-		return "common_array"
+		return "common-array"
 	default:
 		typ := val.Type()
 		return fmt.Sprintf("%s&%s", typ.Name(), s.sha1Identifier(typ.PkgPath()))
@@ -136,6 +152,16 @@ func (s CsvSerializer) sha1Identifier(input string) string {
 	hash.Write([]byte(input))
 	hashInBytes := hash.Sum(nil)
 	return hex.EncodeToString(hashInBytes)
+}
+
+func sprintf(pattern string, values ...any) string {
+	for i, v := range values {
+		switch v := v.(type) {
+		case string:
+			values[i] = fmt.Sprintf("\"%v\"", v)
+		}
+	}
+	return fmt.Sprintf(pattern, values...)
 }
 
 func isCommonType(value interface{}) bool {
