@@ -40,6 +40,8 @@ func readNextTable(csv string) (string, string) {
 				initial = i
 			}
 			headCount++
+		} else if v == '*' && headCount > 0 {
+			headCount++
 		} else if v == '\n' {
 			if tailCount == 1 {
 				end = i
@@ -114,6 +116,7 @@ func parseTable(table string) ResourceNexus {
 
 	return ResourceNexus{
 		key: name,
+		root: rootCount == 2,
 		headers: heads,
 		nodes: items,
 	}
@@ -135,17 +138,18 @@ func parseHeaders(row string) []string {
 
 func parseRow(row string, header bool) ResourceGroup {
 	instance := instanceOf(row, header)
+	var group interface{}
 	switch instanceOf(row, header) {
 	case "MAP":
-		return ResourceGroup{category: instance, group: parseMap(row)}
+		group = parseMap(row)
 	case "ARR":
-		return ResourceGroup{category: instance, group: parseArr(row)}
+		group = parseArr(row)
 	case "STR":
-		parseStr(row)
-	case "ENU":
-		parseEnu(row)
+		group = parseStr(row)
+	default:
+		panic("Not supported.")
 	}
-	return ResourceGroup{}
+	return ResourceGroup{category: instance, group: group}
 }
 
 func instanceOf(row string, header bool) string {
@@ -154,7 +158,7 @@ func instanceOf(row string, header bool) string {
 	for _, v := range row {
 		if !inString {
 			if v == '"' {
-				inString = !inString
+				inString = true
 			} else if v == MAP_LINKER {
 				return "MAP"
 			} else if v == ARR_SEPARATOR || v == ARR_CLOSING {
@@ -164,7 +168,7 @@ func instanceOf(row string, header bool) string {
 			}
 		} else if !escape {
 			if v == '"' {
-				inString = !inString
+				inString = false
 			} else if v == '\\' {
 				escape = true
 			}
@@ -179,20 +183,38 @@ func instanceOf(row string, header bool) string {
 }
 
 func parseMap(row string) map[string]ResourceNode {
+	inString := false
+	escape := false
+
 	mapp := map[string]ResourceNode{}
 	key := ""
 	buffer := ""
 	for _, v := range row {
-		if v == MAP_LINKER {
-			node := parseObj(buffer)
-			key = node.key()
-			buffer = ""
-		} else if v == MAP_SEPARATOR {
-			node := parseObj(buffer)
-			mapp[key] = node
-			buffer = ""
-		} else {
+		isSpecialRuneInString := inString && (v == MAP_LINKER || v == MAP_SEPARATOR)
+		isNotSpecialRune := v != MAP_LINKER && v != MAP_SEPARATOR
+		if isNotSpecialRune || isSpecialRuneInString {
 			buffer += string(v)
+		}
+		if !inString {
+			if v == '"' {
+				inString = true
+			} else if v == MAP_LINKER {
+				node := parseObj(buffer)
+				key = node.key()
+				buffer = ""
+			} else if v == MAP_SEPARATOR {
+				node := parseObj(buffer)
+				mapp[key] = node
+				buffer = ""
+			}
+		} else if !escape {
+			if v == '"' {
+				inString = false
+			} else if v == '\\' {
+				escape = true
+			}
+		} else {
+			escape = false
 		}
 	}
 	node := parseObj(buffer)
@@ -201,31 +223,48 @@ func parseMap(row string) map[string]ResourceNode {
 }
 
 func parseArr(row string) []ResourceNode {
-	arr := []ResourceNode{}
+	return parseLst(row, ARR_SEPARATOR, ARR_CLOSING)
+}
+
+func parseStr(row string) []ResourceNode {
+	return parseLst(row, STR_SEPARATOR, STR_CLOSING)
+}
+
+func parseLst(row string, separator, closing rune) []ResourceNode {
+	inString := false
+	escape := false
+
+	lst := []ResourceNode{}
 	buffer := ""
 	for _, v := range row {
-		if v == ARR_SEPARATOR {
-			node := parseObj(buffer)
-			arr = append(arr, node)
-			buffer = ""
-		} else if v == ARR_CLOSING {
-			break
-		} else {
+		isSpecialRuneInString := inString && (v == separator || v == closing)
+		isNotSpecialRune := v != separator && v != closing
+		if isNotSpecialRune || isSpecialRuneInString {
 			buffer += string(v)
 		}
-
+		if !inString {
+			if v == '"' {
+				inString = true
+			} else if v == separator {
+				node := parseObj(buffer)
+				lst = append(lst, node)
+				buffer = ""
+			} else if v == closing {
+				break
+			}
+		} else if !escape {
+			if v == '"' {
+				inString = false
+			} else if v == '\\' {
+				escape = true
+			}
+		} else {
+			escape = false
+		}
 	}
 	node := parseObj(buffer)
-	arr = append(arr, node)
-	return arr
-}
-
-func parseStr(row string) {
-
-}
-
-func parseEnu(row string) {
-
+	lst = append(lst, node)
+	return lst
 }
 
 func parseObj(obj string) ResourceNode {
