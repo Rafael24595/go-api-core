@@ -6,5 +6,9 @@ const(
 	MAP GroupCategory = "MAP"
 	ARR GroupCategory = "ARR"
 	STR GroupCategory = "STR"
-	ENU GroupCategory = "ENU"
+	OBJ GroupCategory = "OBJ"
 )
+
+func (m GroupCategory) String() string {
+	return string(m)
+}

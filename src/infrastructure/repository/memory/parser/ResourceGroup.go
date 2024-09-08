@@ -7,12 +7,12 @@ import (
 )
 
 type ResourceGroup struct {
-	category string
+	category GroupCategory
 	headers  collection.CollectionList[string]
 	group    any
 }
 
-func newGroup[T any](category string, headers []string, group T) ResourceGroup {
+func newGroup[T any](category GroupCategory, headers []string, group T) ResourceGroup {
 	return ResourceGroup{
 		category: category,
 		headers: *collection.FromList(headers),

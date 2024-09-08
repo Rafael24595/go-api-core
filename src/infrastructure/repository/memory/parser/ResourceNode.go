@@ -21,6 +21,10 @@ func fromNonPointer(value interface{}) ResourceNode {
 	}
 }
 
+func fromEmpty() ResourceNode {
+	return fromNonPointer("")
+}
+
 func (n ResourceNode) key() string {
 	return fmt.Sprintf("%v", n.value)
 }

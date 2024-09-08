@@ -150,6 +150,10 @@ func (d *CsvDeserializer) makeArr(template any, root *ResourceGroup) reflect.Val
 		v := p.Value()
 		if v.index == -1 {
 			elem := reflect.ValueOf(v.value)
+			if elem.Type() != arrValuesType {
+				println(3)
+			}
+
 			arr.Index(i).Set(elem.Convert(arrValuesType))
 		} else {
 			reference, ok := d.tables.Find(&v)
