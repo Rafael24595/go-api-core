@@ -1,320 +1,178 @@
 package parser
 
-import "strconv"
+import (
+	"reflect"
+)
 
 type CsvDeserializer struct {
-	Structures map[string][]string
+	tables ResourceCollection
 }
 
-func (s *CsvDeserializer) Deserialize(csv string) {
-	tables := readTables(csv)
-	println(tables)
-}
-
-func readTables(csv string) []ResourceNexus {
-	raw := csv
-	tables := []ResourceNexus{}
-	for len(raw) > 0 {
-		var table string
-		table, raw = readNextTable(raw)
-		if len(table) > 0 {
-			nexus := parseTable(table)
-			tables = append(tables, nexus)
-		}
-	}
-	return tables
-}
-
-func readNextTable(csv string) (string, string) {
-	initial := 0
-	headCount := 0
-
-	end := 0
-	tailCount := 0
-
-	count := 0
-	for i, v := range csv {
-		count = i
-		if v == '/' {
-			if headCount == 0 {
-				initial = i
-			}
-			headCount++
-		} else if v == '*' && headCount > 0 {
-			headCount++
-		} else if v == '\n' {
-			if tailCount == 1 {
-				end = i
-				break
-			}
-			tailCount++
-		} else {
-			if headCount < 3 {
-				headCount = 0
-			}
-			if tailCount < 2 {
-				tailCount = 0
-			}
-		}
-	}
-
-	if count == len(csv)-1 {
-		end = count
-	}
-
-	if end == 0 {
-		return "", ""
-	}
-
-	return csv[initial:end], csv[end:]
-}
-
-func parseTable(table string) ResourceNexus {
-	rootCount := 0
-	headCount := 0
-	parseHead := false
-
-	name := ""
-	heads := []string{}
-	items := []ResourceGroup{}
-
-	bufferBase := ""
-	row := 0
-	for _, v := range table {
-		if !parseHead {
-			if v == '/' {
-				headCount++
-			} else if v == '*' {
-				rootCount++
-				headCount++
-			} else if v == '\n' && headCount == 3 {
-				parseHead = true
-				name = bufferBase
-				bufferBase = ""
-			} else if v == ' ' {
-				//
-			} else {
-				bufferBase += string(v)
-			}
-		} else {
-			if len(bufferBase) == 0 && isArrowComponent(v) {
-				//
-			} else if v == '\n' {
-				if row == 0 {
-					heads = parseHeaders(bufferBase)
-				} else {
-					row := parseRow(bufferBase, len(heads) != 0)
-					items = append(items, row)
-				}
-				bufferBase = ""
-				row++
-			} else {
-				bufferBase += string(v)
-			}
-		}
-	}
-
-	return ResourceNexus{
-		key: name,
-		root: rootCount == 2,
-		headers: heads,
-		nodes: items,
+func NewDeserialzer(csv string) *CsvDeserializer {
+	tables := newDeserializerReader().
+		read(csv)
+	return &CsvDeserializer{
+		tables: tables,
 	}
 }
 
-func parseHeaders(row string) []string {
-	heads := []string{}
-	buffer := ""
-	for _, v := range row {
-		if v == HEA_SEPARATOR {
-			heads = append(heads, buffer)
-			buffer = ""
-		} else {
-			buffer += string(v)
-		}
+func (d *CsvDeserializer) Deserialize(value any) {
+	valPtr := reflect.ValueOf(value)
+
+	if valPtr.Kind() != reflect.Ptr || valPtr.Elem().Kind() != reflect.Struct {
+		panic("obj must be a pointer to a struct")
 	}
-	return heads
+
+	root, ok := d.tables.root()
+	if !ok {
+		panic("//TODO: Bad format.")
+	}
+
+	group, ok := root.get(0)
+	if !ok {
+		panic("//TODO: Bad format.")
+	}
+
+	d.makeElement(value, group)
+
+	//TODO:
+	return
 }
 
-func parseRow(row string, header bool) ResourceGroup {
-	instance := instanceOf(row, header)
-	var group interface{}
-	switch instanceOf(row, header) {
-	case "MAP":
-		group = parseMap(row)
-	case "ARR":
-		group = parseArr(row)
-	case "STR":
-		group = parseStr(row)
+func (d *CsvDeserializer) makeElement(template any, root *ResourceGroup) reflect.Value {
+	element := reflect.ValueOf(template)
+	switch element.Kind() {
+	case reflect.Struct, reflect.Ptr:
+		return d.makeStr(template, root)
+	case reflect.Map:
+		return d.makeMap(template, root)
+	case reflect.Slice, reflect.Array:
+		return d.makeArr(template, root)
 	default:
-		panic("Not supported.")
+		return makeObj(template, root)
 	}
-	return ResourceGroup{category: instance, group: group}
 }
 
-func instanceOf(row string, header bool) string {
-	inString := false
-	escape := false
-	for _, v := range row {
-		if !inString {
-			if v == '"' {
-				inString = true
-			} else if v == MAP_LINKER {
-				return "MAP"
-			} else if v == ARR_SEPARATOR || v == ARR_CLOSING {
-				return "ARR"
-			} else if v == STR_SEPARATOR || v == STR_CLOSING {
-				return "STR"
-			}
-		} else if !escape {
-			if v == '"' {
-				inString = false
-			} else if v == '\\' {
-				escape = true
-			}
-		} else {
-			escape = false
+func (d *CsvDeserializer) makeStr(template any, root *ResourceGroup) reflect.Value {
+	structure := fixStr(template)
+
+	for i := 0; i < structure.NumField(); i++ {
+		name := structure.Type().Field(i).Name
+		field := structure.FieldByName(name)
+		fieldTemplate := field.Interface()
+
+		node, ok := root.findField(name)
+		if !ok {
+			println(5)
 		}
+
+		if !isCommonType(fieldTemplate) {
+			reference, ok := d.tables.Find(node)
+			if !ok {
+				println(4)
+			}
+			element := d.makeElement(fieldTemplate, reference)
+			field.Set(element)
+
+			continue
+		}
+
+		if !field.IsValid() {
+			println(1)
+		}
+		if !field.CanSet() {
+			println(2)
+		}
+
+		valueRef := reflect.ValueOf(node.value)
+		if field.Type() != valueRef.Type() {
+			println(3)
+		}
+
+		field.Set(valueRef)
 	}
-	if !header {
-		return "ENU"
-	}
-	return "STR"
+	return structure
 }
 
-func parseMap(row string) map[string]ResourceNode {
-	inString := false
-	escape := false
+func fixStr(value any) reflect.Value {
+	element := reflect.ValueOf(value)
+	if element.Kind() != reflect.Ptr {
+		structureType := reflect.TypeOf(value)
+		return reflect.New(structureType).Elem()
+	}
+	return element.Elem()
+}
 
-	mapp := map[string]ResourceNode{}
-	key := ""
-	buffer := ""
-	for _, v := range row {
-		isSpecialRuneInString := inString && (v == MAP_LINKER || v == MAP_SEPARATOR)
-		isNotSpecialRune := v != MAP_LINKER && v != MAP_SEPARATOR
-		if isNotSpecialRune || isSpecialRuneInString {
-			buffer += string(v)
-		}
-		if !inString {
-			if v == '"' {
-				inString = true
-			} else if v == MAP_LINKER {
-				node := parseObj(buffer)
-				key = node.key()
-				buffer = ""
-			} else if v == MAP_SEPARATOR {
-				node := parseObj(buffer)
-				mapp[key] = node
-				buffer = ""
-			}
-		} else if !escape {
-			if v == '"' {
-				inString = false
-			} else if v == '\\' {
-				escape = true
-			}
+func (d *CsvDeserializer) makeMap(template any, root *ResourceGroup) reflect.Value {
+	mapType := reflect.TypeOf(template)
+	mapElement := reflect.New(mapType).Elem()
+	mapKeysType := reflect.TypeOf(mapElement.Interface()).Key()
+	mapValuesType := reflect.TypeOf(mapElement.Interface()).Elem()
+	mapValuesElement := reflect.New(mapValuesType).Elem()
+
+	mapp := reflect.MakeMap(mapType)
+
+	for _, p := range root.findFields() {
+		k := p.Key()
+		v := p.Value()
+
+		index := reflect.ValueOf(k)
+
+		if v.index == -1 {
+			value := reflect.ValueOf(k)
+			mapp.SetMapIndex(index.Convert(mapKeysType), value.Convert(mapValuesType))
 		} else {
-			escape = false
+			reference, ok := d.tables.Find(&v)
+			if !ok {
+				println(4)
+			}
+
+			v := d.makeElement(mapValuesElement.Interface(), reference)
+
+			mapp.SetMapIndex(index.Convert(mapKeysType), v)
 		}
 	}
-	node := parseObj(buffer)
-	mapp[key] = node
 	return mapp
 }
 
-func parseArr(row string) []ResourceNode {
-	return parseLst(row, ARR_SEPARATOR, ARR_CLOSING)
-}
+func (d *CsvDeserializer) makeArr(template any, root *ResourceGroup) reflect.Value {
+	arrType := reflect.TypeOf(template)
+	arrElement := reflect.New(arrType).Elem()
+	arrValuesType := reflect.TypeOf(arrElement.Interface()).Elem()
+	arrValuesElement := reflect.New(arrValuesType).Elem()
 
-func parseStr(row string) []ResourceNode {
-	return parseLst(row, STR_SEPARATOR, STR_CLOSING)
-}
+	fields := root.findFields()
+	len := len(fields)
 
-func parseLst(row string, separator, closing rune) []ResourceNode {
-	inString := false
-	escape := false
+	arr := reflect.MakeSlice(arrType, len, len)
 
-	lst := []ResourceNode{}
-	buffer := ""
-	for _, v := range row {
-		isSpecialRuneInString := inString && (v == separator || v == closing)
-		isNotSpecialRune := v != separator && v != closing
-		if isNotSpecialRune || isSpecialRuneInString {
-			buffer += string(v)
-		}
-		if !inString {
-			if v == '"' {
-				inString = true
-			} else if v == separator {
-				node := parseObj(buffer)
-				lst = append(lst, node)
-				buffer = ""
-			} else if v == closing {
-				break
-			}
-		} else if !escape {
-			if v == '"' {
-				inString = false
-			} else if v == '\\' {
-				escape = true
-			}
+	for i, p := range fields {
+		v := p.Value()
+		if v.index == -1 {
+			elem := reflect.ValueOf(v.value)
+			arr.Index(i).Set(elem.Convert(arrValuesType))
 		} else {
-			escape = false
+			reference, ok := d.tables.Find(&v)
+			if !ok {
+				println(4)
+			}
+
+			v := d.makeElement(arrValuesElement.Interface(), reference)
+			arr.Index(i).Set(v.Convert(arrValuesType.Elem()))
 		}
 	}
-	node := parseObj(buffer)
-	lst = append(lst, node)
-	return lst
+	return arr
 }
 
-func parseObj(obj string) ResourceNode {
-	len := len(obj)
-	if len == 0 {
-		return fromNonPointer("")
-	}
-	if obj[0] == byte(PTR_HEADER) {
-		return parsePtr(obj)
-	}
-	if obj[0] == '"' && obj[len-1] == '"' {
-		return fromNonPointer(obj[1 : len-1])
-	}
-	rb, err := strconv.ParseBool(obj)
-	if err == nil {
-		return fromNonPointer(rb)
-	}
-	rf, err := strconv.ParseFloat(obj, 64)
-	if err == nil {
-		return fromNonPointer(rf)
-	}
-	ri, err := strconv.Atoi(obj)
-	if err == nil {
-		return fromNonPointer(ri)
-	}
-	panic("Does not recognized")
-}
+func makeObj(template any, root *ResourceGroup) reflect.Value {
+	element := reflect.ValueOf(template)
 
-func parsePtr(obj string) ResourceNode {
-	key := ""
-	index := 0
-	buffer := ""
-	for i, v := range obj {
-		if i == 0 {
-			continue
-		}
-		if v == PTR_SEPARATOR {
-			key = buffer
-			buffer = ""
-		} else {
-			buffer += string(v)
-		}
-	}
-	index, err :=strconv.Atoi(buffer)
-	if err != nil {
-		panic(err)
-	}
-	return fromPointer(key, index)
-}
+	node, _ := root.findValue()
 
-func isArrowComponent(v rune) bool {
-	return (v >= '0' && v <= '9') || v == 'H' || v == '-' || v == '>' || v == ' ' || v == '\t'
+	valueRef := reflect.ValueOf(node.value)
+	if element.Type().Kind() != valueRef.Type().Kind() {
+		println(3)
+	}
+
+	return valueRef.Convert(element.Type())
 }

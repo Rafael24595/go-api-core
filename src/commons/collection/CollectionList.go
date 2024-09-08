@@ -9,10 +9,21 @@ type CollectionList [T any] struct {
 	items []T
 }
 
-func From[T any](items []T) *CollectionList[T] {
+func FromList[T any](items []T) *CollectionList[T] {
 	return &CollectionList[T]{
 		items,
 	}
+}
+
+func (collection *CollectionList[T]) Size() int {
+	return len(collection.items)
+}
+
+func (collection *CollectionList[T]) Get(index int) (*T, bool) {
+    if index >= 0 && index < len(collection.items) {
+        return &collection.items[index], true
+    }
+    return nil, false
 }
 
 func (collection *CollectionList[T]) Sort(predicate func(i, j int) bool) *CollectionList[T] {
@@ -20,13 +31,22 @@ func (collection *CollectionList[T]) Sort(predicate func(i, j int) bool) *Collec
 	return collection
 }
 
-func (collection *CollectionList[T]) Find(predicate func(T) bool) *T {
-	for _, item := range collection.items {
+func (collection *CollectionList[T]) IndexOf(predicate func(T) bool) (int, bool) {
+	for i, item := range collection.items {
         if predicate(item) {
-            return &item
+            return i, true
         }
     }
-	return nil
+	return -1, false
+}
+
+func (collection *CollectionList[T]) Find(predicate func(T) bool) (*T, bool) {
+	for _, item := range collection.items {
+        if predicate(item) {
+            return &item, true
+        }
+    }
+	return nil, false
 }
 
 func (collection *CollectionList[T]) Filter(predicate func(T) bool) *CollectionList[T] {
@@ -38,6 +58,10 @@ func (collection *CollectionList[T]) Filter(predicate func(T) bool) *CollectionL
     }
 	collection.items = filtered
     return collection
+}
+
+func (collection *CollectionList[T]) MapSelf(predicate func(T) T) *CollectionList[T] {
+    return Map(collection, predicate)
 }
 
 func (collection *CollectionList[T]) Map(predicate func(T) any) *CollectionList[interface{}] {

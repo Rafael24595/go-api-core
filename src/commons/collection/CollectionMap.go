@@ -4,6 +4,10 @@ type CollectionMap [T comparable, K any] struct {
 	items map[T]K
 }
 
+func (collection *CollectionMap[T, K]) Size() int {
+	return len(collection.items)
+}
+
 func FromMap[T comparable, K any](items map[T]K) *CollectionMap[T, K] {
 	return &CollectionMap[T, K]{
 		items,
@@ -13,6 +17,24 @@ func FromMap[T comparable, K any](items map[T]K) *CollectionMap[T, K] {
 func (collection *CollectionMap[T, K]) Find(key T) (*K, bool) {
 	value, exists := collection.items[key]
 	return &value, exists
+}
+
+func (collection *CollectionMap[T, K]) FindOnePredicate(predicate func (K) bool) (*K, bool) {
+	items := collection.FindPredicate(predicate)
+	if len(items) == 0 {
+		return nil, false
+	}
+	return &items[0], true
+}
+
+func (collection *CollectionMap[T, K]) FindPredicate(predicate func (K) bool) []K {
+	filter := []K{}
+	for _, v := range collection.items {
+		if predicate(v) {
+			filter = append(filter, v)
+		}
+	}
+	return filter
 }
 
 func (collection *CollectionMap[T, K]) Exists(key T) bool {
@@ -48,7 +70,7 @@ func (collection *CollectionMap[T, K]) Pairs() []Pair[T, K] {
     for key := range collection.items {
         pairs = append(pairs, Pair[T, K]{
 			key: key,
-			Value: collection.items[key],
+			value: collection.items[key],
 		})
     }
 	return pairs

@@ -66,7 +66,7 @@ func (s *CsvSerializer) serialize(value any) string {
 
 			strRow = append(strRow, fmt.Sprintf("%v", value))
 		}
-		row = fmt.Sprintf("%v:", strings.Join(strRow, ";"))
+		row = fmt.Sprintf("%v%c", strings.Join(strRow, string(STR_SEPARATOR)), STR_CLOSING)
 	case reflect.Map:
 		mapRow := []string{}
 		for _, k := range val.MapKeys() {
@@ -83,9 +83,9 @@ func (s *CsvSerializer) serialize(value any) string {
 			} else {
 				value = sprintf("%v", value)
 			}
-			mapRow = append(mapRow, fmt.Sprintf("%v=%v", key, value))
+			mapRow = append(mapRow, fmt.Sprintf("%v%c%v", key, MAP_LINKER, value))
 		}
-		row = fmt.Sprintf("%v", strings.Join(mapRow, ","))
+		row = fmt.Sprintf("%v", strings.Join(mapRow, string(MAP_SEPARATOR)))
 	case reflect.Slice, reflect.Array:
 		arrayRow := []string{}
 		for i := 0; i < val.Len(); i++ {
@@ -95,7 +95,9 @@ func (s *CsvSerializer) serialize(value any) string {
 			}
 			arrayRow = append(arrayRow, sprintf("%v", value))
 		}
-		row = fmt.Sprintf("%v.", strings.Join(arrayRow, ","))
+		row = fmt.Sprintf("%v%c", strings.Join(arrayRow, string(ARR_SEPARATOR)), ARR_CLOSING)
+	case reflect.String:
+		row = sprintf("\"%v\"", value)
 	default:
 		row = sprintf("%v", value)
 	}
@@ -109,7 +111,7 @@ func (s *CsvSerializer) serialize(value any) string {
 	}
 	s.Structures[t] = append(s.Structures[t], row)
 
-	return fmt.Sprintf("$%s_%v", t, len(s.Structures[t])-1)
+	return fmt.Sprintf("$%s_%v", t, len(s.Structures[t])-2)
 }
 
 func (s *CsvSerializer) key(val reflect.Value) string {
