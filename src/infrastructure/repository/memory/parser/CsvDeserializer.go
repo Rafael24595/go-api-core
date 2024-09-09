@@ -16,7 +16,11 @@ func NewDeserialzer(csv string) *CsvDeserializer {
 	}
 }
 
-func (d *CsvDeserializer) Deserialize(value any) {
+func (d *CsvDeserializer) Deserialize(value any) any {
+	return d.deserializeIndex(value, 0)
+}
+
+func (d *CsvDeserializer) deserializeIndex(value any, index int) any {
 	valPtr := reflect.ValueOf(value)
 
 	if valPtr.Kind() != reflect.Ptr || valPtr.Elem().Kind() != reflect.Struct {
@@ -28,15 +32,22 @@ func (d *CsvDeserializer) Deserialize(value any) {
 		panic("//TODO: Bad format.")
 	}
 
-	group, ok := root.get(0)
+	group, ok := root.get(index)
 	if !ok {
 		panic("//TODO: Bad format.")
 	}
 
-	d.makeElement(value, group)
+	result := d.makeElement(value, group)
+	
+	return result.Interface()
+}
 
-	//TODO:
-	return
+func (d *CsvDeserializer) Iterate() DeserializeIterator {
+	max := 0
+	if root, ok := d.tables.root(); ok {
+		max = root.nodes.Size()
+	}
+	return newIterator(*d, max)
 }
 
 func (d *CsvDeserializer) makeElement(template any, root *ResourceGroup) reflect.Value {

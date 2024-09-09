@@ -4,8 +4,8 @@ type CollectionMap [T comparable, K any] struct {
 	items map[T]K
 }
 
-func (collection *CollectionMap[T, K]) Size() int {
-	return len(collection.items)
+func (c *CollectionMap[T, K]) Size() int {
+	return len(c.items)
 }
 
 func FromMap[T comparable, K any](items map[T]K) *CollectionMap[T, K] {
@@ -14,22 +14,22 @@ func FromMap[T comparable, K any](items map[T]K) *CollectionMap[T, K] {
 	}
 }
 
-func (collection *CollectionMap[T, K]) Find(key T) (*K, bool) {
-	value, exists := collection.items[key]
+func (c *CollectionMap[T, K]) Find(key T) (*K, bool) {
+	value, exists := c.items[key]
 	return &value, exists
 }
 
-func (collection *CollectionMap[T, K]) FindOnePredicate(predicate func (K) bool) (*K, bool) {
-	items := collection.FindPredicate(predicate)
+func (c *CollectionMap[T, K]) FindOnePredicate(predicate func (K) bool) (*K, bool) {
+	items := c.FindPredicate(predicate)
 	if len(items) == 0 {
 		return nil, false
 	}
 	return &items[0], true
 }
 
-func (collection *CollectionMap[T, K]) FindPredicate(predicate func (K) bool) []K {
+func (c *CollectionMap[T, K]) FindPredicate(predicate func (K) bool) []K {
 	filter := []K{}
-	for _, v := range collection.items {
+	for _, v := range c.items {
 		if predicate(v) {
 			filter = append(filter, v)
 		}
@@ -37,16 +37,16 @@ func (collection *CollectionMap[T, K]) FindPredicate(predicate func (K) bool) []
 	return filter
 }
 
-func (collection *CollectionMap[T, K]) Exists(key T) bool {
-	_, exists := collection.items[key]
+func (c *CollectionMap[T, K]) Exists(key T) bool {
+	_, exists := c.items[key]
 	return exists
 }
 
-func (collection *CollectionMap[T, K]) Merge(other map[T]K) *CollectionMap[T, K] {
+func (c *CollectionMap[T, K]) Merge(other map[T]K) *CollectionMap[T, K] {
     for key := range other {
-        collection.items[key] = other[key]
+        c.items[key] = other[key]
     }
-	return collection
+	return c
 }
 
 func (collection CollectionMap[T, K]) Keys() []T {
@@ -57,20 +57,20 @@ func (collection CollectionMap[T, K]) Keys() []T {
 	return keys
 }
 
-func (collection *CollectionMap[T, K]) Values() []K {
-	values := make([]K, 0, len(collection.items))
-    for key := range collection.items {
-        values = append(values, collection.items[key])
+func (c *CollectionMap[T, K]) Values() []K {
+	values := make([]K, 0, len(c.items))
+    for key := range c.items {
+        values = append(values, c.items[key])
     }
 	return values
 }
 
-func (collection *CollectionMap[T, K]) Pairs() []Pair[T, K] {
-	pairs := make([]Pair[T, K], 0, len(collection.items))
-    for key := range collection.items {
+func (c *CollectionMap[T, K]) Pairs() []Pair[T, K] {
+	pairs := make([]Pair[T, K], 0, len(c.items))
+    for key := range c.items {
         pairs = append(pairs, Pair[T, K]{
 			key: key,
-			value: collection.items[key],
+			value: c.items[key],
 		})
     }
 	return pairs

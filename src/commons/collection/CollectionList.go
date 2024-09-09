@@ -15,24 +15,29 @@ func FromList[T any](items []T) *CollectionList[T] {
 	}
 }
 
-func (collection *CollectionList[T]) Size() int {
-	return len(collection.items)
+func (c *CollectionList[T]) Append(items ...T) *CollectionList[T] {
+    c.items = append(c.items, items...)
+	return c
 }
 
-func (collection *CollectionList[T]) Get(index int) (*T, bool) {
-    if index >= 0 && index < len(collection.items) {
-        return &collection.items[index], true
+func (c *CollectionList[T]) Size() int {
+	return len(c.items)
+}
+
+func (c *CollectionList[T]) Get(index int) (*T, bool) {
+    if index >= 0 && index < len(c.items) {
+        return &c.items[index], true
     }
     return nil, false
 }
 
-func (collection *CollectionList[T]) Sort(predicate func(i, j int) bool) *CollectionList[T] {
-	sort.Slice(collection.items, predicate)
-	return collection
+func (c *CollectionList[T]) Sort(predicate func(i, j int) bool) *CollectionList[T] {
+	sort.Slice(c.items, predicate)
+	return c
 }
 
-func (collection *CollectionList[T]) IndexOf(predicate func(T) bool) (int, bool) {
-	for i, item := range collection.items {
+func (c *CollectionList[T]) IndexOf(predicate func(T) bool) (int, bool) {
+	for i, item := range c.items {
         if predicate(item) {
             return i, true
         }
@@ -40,8 +45,8 @@ func (collection *CollectionList[T]) IndexOf(predicate func(T) bool) (int, bool)
 	return -1, false
 }
 
-func (collection *CollectionList[T]) Find(predicate func(T) bool) (*T, bool) {
-	for _, item := range collection.items {
+func (c *CollectionList[T]) Find(predicate func(T) bool) (*T, bool) {
+	for _, item := range c.items {
         if predicate(item) {
             return &item, true
         }
@@ -49,57 +54,57 @@ func (collection *CollectionList[T]) Find(predicate func(T) bool) (*T, bool) {
 	return nil, false
 }
 
-func (collection *CollectionList[T]) Filter(predicate func(T) bool) *CollectionList[T] {
+func (c *CollectionList[T]) Filter(predicate func(T) bool) *CollectionList[T] {
     var filtered []T
-    for _, item := range collection.items {
+    for _, item := range c.items {
         if predicate(item) {
             filtered = append(filtered, item)
         }
     }
-	collection.items = filtered
-    return collection
+	c.items = filtered
+    return c
 }
 
-func (collection *CollectionList[T]) MapSelf(predicate func(T) T) *CollectionList[T] {
-    return Map(collection, predicate)
+func (c *CollectionList[T]) MapSelf(predicate func(T) T) *CollectionList[T] {
+    return Map(c, predicate)
 }
 
-func (collection *CollectionList[T]) Map(predicate func(T) any) *CollectionList[interface{}] {
-    return Map(collection, predicate)
+func (c *CollectionList[T]) Map(predicate func(T) any) *CollectionList[interface{}] {
+    return Map(c, predicate)
 }
 
-func (collection *CollectionList[T]) Pages(size int) int {
-    len := float64(len(collection.items))
+func (c *CollectionList[T]) Pages(size int) int {
+    len := float64(len(c.items))
     fSize := float64(size)
 	return int(math.Ceil(len / fSize))
 }
 
-func (collection *CollectionList[T]) Page(page, size int) *CollectionList[T] {
+func (c *CollectionList[T]) Page(page, size int) *CollectionList[T] {
     if page == 0 {
         page = 1
     }
     start := (page - 1) * size;
     end := page * size;
-	return collection.Slice(start, end)
+	return c.Slice(start, end)
 }
 
-func (collection *CollectionList[T]) Slice(start, end int) *CollectionList[T] {
+func (c *CollectionList[T]) Slice(start, end int) *CollectionList[T] {
     if start < 0 {
         start = 0
     }
-    if start > len(collection.items) -1 {
-        start = len(collection.items)
+    if start > len(c.items) -1 {
+        start = len(c.items)
     }
-    if end > len(collection.items) -1 {
-        end = len(collection.items)
+    if end > len(c.items) -1 {
+        end = len(c.items)
     }
-    collection.items = collection.items[start:end]
-	return collection
+    c.items = c.items[start:end]
+	return c
 }
 
-func Map[T, K any](collection *CollectionList[T], predicate func(T) K) *CollectionList[K] {
+func Map[T, K any](c *CollectionList[T], predicate func(T) K) *CollectionList[K] {
     var mapped []K
-    for _, item := range collection.items {
+    for _, item := range c.items {
 		mapped = append(mapped, predicate(item))
     }
     return &CollectionList[K]{
