@@ -1,12 +1,12 @@
 package parser
 
 type DeserializeIterator struct {
-	deserilizer CsvDeserializer
+	deserilizer CsvtDeserializer
 	max         int
 	current     int
 }
 
-func newIterator(deserilizer CsvDeserializer, max int) DeserializeIterator {
+func newIterator(deserilizer CsvtDeserializer, max int) DeserializeIterator {
 	return DeserializeIterator{
 		deserilizer: deserilizer,
 		max: max,

@@ -4,17 +4,17 @@ import (
 	"strings"
 )
 
-type csvReader struct {
+type csvtReader struct {
 	structures map[string][]string
 }
 
-func newDeserializerReader() *csvReader {
-	return &csvReader{
+func newDeserializerReader() *csvtReader {
+	return &csvtReader{
 		structures: make(map[string][]string),
 	}
 }
 
-func (r *csvReader) read(csv string) ResourceCollection {
+func (r *csvtReader) read(csv string) ResourceCollection {
 	tables := map[string]ResourceNexus{}
 
 	parser := newDeserializerParser()
@@ -31,7 +31,7 @@ func (r *csvReader) read(csv string) ResourceCollection {
 	return newCollection(tables)
 }
 
-func (d *csvReader) readNext(csv string) (string, string) {
+func (d *csvtReader) readNext(csv string) (string, string) {
 	initial := 0
 	headCount := 0
 
@@ -41,12 +41,12 @@ func (d *csvReader) readNext(csv string) (string, string) {
 	index := 0
 	for i, v := range csv {
 		index = i
-		if v == '/' {
+		if v == TBL_HEAD_BASE {
 			if headCount == 0 {
 				initial = i
 			}
 			headCount++
-		} else if v == '*' && headCount > 0 {
+		} else if v == TBL_HEAD_ROOT && headCount > 0 {
 			headCount++
 		} else if v == '\n' {
 			if tailCount == 1 {

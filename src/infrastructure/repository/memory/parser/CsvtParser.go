@@ -5,15 +5,15 @@ import (
 	"strings"
 )
 
-type csvParser struct {
+type csvtParser struct {
 }
 
-func newDeserializerParser() *csvParser {
-	return &csvParser{
+func newDeserializerParser() *csvtParser {
+	return &csvtParser{
 	}
 }
 
-func (p *csvParser) parse(table string) ResourceNexus {
+func (p *csvtParser) parse(table string) ResourceNexus {
 	rootCount := 0
 	headCount := 0
 	parseHead := false
@@ -29,9 +29,9 @@ func (p *csvParser) parse(table string) ResourceNexus {
 	buffer := ""
 	for _, v := range table {
 		if !parseHead {
-			if v == '/' {
+			if v == TBL_HEAD_BASE {
 				headCount++
-			} else if v == '*' {
+			} else if v == TBL_HEAD_ROOT {
 				rootCount++
 				headCount++
 			} else if v == '\n' && headCount == 3 {
@@ -73,7 +73,7 @@ func (p *csvParser) parse(table string) ResourceNexus {
 	return newNexus(name, rootCount == 2, items)
 }
 
-func (p *csvParser) parseHeaders(row string) []string {
+func (p *csvtParser) parseHeaders(row string) []string {
 	heads := []string{}
 
 	buffer := ""
@@ -93,7 +93,7 @@ func (p *csvParser) parseHeaders(row string) []string {
 	return heads
 }
 
-func (p *csvParser) parseRow(row string, header []string) ResourceGroup {
+func (p *csvtParser) parseRow(row string, header []string) ResourceGroup {
 	instance := p.categoryOf(row, len(header) != 0)
 	var group interface{}
 	switch instance {
@@ -111,7 +111,7 @@ func (p *csvParser) parseRow(row string, header []string) ResourceGroup {
 	return newGroup(instance, header, group)
 }
 
-func (p *csvParser) categoryOf(row string, header bool) GroupCategory {
+func (p *csvtParser) categoryOf(row string, header bool) GroupCategory {
 	inString := false
 	escape := false
 
@@ -144,7 +144,7 @@ func (p *csvParser) categoryOf(row string, header bool) GroupCategory {
 	return STR
 }
 
-func (p *csvParser) parseMap(row string) map[string]ResourceNode {
+func (p *csvtParser) parseMap(row string) map[string]ResourceNode {
 	mapp := map[string]ResourceNode{}
 
 	inString := false
@@ -189,15 +189,15 @@ func (p *csvParser) parseMap(row string) map[string]ResourceNode {
 	return mapp
 }
 
-func (p *csvParser) parseArray(row string) []ResourceNode {
+func (p *csvtParser) parseArray(row string) []ResourceNode {
 	return p.parseList(row, ARR_SEPARATOR, ARR_CLOSING)
 }
 
-func (p *csvParser) parseStructure(row string) []ResourceNode {
+func (p *csvtParser) parseStructure(row string) []ResourceNode {
 	return p.parseList(row, STR_SEPARATOR, STR_CLOSING)
 }
 
-func (p *csvParser) parseList(row string, separator, closing rune) []ResourceNode {
+func (p *csvtParser) parseList(row string, separator, closing rune) []ResourceNode {
 	lst := []ResourceNode{}
 
 	inString := false
@@ -240,7 +240,7 @@ func (p *csvParser) parseList(row string, separator, closing rune) []ResourceNod
 	return lst
 }
 
-func (p *csvParser) parseObject(obj string) ResourceNode {
+func (p *csvtParser) parseObject(obj string) ResourceNode {
 	if len(obj) == 0 {
 		return fromEmpty()
 	}
@@ -265,7 +265,7 @@ func (p *csvParser) parseObject(obj string) ResourceNode {
 	panic("//TODO: Does not recognized")
 }
 
-func (p *csvParser) isPointer(obj string) (string, int, bool) {
+func (p *csvtParser) isPointer(obj string) (string, int, bool) {
 	if obj[0] != byte(PTR_HEADER) {
 		return obj, 0, false
 	}
@@ -294,7 +294,7 @@ func (p *csvParser) isPointer(obj string) (string, int, bool) {
 	return key, index, true
 }
 
-func (p *csvParser) isString(obj string) (string, bool) {
+func (p *csvtParser) isString(obj string) (string, bool) {
 	len := len(obj)
 	if obj[0] == '"' && obj[len-1] == '"' {
 		return obj[1 : len-1], true
@@ -302,6 +302,6 @@ func (p *csvParser) isString(obj string) (string, bool) {
 	return obj, false
 }
 
-func (p *csvParser) isArrowComponent(v rune) (bool, bool) {
-	return (v >= '0' && v <= '9') || v == 'H' || v == '-' || v == '>' || v == ' ', v == '>'
+func (p *csvtParser) isArrowComponent(v rune) (bool, bool) {
+	return (v >= '0' && v <= '9') || v == TBL_INDEX_HEAD || v == '-' || v == '>' || v == ' ', v == '>'
 }

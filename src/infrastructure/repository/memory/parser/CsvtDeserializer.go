@@ -4,23 +4,23 @@ import (
 	"reflect"
 )
 
-type CsvDeserializer struct {
+type CsvtDeserializer struct {
 	tables ResourceCollection
 }
 
-func NewDeserialzer(csv string) *CsvDeserializer {
+func NewDeserialzer(csv string) *CsvtDeserializer {
 	tables := newDeserializerReader().
 		read(csv)
-	return &CsvDeserializer{
+	return &CsvtDeserializer{
 		tables: tables,
 	}
 }
 
-func (d *CsvDeserializer) Deserialize(value any) any {
+func (d *CsvtDeserializer) Deserialize(value any) any {
 	return d.deserializeIndex(value, 0)
 }
 
-func (d *CsvDeserializer) deserializeIndex(value any, index int) any {
+func (d *CsvtDeserializer) deserializeIndex(value any, index int) any {
 	valPtr := reflect.ValueOf(value)
 
 	if valPtr.Kind() != reflect.Ptr || valPtr.Elem().Kind() != reflect.Struct {
@@ -42,7 +42,7 @@ func (d *CsvDeserializer) deserializeIndex(value any, index int) any {
 	return result.Interface()
 }
 
-func (d *CsvDeserializer) Iterate() DeserializeIterator {
+func (d *CsvtDeserializer) Iterate() DeserializeIterator {
 	max := 0
 	if root, ok := d.tables.root(); ok {
 		max = root.nodes.Size()
@@ -50,7 +50,7 @@ func (d *CsvDeserializer) Iterate() DeserializeIterator {
 	return newIterator(*d, max)
 }
 
-func (d *CsvDeserializer) makeElement(template any, root *ResourceGroup) reflect.Value {
+func (d *CsvtDeserializer) makeElement(template any, root *ResourceGroup) reflect.Value {
 	element := reflect.ValueOf(template)
 	switch element.Kind() {
 	case reflect.Struct, reflect.Ptr:
@@ -64,7 +64,7 @@ func (d *CsvDeserializer) makeElement(template any, root *ResourceGroup) reflect
 	}
 }
 
-func (d *CsvDeserializer) makeStr(template any, root *ResourceGroup) reflect.Value {
+func (d *CsvtDeserializer) makeStr(template any, root *ResourceGroup) reflect.Value {
 	structure := fixStr(template)
 
 	for i := 0; i < structure.NumField(); i++ {
@@ -114,7 +114,7 @@ func fixStr(value any) reflect.Value {
 	return element.Elem()
 }
 
-func (d *CsvDeserializer) makeMap(template any, root *ResourceGroup) reflect.Value {
+func (d *CsvtDeserializer) makeMap(template any, root *ResourceGroup) reflect.Value {
 	mapType := reflect.TypeOf(template)
 	mapElement := reflect.New(mapType).Elem()
 	mapKeysType := reflect.TypeOf(mapElement.Interface()).Key()
@@ -146,7 +146,7 @@ func (d *CsvDeserializer) makeMap(template any, root *ResourceGroup) reflect.Val
 	return mapp
 }
 
-func (d *CsvDeserializer) makeArr(template any, root *ResourceGroup) reflect.Value {
+func (d *CsvtDeserializer) makeArr(template any, root *ResourceGroup) reflect.Value {
 	arrType := reflect.TypeOf(template)
 	arrElement := reflect.New(arrType).Elem()
 	arrValuesType := reflect.TypeOf(arrElement.Interface()).Elem()

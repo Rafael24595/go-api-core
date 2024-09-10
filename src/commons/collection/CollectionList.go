@@ -31,8 +31,10 @@ func (c *CollectionList[T]) Get(index int) (*T, bool) {
     return nil, false
 }
 
-func (c *CollectionList[T]) Sort(predicate func(i, j int) bool) *CollectionList[T] {
-	sort.Slice(c.items, predicate)
+func (c *CollectionList[T]) Sort(less func(i, j T) bool) *CollectionList[T] {
+	sort.Slice(c.items, func(i, j int) bool {
+        return less(c.items[i], c.items[j])
+    })
 	return c
 }
 

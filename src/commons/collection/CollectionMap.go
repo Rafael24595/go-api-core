@@ -57,6 +57,14 @@ func (collection CollectionMap[T, K]) Keys() []T {
 	return keys
 }
 
+func (collection CollectionMap[T, K]) KeysCollection() *CollectionList[T] {
+	keys := make([]T, 0, len(collection.items))
+    for key := range collection.items {
+        keys = append(keys, key)
+    }
+	return FromList(keys)
+}
+
 func (c *CollectionMap[T, K]) Values() []K {
 	values := make([]K, 0, len(c.items))
     for key := range c.items {
