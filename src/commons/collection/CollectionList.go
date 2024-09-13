@@ -31,6 +31,14 @@ func (c *CollectionList[T]) Get(index int) (*T, bool) {
     return nil, false
 }
 
+func (c *CollectionList[T]) First() (*T, bool) {
+    return c.Get(0)
+}
+
+func (c *CollectionList[T]) Last() (*T, bool) {
+    return c.Get(c.Size() - 1)
+}
+
 func (c *CollectionList[T]) Sort(less func(i, j T) bool) *CollectionList[T] {
 	sort.Slice(c.items, func(i, j int) bool {
         return less(c.items[i], c.items[j])
@@ -54,6 +62,16 @@ func (c *CollectionList[T]) Find(predicate func(T) bool) (*T, bool) {
         }
     }
 	return nil, false
+}
+
+func (c *CollectionList[T]) FindPredicate(predicate func (T) bool) []T {
+	filter := []T{}
+	for _, v := range c.items {
+		if predicate(v) {
+			filter = append(filter, v)
+		}
+	}
+	return filter
 }
 
 func (c *CollectionList[T]) Filter(predicate func(T) bool) *CollectionList[T] {
