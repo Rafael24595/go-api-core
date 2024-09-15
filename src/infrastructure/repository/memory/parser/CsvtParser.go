@@ -70,6 +70,11 @@ func (p *csvtParser) parse(table string) ResourceNexus {
 		}
 	}
 
+	if len(buffer) > 0 {
+		row := p.parseRow(buffer, heads)
+		items = append(items, row)
+	}
+
 	return newNexus(name, rootCount == 2, items)
 }
 

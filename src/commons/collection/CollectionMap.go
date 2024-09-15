@@ -4,14 +4,24 @@ type CollectionMap [T comparable, K any] struct {
 	items map[T]K
 }
 
-func (c *CollectionMap[T, K]) Size() int {
-	return len(c.items)
-}
-
 func FromMap[T comparable, K any](items map[T]K) *CollectionMap[T, K] {
 	return &CollectionMap[T, K]{
 		items,
 	}
+}
+
+func EmptyMap[T comparable, K any]() *CollectionMap[T, K] {
+	return FromMap(make(map[T]K))
+}
+
+func (c *CollectionMap[T, K]) Size() int {
+	return len(c.items)
+}
+
+func (c *CollectionMap[T, K]) Put(key T, item K) (*K, bool) {
+	old, exists := c.Find(key)
+	c.items[key] = item
+	return old, exists
 }
 
 func (c *CollectionMap[T, K]) Find(key T) (*K, bool) {
@@ -67,6 +77,14 @@ func (collection CollectionMap[T, K]) KeysCollection() *CollectionList[T] {
 
 func (c *CollectionMap[T, K]) Values() []K {
 	values := make([]K, 0, len(c.items))
+    for key := range c.items {
+        values = append(values, c.items[key])
+    }
+	return values
+}
+
+func (c *CollectionMap[T, K]) ValuesInterface() []any {
+	values := make([]any, 0, len(c.items))
     for key := range c.items {
         values = append(values, c.items[key])
     }

@@ -15,6 +15,10 @@ func FromList[T any](items []T) *CollectionList[T] {
 	}
 }
 
+func EmptyList[T any]() *CollectionList[T] {
+	return FromList(make([]T, 0))
+}
+
 func (c *CollectionList[T]) Append(items ...T) *CollectionList[T] {
     c.items = append(c.items, items...)
 	return c
