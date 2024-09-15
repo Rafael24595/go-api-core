@@ -1,4 +1,4 @@
-package parser
+package translator
 
 const (
 	HEA_SEPARATOR rune = ';' 

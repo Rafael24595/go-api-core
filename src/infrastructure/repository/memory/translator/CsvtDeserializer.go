@@ -1,6 +1,7 @@
-package parser
+package translator
 
 import (
+	"fmt"
 	"reflect"
 )
 
@@ -8,38 +9,44 @@ type CsvtDeserializer struct {
 	tables ResourceCollection
 }
 
-func NewDeserialzer(csv string) *CsvtDeserializer {
-	tables := newDeserializerReader().
+func NewDeserialzer(csv string) (*CsvtDeserializer, TranslateError) {
+	tables, err := newDeserializerReader().
 		read(csv)
-	return &CsvtDeserializer{
-		tables: tables,
+	if err != nil {
+		return nil, err
 	}
+	return &CsvtDeserializer{
+		tables: *tables,
+	}, nil
 }
 
-func (d *CsvtDeserializer) Deserialize(value any) any {
+func (d *CsvtDeserializer) Deserialize(value any) (any, TranslateError) {
 	return d.deserializeIndex(value, 0)
 }
 
-func (d *CsvtDeserializer) deserializeIndex(value any, index int) any {
+func (d *CsvtDeserializer) deserializeIndex(value any, index int) (any, TranslateError) {
 	valPtr := reflect.ValueOf(value)
 
 	if valPtr.Kind() != reflect.Ptr || valPtr.Elem().Kind() != reflect.Struct {
-		panic("obj must be a pointer to a struct")
+		return nil, TranslateErrorFrom("Root struct must be a pointer.")
 	}
 
 	root, ok := d.tables.root()
 	if !ok {
-		panic("//TODO: Bad format.")
+		return nil, TranslateErrorFrom("Root struct is not defined.")
 	}
 
 	group, ok := root.get(index)
 	if !ok {
-		panic("//TODO: Bad format.")
+		return nil, TranslateErrorFrom("Index does not exists.")
 	}
 
-	result := d.makeElement(value, group)
+	result, err := d.makeElement(value, group)
+	if err != nil {
+		return nil, err
+	}
 	
-	return result.Interface()
+	return result.Interface(), nil
 }
 
 func (d *CsvtDeserializer) Iterate() DeserializeIterator {
@@ -50,7 +57,7 @@ func (d *CsvtDeserializer) Iterate() DeserializeIterator {
 	return newIterator(*d, max)
 }
 
-func (d *CsvtDeserializer) makeElement(template any, root *ResourceGroup) reflect.Value {
+func (d *CsvtDeserializer) makeElement(template any, root *ResourceGroup) (reflect.Value, TranslateError) {
 	element := reflect.ValueOf(template)
 	switch element.Kind() {
 	case reflect.Struct, reflect.Ptr:
@@ -64,7 +71,7 @@ func (d *CsvtDeserializer) makeElement(template any, root *ResourceGroup) reflec
 	}
 }
 
-func (d *CsvtDeserializer) makeStr(template any, root *ResourceGroup) reflect.Value {
+func (d *CsvtDeserializer) makeStr(template any, root *ResourceGroup) (reflect.Value, TranslateError) {
 	structure := fixStr(template)
 
 	for i := 0; i < structure.NumField(); i++ {
@@ -74,35 +81,39 @@ func (d *CsvtDeserializer) makeStr(template any, root *ResourceGroup) reflect.Va
 
 		node, ok := root.findField(name)
 		if !ok {
-			println(5)
+			return reflect.Value{}, TranslateErrorFrom(fmt.Sprintf("Field \"%s\" not found.", name))
 		}
 
 		if !isCommonType(fieldTemplate) {
 			reference, ok := d.tables.Find(node)
 			if !ok {
-				println(4)
+				return reflect.Value{}, TranslateErrorFrom(fmt.Sprintf("Field \"%s\" reference \"%s\" not found.", name, node.key()))
 			}
-			element := d.makeElement(fieldTemplate, reference)
+			element, err := d.makeElement(fieldTemplate, reference)
+			if err != nil {
+				return reflect.Value{}, err
+			}
 			field.Set(element)
 
 			continue
 		}
 
 		if !field.IsValid() {
-			println(1)
+			return reflect.Value{}, TranslateErrorFrom(fmt.Sprintf("Field \"%s\" is not valid.", name))
 		}
 		if !field.CanSet() {
-			println(2)
+			return reflect.Value{}, TranslateErrorFrom(fmt.Sprintf("Field \"%s\" cannot set.", name))
 		}
 
 		valueRef := reflect.ValueOf(node.value)
 		if field.Type() != valueRef.Type() {
-			println(3)
+			err := fmt.Sprintf("Field \"%s\" type must be \"%s\", but \"%s\" found.", name, field.Type().Name(), valueRef.Type().Name())
+			return reflect.Value{}, TranslateErrorFrom(err)
 		}
 
 		field.Set(valueRef)
 	}
-	return structure
+	return structure, nil
 }
 
 func fixStr(value any) reflect.Value {
@@ -114,7 +125,7 @@ func fixStr(value any) reflect.Value {
 	return element.Elem()
 }
 
-func (d *CsvtDeserializer) makeMap(template any, root *ResourceGroup) reflect.Value {
+func (d *CsvtDeserializer) makeMap(template any, root *ResourceGroup) (reflect.Value, TranslateError) {
 	mapType := reflect.TypeOf(template)
 	mapElement := reflect.New(mapType).Elem()
 	mapKeysType := reflect.TypeOf(mapElement.Interface()).Key()
@@ -135,18 +146,21 @@ func (d *CsvtDeserializer) makeMap(template any, root *ResourceGroup) reflect.Va
 		} else {
 			reference, ok := d.tables.Find(&v)
 			if !ok {
-				println(4)
+				return reflect.Value{}, TranslateErrorFrom(fmt.Sprintf("Field \"%s\" is not valid.", k))
 			}
 
-			v := d.makeElement(mapValuesElement.Interface(), reference)
+			v, err := d.makeElement(mapValuesElement.Interface(), reference)
+			if err != nil {
+				return reflect.Value{}, err
+			}
 
 			mapp.SetMapIndex(index.Convert(mapKeysType), v)
 		}
 	}
-	return mapp
+	return mapp, nil
 }
 
-func (d *CsvtDeserializer) makeArr(template any, root *ResourceGroup) reflect.Value {
+func (d *CsvtDeserializer) makeArr(template any, root *ResourceGroup) (reflect.Value, TranslateError) {
 	arrType := reflect.TypeOf(template)
 	arrElement := reflect.New(arrType).Elem()
 	arrValuesType := reflect.TypeOf(arrElement.Interface()).Elem()
@@ -162,32 +176,41 @@ func (d *CsvtDeserializer) makeArr(template any, root *ResourceGroup) reflect.Va
 		if v.index == -1 {
 			elem := reflect.ValueOf(v.value)
 			if elem.Type() != arrValuesType {
-				println(3)
+				err := fmt.Sprintf("Array position \"%d\" type must be \"%s\", but \"%s\" found.", i, elem.Type().Name(), arrValuesType)
+				return reflect.Value{}, TranslateErrorFrom(err)
 			}
 
 			arr.Index(i).Set(elem.Convert(arrValuesType))
 		} else {
 			reference, ok := d.tables.Find(&v)
 			if !ok {
-				println(4)
+				return reflect.Value{}, TranslateErrorFrom(fmt.Sprintf("Array position \"%d\" reference \"%s\" not found.", i, v.key()))
 			}
 
-			v := d.makeElement(arrValuesElement.Interface(), reference)
+			v, err := d.makeElement(arrValuesElement.Interface(), reference)
+			if err != nil {
+				return reflect.Value{}, err
+			}
 			arr.Index(i).Set(v.Convert(arrValuesType.Elem()))
 		}
 	}
-	return arr
+	return arr, nil
 }
 
-func makeObj(template any, root *ResourceGroup) reflect.Value {
+func makeObj(template any, root *ResourceGroup) (reflect.Value, TranslateError) {
 	element := reflect.ValueOf(template)
 
-	node, _ := root.findValue()
+	node, ok := root.findValue()
+	if !ok {
+		return reflect.Value{}, TranslateErrorFrom(fmt.Sprintf("Field category \"%s\" not found.", root.category))
+	}
+
 
 	valueRef := reflect.ValueOf(node.value)
 	if element.Type().Kind() != valueRef.Type().Kind() {
-		println(3)
+		err := fmt.Sprintf("Field category \"%s\" type must be \"%s\", but \"%s\" found.", root.category, element.Type().Name(), valueRef.Type().Name())
+		return reflect.Value{}, TranslateErrorFrom(err)
 	}
 
-	return valueRef.Convert(element.Type())
+	return valueRef.Convert(element.Type()), nil
 }

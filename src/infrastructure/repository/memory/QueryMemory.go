@@ -7,18 +7,20 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/commons/collection"
 	"github.com/Rafael24595/go-api-core/src/domain"
-	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/memory/parser"
+	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/memory/translator"
 )
 
 type QueryMemory struct {
 	mu         sync.RWMutex
 	collection *collection.CollectionMap[string, domain.Request]
+	path       string
 }
 
 func NewQueryMemory() *QueryMemory {
-    return &QueryMemory{
-        collection: collection.EmptyMap[string, domain.Request](),
-    }
+	return &QueryMemory{
+		collection: collection.EmptyMap[string, domain.Request](),
+		path:       DEFAULT_FILE_PATH,
+	}
 }
 
 func InitializeQueryMemory() (*QueryMemory, error) {
@@ -62,18 +64,24 @@ func (r *QueryMemory) insert(request domain.Request) (domain.Request, []any) {
 }
 
 func (r *QueryMemory) read() (map[string]domain.Request, error) {
-	buffer, err := readFile(DEFAULT_FILE_PATH)
+	buffer, err := readFile(r.path)
 	if err != nil {
 		return nil, err
 	}
 
 	requests := map[string]domain.Request{}
 
-	deserializer := parser.NewDeserialzer(string(buffer))
+	deserializer, err := translator.NewDeserialzer(string(buffer))
+	if err != nil {
+		return nil, err
+	}
 	iterator := deserializer.Iterate()
 	for iterator.Next() {
 		request := &domain.Request{}
-		iterator.Deserialize(request)
+		_ , err := iterator.Deserialize(request)
+		if err != nil {
+			return nil, err
+		}
 		requests[request.Id] = *request
 	}
 

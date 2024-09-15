@@ -1,4 +1,4 @@
-package parser
+package translator
 
 type DeserializeIterator struct {
 	deserilizer CsvtDeserializer
@@ -19,6 +19,6 @@ func (i *DeserializeIterator) Next() bool {
 	return i.current < i.max
 }
 
-func (i *DeserializeIterator) Deserialize(value any) any {
+func (i *DeserializeIterator) Deserialize(value any) (any, TranslateError) {
 	return i.deserilizer.deserializeIndex(value, i.current)
 }

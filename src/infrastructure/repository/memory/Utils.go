@@ -37,7 +37,7 @@ func writeFile(filePath, content string) error {
 	}
 	defer file.Close()
 
-	_, err = file.WriteString(content)
+	_, err = file.Write([]byte(content))
 	if err != nil {
 		return err
 	}

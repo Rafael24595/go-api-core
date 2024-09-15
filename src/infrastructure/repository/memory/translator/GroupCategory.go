@@ -1,4 +1,4 @@
-package parser
+package translator
 
 type GroupCategory string
 

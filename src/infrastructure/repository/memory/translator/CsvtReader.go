@@ -1,4 +1,4 @@
-package parser
+package translator
 
 import (
 	"strings"
@@ -14,7 +14,7 @@ func newDeserializerReader() *csvtReader {
 	}
 }
 
-func (r *csvtReader) read(csv string) ResourceCollection {
+func (r *csvtReader) read(csv string) (*ResourceCollection, TranslateError) {
 	tables := map[string]ResourceNexus{}
 
 	parser := newDeserializerParser()
@@ -24,11 +24,15 @@ func (r *csvtReader) read(csv string) ResourceCollection {
 		var table string
 		table, buffer = r.readNext(buffer)
 		if len(strings.TrimSpace(table)) > 0 {
-			nexus := parser.parse(table)
-			tables[nexus.key] = nexus
+			nexus, err := parser.parse(table)
+			if err != nil {
+				return nil, err
+			}
+			tables[nexus.key] = *nexus
 		}
 	}
-	return newCollection(tables)
+	collection := newCollection(tables)
+	return &collection, nil
 }
 
 func (d *csvtReader) readNext(csv string) (string, string) {
