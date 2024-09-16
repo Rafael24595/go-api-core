@@ -1,4 +1,4 @@
-package translator
+package csvt_translator
 
 const (
 	HEA_SEPARATOR rune = ';' 

@@ -1,4 +1,4 @@
-package translator
+package csvt_translator
 
 import (
 	"github.com/Rafael24595/go-api-core/src/commons/collection"

@@ -7,7 +7,7 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/commons/collection"
 	"github.com/Rafael24595/go-api-core/src/domain"
-	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/memory/translator"
+	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/csvt_translator"
 )
 
 type QueryMemory struct {
@@ -71,7 +71,7 @@ func (r *QueryMemory) read() (map[string]domain.Request, error) {
 
 	requests := map[string]domain.Request{}
 
-	deserializer, err := translator.NewDeserialzer(string(buffer))
+	deserializer, err := csvt_translator.NewDeserialzer(string(buffer))
 	if err != nil {
 		return nil, err
 	}

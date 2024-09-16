@@ -1,4 +1,4 @@
-package translator
+package csvt_translator
 
 type DeserializeIterator struct {
 	deserilizer CsvtDeserializer

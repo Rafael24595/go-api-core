@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/Rafael24595/go-api-core/src/domain"
-	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/memory/translator"
+	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/csvt_translator"
 )
 
 type CommandMemory struct {
@@ -29,7 +29,7 @@ func (r *CommandMemory) Insert(request domain.Request) *domain.Request {
 }
 
 func (r *CommandMemory) write(requests []any) error {
-	csvt := translator.NewSerializer().
+	csvt := csvt_translator.NewSerializer().
 		Serialize(requests...)
 
 	return writeFile(r.path, csvt)

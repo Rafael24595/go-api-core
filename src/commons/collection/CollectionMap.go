@@ -18,12 +18,6 @@ func (c *CollectionMap[T, K]) Size() int {
 	return len(c.items)
 }
 
-func (c *CollectionMap[T, K]) Put(key T, item K) (*K, bool) {
-	old, exists := c.Find(key)
-	c.items[key] = item
-	return old, exists
-}
-
 func (c *CollectionMap[T, K]) Find(key T) (*K, bool) {
 	value, exists := c.items[key]
 	return &value, exists
@@ -52,11 +46,23 @@ func (c *CollectionMap[T, K]) Exists(key T) bool {
 	return exists
 }
 
+func (c *CollectionMap[T, K]) Put(key T, item K) (*K, bool) {
+	old, exists := c.Find(key)
+	c.items[key] = item
+	return old, exists
+}
+
 func (c *CollectionMap[T, K]) Merge(other map[T]K) *CollectionMap[T, K] {
     for key := range other {
         c.items[key] = other[key]
     }
 	return c
+}
+
+func (c *CollectionMap[T, K]) Remove(key T, item K) (*K, bool) {
+	old, exists := c.Find(key)
+	delete(c.items, key)
+	return old, exists
 }
 
 func (collection CollectionMap[T, K]) Keys() []T {
@@ -104,4 +110,11 @@ func (c *CollectionMap[T, K]) Pairs() []Pair[T, K] {
 
 func (collection CollectionMap[T, K]) Collect() map[T]K {
 	return collection.items
+}
+
+func Merge[T comparable, K any](target, source map[T]K) map[T]K {
+    for k, v := range source {
+        target[k] = v
+    }
+	return target
 }
