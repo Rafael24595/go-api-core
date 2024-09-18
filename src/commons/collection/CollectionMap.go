@@ -112,7 +112,7 @@ func (collection CollectionMap[T, K]) Collect() map[T]K {
 	return collection.items
 }
 
-func Merge[T comparable, K any](target, source map[T]K) map[T]K {
+func MapMerge[T comparable, K any](target, source map[T]K) map[T]K {
     for k, v := range source {
         target[k] = v
     }
