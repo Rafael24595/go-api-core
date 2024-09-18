@@ -107,8 +107,12 @@ func (d *CsvtDeserializer) makeStr(template any, root *ResourceGroup) (reflect.V
 
 		valueRef := reflect.ValueOf(node.value)
 		if field.Type() != valueRef.Type() {
-			err := fmt.Sprintf("Field \"%s\" type must be \"%s\", but \"%s\" found.", name, field.Type().Name(), valueRef.Type().Name())
-			return reflect.Value{}, TranslateErrorFrom(err)
+			if valueRef.Type().ConvertibleTo(field.Type()) {
+				valueRef = valueRef.Convert(field.Type())
+			} else {
+				err := fmt.Sprintf("Field \"%s\" type must be \"%s\", but \"%s\" found.", name, field.Type().Name(), valueRef.Type().Name())
+				return reflect.Value{}, TranslateErrorFrom(err)
+			}
 		}
 
 		field.Set(valueRef)
