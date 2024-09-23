@@ -90,11 +90,11 @@ func (c *CollectionList[T]) Filter(predicate func(T) bool) *CollectionList[T] {
 }
 
 func (c *CollectionList[T]) MapSelf(predicate func(T) T) *CollectionList[T] {
-    return Map(c, predicate)
+    return MapList(c, predicate)
 }
 
 func (c *CollectionList[T]) Map(predicate func(T) any) *CollectionList[interface{}] {
-    return Map(c, predicate)
+    return MapList(c, predicate)
 }
 
 func (c *CollectionList[T]) Pages(size int) int {
@@ -126,7 +126,7 @@ func (c *CollectionList[T]) Slice(start, end int) *CollectionList[T] {
 	return c
 }
 
-func Map[T, K any](c *CollectionList[T], predicate func(T) K) *CollectionList[K] {
+func MapList[T, K any](c *CollectionList[T], predicate func(T) K) *CollectionList[K] {
     var mapped []K
     for _, item := range c.items {
 		mapped = append(mapped, predicate(item))

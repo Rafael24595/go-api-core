@@ -58,3 +58,9 @@ func HttpMethodFromString(value string) (*HttpMethod, commons.ApiError) {
 		return nil, commons.ApiErrorFrom(422, fmt.Sprintf("Unknown method value: '%s'", value))
 	}
 }
+
+func HttpMethods() []HttpMethod {
+	return []HttpMethod{
+		GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS, TRACE, CONNECT,
+	}
+}

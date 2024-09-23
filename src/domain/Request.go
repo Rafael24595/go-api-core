@@ -3,6 +3,8 @@ package domain
 import (
 	"github.com/Rafael24595/go-api-core/src/domain/body"
 	"github.com/Rafael24595/go-api-core/src/domain/cookie"
+	"github.com/Rafael24595/go-api-core/src/domain/header"
+	"github.com/Rafael24595/go-api-core/src/domain/query"
 )
 
 type Request struct {
@@ -11,7 +13,8 @@ type Request struct {
 	Name      string         `json:"name"`
 	Method    HttpMethod     `json:"method"`
 	Uri       string         `json:"uri"`
-	Headers   Headers        `json:"headers"`
+	Queries   query.Queries  `json:"queries"`
+	Headers   header.Headers `json:"headers"`
 	Cookies   cookie.Cookies `json:"cookies"`
 	Body      body.Body      `json:"body"`
 	Status    Status         `json:"status"`

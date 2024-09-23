@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/Rafael24595/go-api-core/src/commons"
+	"github.com/Rafael24595/go-api-core/src/commons/collection"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/body"
 	"github.com/Rafael24595/go-api-core/src/domain/cookie"
+	"github.com/Rafael24595/go-api-core/src/domain/header"
 )
 
 type HttpClient struct {
@@ -56,6 +58,10 @@ func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, commo
 		return nil, commons.ApiErrorFromCause(500, "Cannot build HTTP request", err)
 	}
 
+	req.Header = collection.MapMap(collection.FromMap(operation.Headers.Headers), func(key string, value header.Header) []string {
+		return value.Header
+	}).Collect()
+
 	return req, nil
 }
 
@@ -67,17 +73,22 @@ func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, re
 		return nil, commons.ApiErrorFromCause(500, "Failed to read response", err)
 	}
 
-	headers := domain.Headers{
-		Headers: resp.Header,
+	headers := header.Headers{
+		Headers: collection.MapMap(collection.FromMap(resp.Header), func(key string, value []string) header.Header {
+			return header.Header{
+				Active: true,
+				Header: value,
+			}
+		}).Collect(),
 	}
 
 	cookies := cookie.Cookies{
 		Cookies: make(map[string]cookie.Cookie),
 	}
 
-	setCookie := headers.Headers["Set-Cookie"]
-	if len(setCookie) > 0 {
-		for _, c := range setCookie {
+	
+	if setCookie, ok := headers.Headers["Set-Cookie"]; ok && len(setCookie.Header) > 0 {
+		for _, c := range setCookie.Header {
 			parsed, err := cookie.CookieFromString(c)
 			if err != nil {
 				return nil, err

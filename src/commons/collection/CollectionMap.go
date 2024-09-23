@@ -112,6 +112,16 @@ func (collection CollectionMap[T, K]) Collect() map[T]K {
 	return collection.items
 }
 
+func MapMap[T comparable, K, E any](c *CollectionMap[T, K], predicate func(T, K) E) *CollectionMap[T, E] {
+    mapped := map[T]E{}
+    for key, item := range c.items {
+		mapped[key] = predicate(key, item)
+    }
+    return &CollectionMap[T, E]{
+		items: mapped,
+	}
+}
+
 func MapMerge[T comparable, K any](target, source map[T]K) map[T]K {
     for k, v := range source {
         target[k] = v
