@@ -41,6 +41,17 @@ func (c *CollectionMap[T, K]) FindPredicate(predicate func (K) bool) []K {
 	return filter
 }
 
+func (c *CollectionMap[T, K]) Filter(predicate func(T, K) bool) *CollectionMap[T, K] {
+    filter := map[T]K{}
+    for key, item := range c.items {
+        if predicate(key, item) {
+			filter[key] = item
+        }
+    }
+	c.items = filter
+    return c
+}
+
 func (c *CollectionMap[T, K]) Exists(key T) bool {
 	_, exists := c.items[key]
 	return exists

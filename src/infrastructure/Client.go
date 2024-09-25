@@ -58,11 +58,47 @@ func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, commo
 		return nil, commons.ApiErrorFromCause(500, "Cannot build HTTP request", err)
 	}
 
-	req.Header = collection.MapMap(collection.FromMap(operation.Headers.Headers), func(key string, value header.Header) []string {
-		return value.Header
-	}).Collect()
+	req = c.applyQuery(operation, req)
+	req = c.applyHeader(operation, req)
+	req = c.applyAuth(operation, req)
 
 	return req, nil
+}
+
+func (c *HttpClient) applyQuery(operation domain.Request, req *http.Request) *http.Request {
+	query := req.URL.Query()
+	for k, q := range operation.Queries.Queries {
+		if !q.Active {
+			continue
+		}
+		for _, v := range q.Query {
+			query.Add(k, v)
+		}
+	}
+	req.URL.RawQuery = query.Encode()
+	return req
+}
+
+func (c *HttpClient) applyHeader(operation domain.Request, req *http.Request) *http.Request {
+	req.Header = collection.MapMap(collection.FromMap(operation.Headers.Headers).
+		Filter(func(s string, h header.Header) bool {
+			return h.Active
+		}), func(key string, value header.Header) []string {
+			return value.Header
+		}).
+		Collect()
+	return req
+}
+
+func (c *HttpClient) applyAuth(operation domain.Request, req *http.Request) *http.Request {
+	for _, a := range operation.Auth.Auths {
+		if !a.Active {
+			continue
+		}
+		strategy := a.Type.LoadStrategy()
+		req = strategy(a, req)
+	}
+	return req
 }
 
 func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, resp http.Response) (*domain.Response, commons.ApiError) {
