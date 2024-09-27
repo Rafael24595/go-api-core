@@ -123,6 +123,10 @@ func (collection CollectionMap[T, K]) Collect() map[T]K {
 	return collection.items
 }
 
+func MapMapFrom[T comparable, K, E any](items map[T]K, predicate func(T, K) E) *CollectionMap[T, E] {
+    return MapMap(FromMap(items), predicate)
+}
+
 func MapMap[T comparable, K, E any](c *CollectionMap[T, K], predicate func(T, K) E) *CollectionMap[T, E] {
     mapped := map[T]E{}
     for key, item := range c.items {

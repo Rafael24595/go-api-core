@@ -1,8 +1,10 @@
 package collection
 
 import (
+	"fmt"
 	"math"
 	"sort"
+	"strings"
 )
 
 type CollectionList [T any] struct {
@@ -126,6 +128,10 @@ func (c *CollectionList[T]) Slice(start, end int) *CollectionList[T] {
 	return c
 }
 
+func MapListFrom[T, K any](items []T, predicate func(T) K) *CollectionList[K] {
+    return MapList(FromList(items), predicate)
+}
+
 func MapList[T, K any](c *CollectionList[T], predicate func(T) K) *CollectionList[K] {
     var mapped []K
     for _, item := range c.items {
@@ -136,6 +142,15 @@ func MapList[T, K any](c *CollectionList[T], predicate func(T) K) *CollectionLis
 	}
 }
 
-func (collection CollectionList[T]) Collect() []T {
-	return collection.items
+func (c *CollectionList[T]) Join(separator string) string {
+    if items, ok := interface{}(c.items).([]string); ok {
+        return strings.Join(items, separator)
+    }
+    return MapList(c, func(i T) string {
+        return fmt.Sprintf("%v", i)
+    }).Join(separator)
+}
+
+func (c CollectionList[T]) Collect() []T {
+	return c.items
 }
