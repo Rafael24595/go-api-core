@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"time"
+
 	"github.com/Rafael24595/go-api-core/src/domain/auth"
 	"github.com/Rafael24595/go-api-core/src/domain/body"
 	"github.com/Rafael24595/go-api-core/src/domain/cookie"
@@ -20,4 +22,31 @@ type Request struct {
 	Body      body.Body      `json:"body"`
 	Auth      auth.Auths     `json:"auth"`
 	Status    Status         `json:"status"`
+}
+
+func NewRequest(name string, method HttpMethod, uri string) *Request {
+	return &Request{
+		Id: "",
+		Timestamp: time.Now().UnixMilli(),
+		Name: name,
+		Method: method,
+		Uri: uri,
+		Queries: query.Queries{
+			Queries: make(map[string]query.Query),
+		},
+		Headers: header.Headers{
+			Headers: make(map[string]header.Header),
+		},
+		Cookies: cookie.Cookies{
+			Cookies: make(map[string]cookie.Cookie),
+		},
+		Body: body.Body{
+			ContentType: body.None,
+			Bytes: make([]byte, 0),
+		},
+		Auth: auth.Auths{
+			Auths: make(map[string]auth.Auth),
+		},
+		Status: Historic,
+	}
 }

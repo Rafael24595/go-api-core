@@ -52,6 +52,10 @@ func (c *CollectionMap[T, K]) Filter(predicate func(T, K) bool) *CollectionMap[T
     return c
 }
 
+func (c *CollectionMap[T, K]) MapSelf(predicate func(T, K) K) *CollectionMap[T, K] {
+    return MapMap(c, predicate)
+}
+
 func (c *CollectionMap[T, K]) Exists(key T) bool {
 	_, exists := c.items[key]
 	return exists
@@ -82,6 +86,10 @@ func (collection CollectionMap[T, K]) Keys() []T {
         keys = append(keys, key)
     }
 	return keys
+}
+
+func (collection CollectionMap[T, K]) KeysList() *CollectionList[T] {
+	return FromList(collection.Keys())
 }
 
 func (collection CollectionMap[T, K]) KeysCollection() *CollectionList[T] {

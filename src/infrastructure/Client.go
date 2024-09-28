@@ -133,8 +133,14 @@ func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, re
 		}
 	}
 
+	contentType := body.Text
+	sContentType := resp.Header.Get("content-type")
+	if oContentType, ok := body.FromContentType(sContentType); ok {
+		contentType = oContentType
+	}
+
 	bodyData := body.Body{
-		ContentType: body.None,
+		ContentType: contentType,
 		Bytes:       bodyResponse,
 	}
 
