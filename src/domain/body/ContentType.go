@@ -17,6 +17,10 @@ func (s ContentType) String() string {
 	return string(s)
 }
 
+func (s ContentType) lower() string {
+	return strings.ToLower(s.String())
+}
+
 func RequestContentTypes() []ContentType {
 	return []ContentType{
 		Text,
@@ -26,7 +30,26 @@ func RequestContentTypes() []ContentType {
 	}
 }
 
-func FromContentType(contentType string) (ContentType, bool) {
+func ContentTypeFromString(contentType string) (ContentType, bool) {
+	contentType = strings.ToLower(contentType)
+
+	switch strings.ToLower(contentType) {
+	case Text.lower():
+		return Text, true
+	case Form.lower():
+		return Form, true
+	case Json.lower():
+		return Json, true
+	case Xml.lower():
+		return Xml, true
+	case Html.lower():
+		return Html, true
+	}
+
+	return None, false
+}
+
+func ContentTypeFromHeader(contentType string) (ContentType, bool) {
 	contentType = strings.ToLower(contentType)
 
 	if strings.Contains(contentType, "text/plain") {

@@ -135,7 +135,7 @@ func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, re
 
 	contentType := body.Text
 	sContentType := resp.Header.Get("content-type")
-	if oContentType, ok := body.FromContentType(sContentType); ok {
+	if oContentType, ok := body.ContentTypeFromHeader(sContentType); ok {
 		contentType = oContentType
 	}
 
