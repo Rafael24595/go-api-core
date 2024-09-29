@@ -24,6 +24,10 @@ type Request struct {
 	Status    Status         `json:"status"`
 }
 
+func NewRequestEmpty() *Request {
+	return NewRequest("", GET, "")
+}
+
 func NewRequest(name string, method HttpMethod, uri string) *Request {
 	return &Request{
 		Id: "",
