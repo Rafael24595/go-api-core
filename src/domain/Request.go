@@ -20,7 +20,7 @@ type Request struct {
 	Headers   header.Headers `json:"headers"`
 	Cookies   cookie.Cookies `json:"cookies"`
 	Body      body.Body      `json:"body"`
-	Auth      auth.Auths     `json:"auth"`
+	Auths     auth.Auths     `json:"auth"`
 	Status    Status         `json:"status"`
 }
 
@@ -30,11 +30,11 @@ func NewRequestEmpty() *Request {
 
 func NewRequest(name string, method HttpMethod, uri string) *Request {
 	return &Request{
-		Id: "",
+		Id:        "",
 		Timestamp: time.Now().UnixMilli(),
-		Name: name,
-		Method: method,
-		Uri: uri,
+		Name:      name,
+		Method:    method,
+		Uri:       uri,
 		Queries: query.Queries{
 			Queries: make(map[string]query.Query),
 		},
@@ -46,9 +46,9 @@ func NewRequest(name string, method HttpMethod, uri string) *Request {
 		},
 		Body: body.Body{
 			ContentType: body.None,
-			Bytes: make([]byte, 0),
+			Bytes:       make([]byte, 0),
 		},
-		Auth: auth.Auths{
+		Auths: auth.Auths{
 			Auths: make(map[string]auth.Auth),
 		},
 		Status: Historic,

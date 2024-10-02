@@ -91,7 +91,7 @@ func (c *HttpClient) applyHeader(operation domain.Request, req *http.Request) *h
 }
 
 func (c *HttpClient) applyAuth(operation domain.Request, req *http.Request) *http.Request {
-	for _, a := range operation.Auth.Auths {
+	for _, a := range operation.Auths.Auths {
 		if !a.Active {
 			continue
 		}
