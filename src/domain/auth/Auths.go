@@ -1,11 +1,13 @@
 package auth
 
 type Auths struct {
+	Status bool
 	Auths map[string]Auth `json:"auths"`
 }
 
-func NewAuths() *Auths {
+func NewAuths(status bool) *Auths {
 	return &Auths{
+		Status: status,
 		Auths: make(map[string]Auth),
 	}
 }
