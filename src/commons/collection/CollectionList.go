@@ -95,6 +95,13 @@ func (c *CollectionList[T]) MapSelf(predicate func(T) T) *CollectionList[T] {
     return MapList(c, predicate)
 }
 
+func (c *CollectionList[T]) ForEach(predicate func(int, T)) *CollectionList[T] {
+    for i, v := range c.items {
+        predicate(i, v)
+    }
+    return c
+}
+
 func (c *CollectionList[T]) Map(predicate func(T) any) *CollectionList[interface{}] {
     return MapList(c, predicate)
 }
