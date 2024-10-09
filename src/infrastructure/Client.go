@@ -84,8 +84,8 @@ func (c *HttpClient) applyHeader(operation domain.Request, req *http.Request) *h
 		Filter(func(s string, h header.Header) bool {
 			return h.Active
 		}), func(key string, value header.Header) []string {
-			return value.Header
-		}).
+		return value.Header
+	}).
 		Collect()
 	return req
 }
@@ -116,6 +116,7 @@ func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, re
 		Headers: collection.MapMap(collection.FromMap(resp.Header), func(key string, value []string) header.Header {
 			return header.Header{
 				Active: true,
+				Key:    key,
 				Header: value,
 			}
 		}).Collect(),
@@ -125,7 +126,6 @@ func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, re
 		Cookies: make(map[string]cookie.Cookie),
 	}
 
-	
 	if setCookie, ok := headers.Headers["Set-Cookie"]; ok && len(setCookie.Header) > 0 {
 		for _, c := range setCookie.Header {
 			parsed, err := cookie.CookieFromString(c)
