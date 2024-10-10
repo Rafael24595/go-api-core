@@ -12,18 +12,20 @@ import (
 )
 
 const (
-	HEADER_ROOT = string(TBL_HEAD_BASE) + string(TBL_HEAD_ROOT) + string(TBL_HEAD_ROOT)
-	HEADER_REGULAR = string(TBL_HEAD_BASE) + string(TBL_HEAD_BASE) + string(TBL_HEAD_BASE)
+	HEADER_ROOT       = string(TBL_HEAD_BASE) + string(TBL_HEAD_ROOT) + string(TBL_HEAD_ROOT)
+	HEADER_REGULAR    = string(TBL_HEAD_BASE) + string(TBL_HEAD_BASE) + string(TBL_HEAD_BASE)
 	POINTER_INDEX_FIX = 2
 )
 
 type CsvtSerializer struct {
-	tables map[string][]string
+	tables      map[string][]string
+	nilPointers map[string]string
 }
 
 func NewSerializer() *CsvtSerializer {
 	return &CsvtSerializer{
-		tables: make(map[string][]string),
+		tables:      make(map[string][]string),
+		nilPointers: make(map[string]string),
 	}
 }
 
@@ -66,7 +68,7 @@ func (s *CsvtSerializer) makeTables(rootKey string) string {
 func (s *CsvtSerializer) makeTableRows(rows []string) string {
 	buffer := ""
 	for i, r := range rows {
-		index := strconv.FormatInt(int64(i - 1), 10)
+		index := strconv.FormatInt(int64(i-1), 10)
 		if i == 0 {
 			index = string(TBL_INDEX_HEAD)
 		}
@@ -80,16 +82,50 @@ func (s *CsvtSerializer) serialize(entity any) string {
 	rEntity := reflect.ValueOf(entity)
 
 	key := s.key(rEntity)
-	row := s.serializeEntity(entity, rEntity)
 
 	if _, exists := s.tables[key]; !exists {
 		headers, _ := s.headers(entity)
 		s.tables[key] = append(s.tables[key], headers)
+		if s.canEmpty(rEntity) {
+			s.tables[key] = append(s.tables[key], s.makeEmpty(rEntity))
+			s.nilPointers[key] = s.formatPointerReference(key, len(s.tables[key]))
+		}
 	}
 
-	s.tables[key] = append(s.tables[key], row)
+	if pointer, ok := s.nilPointers[key]; ok && s.isEmpty(rEntity) {
+		return pointer
+	}
 
-	return s.formatPointerReference(key, len(s.tables[key]))
+	row := s.serializeEntity(entity, rEntity)
+
+	s.tables[key] = append(s.tables[key], row)
+	pointer := s.formatPointerReference(key, len(s.tables[key]))
+
+	return pointer
+}
+
+func (s *CsvtSerializer) canEmpty(entity reflect.Value) bool {
+	kind := entity.Kind()
+	return kind == reflect.Array || kind == reflect.Chan || 
+		kind == reflect.Map || kind == reflect.Slice || 
+		kind == reflect.String
+}
+
+func (s *CsvtSerializer) isEmpty(entity reflect.Value) bool {
+	return s.canEmpty(entity) && entity.Len() == 0
+}
+
+func (s *CsvtSerializer) makeEmpty(entity reflect.Value) string {
+	switch entity.Kind() {
+	case reflect.String:
+		return "\"\""
+	case reflect.Map:
+		return ""
+	case reflect.Slice, reflect.Array:
+		return string(ARR_CLOSING)
+	default:
+		panic("Cannot be empty.")
+	}
 }
 
 func (s *CsvtSerializer) serializeEntity(entity any, rEntity reflect.Value) string {
@@ -202,7 +238,7 @@ func (s *CsvtSerializer) formatIndexArrow(index string) string {
 }
 
 func (s *CsvtSerializer) formatPointerReference(key string, position int) string {
-	return fmt.Sprintf("$%s_%v", key, position - POINTER_INDEX_FIX)
+	return fmt.Sprintf("$%s_%v", key, position-POINTER_INDEX_FIX)
 }
 
 func (s CsvtSerializer) sha1Identifier(input string) string {
