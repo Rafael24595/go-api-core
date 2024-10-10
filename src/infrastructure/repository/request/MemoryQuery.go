@@ -7,6 +7,7 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/commons/collection"
 	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/csvt_translator"
 )
 
@@ -49,6 +50,33 @@ func (r *MemoryQuery) FindAll() []domain.Request {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.collection.Values()
+}
+
+func (r *MemoryQuery) FindOptions(options repository.FilterOptions[domain.Request]) []domain.Request {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	values := r.collection.ValuesCollection()
+
+	if options.Predicate != nil {
+		values.Filter(options.Predicate)
+	}
+	if options.Sort != nil {
+		values.Sort(options.Sort)
+	}
+
+	from := 0
+	if options.From == 0 {
+		from = options.From
+	}
+
+	to := values.Size()
+	if options.To == 0 {
+		to = options.To
+	}
+
+	values.Slice(from, to)
+
+	return values.Collect()
 }
 
 func (r *MemoryQuery) Find(key string) (*domain.Request, bool) {

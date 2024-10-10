@@ -9,11 +9,11 @@ import (
 
 type MemoryCommand struct {
 	mu    sync.Mutex
-	query RepositoryQuery
+	query IRepositoryQuery
 	path  string
 }
 
-func NewMemoryCommand(query RepositoryQuery) *MemoryCommand {
+func NewMemoryCommand(query IRepositoryQuery) *MemoryCommand {
 	return &MemoryCommand{
 		query: query,
 		path:  DEFAULT_FILE_PATH,

@@ -6,12 +6,12 @@ import (
 )
 
 type MemoryCommandManager struct {
-	qHistoric RepositoryQuery
-	cHistoric RepositoryCommand
-	persisted RepositoryCommand
+	qHistoric IRepositoryQuery
+	cHistoric IRepositoryCommand
+	persisted IRepositoryCommand
 }
 
-func NewMemoryCommandManager(qHistoric RepositoryQuery, cHistoric RepositoryCommand, persisted RepositoryCommand) *MemoryCommandManager {
+func NewMemoryCommandManager(qHistoric IRepositoryQuery, cHistoric IRepositoryCommand, persisted IRepositoryCommand) *MemoryCommandManager {
 	return &MemoryCommandManager{
 		qHistoric: qHistoric,
 		cHistoric: cHistoric,

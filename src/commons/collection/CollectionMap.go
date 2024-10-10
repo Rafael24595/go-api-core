@@ -96,16 +96,8 @@ func (collection CollectionMap[T, K]) Keys() []T {
 	return keys
 }
 
-func (collection CollectionMap[T, K]) KeysList() *CollectionList[T] {
-	return FromList(collection.Keys())
-}
-
 func (collection CollectionMap[T, K]) KeysCollection() *CollectionList[T] {
-	keys := make([]T, 0, len(collection.items))
-    for key := range collection.items {
-        keys = append(keys, key)
-    }
-	return FromList(keys)
+	return FromList(collection.Keys())
 }
 
 func (c *CollectionMap[T, K]) Values() []K {
@@ -114,6 +106,10 @@ func (c *CollectionMap[T, K]) Values() []K {
         values = append(values, c.items[key])
     }
 	return values
+}
+
+func (collection CollectionMap[T, K]) ValuesCollection() *CollectionList[K] {
+	return FromList(collection.Values())
 }
 
 func (c *CollectionMap[T, K]) ValuesInterface() []any {
