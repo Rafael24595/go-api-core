@@ -7,6 +7,7 @@ import (
 )
 
 type Response struct {
+	Id      string         `json:"_id"`
 	Request string         `json:"request"`
 	Date    int64          `json:"date"`
 	Time    int64          `json:"time"`

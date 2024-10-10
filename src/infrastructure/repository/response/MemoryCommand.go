@@ -1,4 +1,4 @@
-package request
+package response
 
 import (
 	"sync"
@@ -17,29 +17,29 @@ type MemoryCommand struct {
 func NewMemoryCommand(query IRepositoryQuery) *MemoryCommand {
 	return &MemoryCommand{
 		query: query,
-		path:  query.filePath(),
+		path:  DEFAULT_FILE_PATH,
 	}
 }
 
-func (r *MemoryCommand) Insert(request domain.Request) *domain.Request {
+func (r *MemoryCommand) Insert(response domain.Response) *domain.Response {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	cursor, requests := r.query.insert(request)
-	r.write(requests)
+	cursor, responses := r.query.insert(response)
+	r.write(responses)
 	return &cursor
 }
 
-func (r *MemoryCommand) Delete(request domain.Request) *domain.Request {
+func (r *MemoryCommand) Delete(response domain.Response) *domain.Response {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	cursor, requests := r.query.delete(request)
-	r.write(requests)
+	cursor, responses := r.query.delete(response)
+	r.write(responses)
 	return &cursor
 }
 
-func (r *MemoryCommand) write(requests []any) error {
+func (r *MemoryCommand) write(responses []any) error {
 	csvt := csvt_translator.NewSerializer().
-		Serialize(requests...)
+		Serialize(responses...)
 
 	return utils.WriteFile(r.path, csvt)
 }

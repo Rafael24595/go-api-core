@@ -1,4 +1,4 @@
-package request
+package response
 
 import (
 	"sync"
@@ -14,7 +14,7 @@ import (
 
 type MemoryQuery struct {
 	mu         sync.RWMutex
-	collection *collection.CollectionMap[string, domain.Request]
+	collection *collection.CollectionMap[string, domain.Response]
 	path       string
 }
 
@@ -24,7 +24,7 @@ func NewMemoryQuery() *MemoryQuery {
 
 func newMemoryQuery(path string) *MemoryQuery {
 	return &MemoryQuery{
-		collection: collection.EmptyMap[string, domain.Request](),
+		collection: collection.EmptyMap[string, domain.Response](),
 		path:       path,
 	}
 }
@@ -39,25 +39,21 @@ func InitializeMemoryQueryPath(path string) (*MemoryQuery, error) {
 
 func initializeMemoryQuery(path string) (*MemoryQuery, error) {
 	instance := newMemoryQuery(path)
-	requests, err := instance.read()
+	responses, err := instance.read()
 	if err != nil {
 		return nil, err
 	}
-	instance.collection = collection.FromMap(requests)
+	instance.collection = collection.FromMap(responses)
 	return instance, nil
 }
 
-func (r *MemoryQuery) filePath() string {
-	return r.path
-}
-
-func (r *MemoryQuery) FindAll() []domain.Request {
+func (r *MemoryQuery) FindAll() []domain.Response {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.collection.Values()
 }
 
-func (r *MemoryQuery) FindOptions(options repository.FilterOptions[domain.Request]) []domain.Request {
+func (r *MemoryQuery) FindOptions(options repository.FilterOptions[domain.Response]) []domain.Response {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	values := r.collection.ValuesCollection()
@@ -84,7 +80,7 @@ func (r *MemoryQuery) FindOptions(options repository.FilterOptions[domain.Reques
 	return values.Collect()
 }
 
-func (r *MemoryQuery) Find(key string) (*domain.Request, bool) {
+func (r *MemoryQuery) Find(key string) (*domain.Response, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.collection.Find(key)
@@ -96,41 +92,41 @@ func (r *MemoryQuery) Exists(key string) bool {
 	return r.collection.Exists(key)
 }
 
-func (r *MemoryQuery) insert(request domain.Request) (domain.Request, []any) {
+func (r *MemoryQuery) insert(response domain.Response) (domain.Response, []any) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if request.Id != "" {
-		r.collection.Put(request.Id, request)
-		return request, r.collection.ValuesInterface()
+	if response.Id != "" {
+		r.collection.Put(response.Id, response)
+		return response, r.collection.ValuesInterface()
 	}
 	key := uuid.New().String()
 	if r.collection.Exists(key) {
-		return r.insert(request)
+		return r.insert(response)
 	}
-	request.Id = key
-	r.collection.Put(key, request)
-	return request, r.collection.ValuesInterface()
+	response.Id = key
+	r.collection.Put(key, response)
+	return response, r.collection.ValuesInterface()
 }
 
-func (r *MemoryQuery) delete(request domain.Request) (domain.Request, []any) {
+func (r *MemoryQuery) delete(response domain.Response) (domain.Response, []any) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	cursor := request
-	old, _ := r.collection.Remove(request.Id, request)
+	cursor := response
+	old, _ := r.collection.Remove(response.Id, response)
 	if old != nil {
 		cursor = *old
 	}
 	return cursor, r.collection.ValuesInterface()
 }
 
-func (r *MemoryQuery) read() (map[string]domain.Request, error) {
+func (r *MemoryQuery) read() (map[string]domain.Response, error) {
 	buffer, err := utils.ReadFile(r.path)
 	if err != nil {
 		return nil, err
 	}
 
-	requests := map[string]domain.Request{}
+	responses := map[string]domain.Response{}
 
 	deserializer, err := csvt_translator.NewDeserialzer(string(buffer))
 	if err != nil {
@@ -138,13 +134,13 @@ func (r *MemoryQuery) read() (map[string]domain.Request, error) {
 	}
 	iterator := deserializer.Iterate()
 	for iterator.Next() {
-		request := &domain.Request{}
-		_ , err := iterator.Deserialize(request)
+		response := &domain.Response{}
+		_ , err := iterator.Deserialize(response)
 		if err != nil {
 			return nil, err
 		}
-		requests[request.Id] = *request
+		responses[response.Id] = *response
 	}
 
-	return requests, nil
+	return responses, nil
 }

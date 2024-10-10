@@ -1,4 +1,4 @@
-package request
+package utils
 
 import (
 	"io"
@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-func readFile(filePath string) ([]byte, error) {
+func ReadFile(filePath string) ([]byte, error) {
 	dir := filepath.Dir(filePath)
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
@@ -30,7 +30,7 @@ func readFile(filePath string) ([]byte, error) {
 	return io.ReadAll(file)
 }
 
-func writeFile(filePath, content string) error {
+func WriteFile(filePath, content string) error {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
