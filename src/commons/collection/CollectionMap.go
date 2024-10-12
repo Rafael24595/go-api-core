@@ -23,7 +23,7 @@ func (c *CollectionMap[T, K]) Find(key T) (*K, bool) {
 	return &value, exists
 }
 
-func (c *CollectionMap[T, K]) FindOnePredicate(predicate func (K) bool) (*K, bool) {
+func (c *CollectionMap[T, K]) FindOnePredicate(predicate func (T, K) bool) (*K, bool) {
 	items := c.FindPredicate(predicate)
 	if len(items) == 0 {
 		return nil, false
@@ -31,10 +31,10 @@ func (c *CollectionMap[T, K]) FindOnePredicate(predicate func (K) bool) (*K, boo
 	return &items[0], true
 }
 
-func (c *CollectionMap[T, K]) FindPredicate(predicate func (K) bool) []K {
+func (c *CollectionMap[T, K]) FindPredicate(predicate func (T, K) bool) []K {
 	filter := []K{}
-	for _, v := range c.items {
-		if predicate(v) {
+	for k, v := range c.items {
+		if predicate(k, v) {
 			filter = append(filter, v)
 		}
 	}
@@ -129,6 +129,15 @@ func (c *CollectionMap[T, K]) Pairs() []Pair[T, K] {
 		})
     }
 	return pairs
+}
+
+func (c *CollectionMap[T, K]) Clean() *CollectionMap[T, K] {
+	c.items = make(map[T]K)
+	return c
+}
+
+func (c *CollectionMap[T, K]) Clone() *CollectionMap[T, K] {
+	return FromMap(c.items)
 }
 
 func (collection CollectionMap[T, K]) Collect() map[T]K {

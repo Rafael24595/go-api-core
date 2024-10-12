@@ -1,10 +1,11 @@
 package request
 
 import (
+	"encoding/json"
 	"sync"
 
 	"github.com/Rafael24595/go-api-core/src/domain"
-	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/csvt_translator"
+	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/utils"
 )
 
@@ -37,9 +38,24 @@ func (r *MemoryCommand) Delete(request domain.Request) *domain.Request {
 	return &cursor
 }
 
-func (r *MemoryCommand) write(requests []any) error {
-	csvt := csvt_translator.NewSerializer().
-		Serialize(requests...)
+func (r *MemoryCommand) DeleteOptions(options repository.FilterOptions[domain.Request]) []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
-	return utils.WriteFile(r.path, csvt)
+	ids, requests := r.query.deleteOptions(options, func(r domain.Request) string {
+		return r.Id
+	})
+
+	r.write(requests)
+
+	return ids
+}
+
+func (r *MemoryCommand) write(requests []any) error {
+	jsonData, err := json.Marshal(requests)
+	if err != nil {
+		return err
+	}
+
+	return utils.WriteFile(r.path, string(jsonData))
 }

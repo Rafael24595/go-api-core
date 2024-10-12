@@ -193,7 +193,7 @@ func (s *CsvtSerializer) serializeArray(entity reflect.Value) string {
 
 func (s *CsvtSerializer) serializeObject(entity any, rEntity reflect.Value) string {
 	if rEntity.Kind() == reflect.String {
-		return sprintf("\"%v\"", entity)
+		return sprintf("%s", fmt.Sprintf("%v", entity))
 	}
 	return sprintf("%v", entity)
 }
@@ -252,7 +252,9 @@ func sprintf(pattern string, values ...any) string {
 	for i, v := range values {
 		switch v := v.(type) {
 		case string:
-			values[i] = fmt.Sprintf("\"%v\"", v)
+			fixed := strings.ReplaceAll(v, "\"", "\\\"")
+			fixed = strings.ReplaceAll(fixed, "\n", "\\n")
+			values[i] = fmt.Sprintf("\"%v\"", fixed)
 		}
 	}
 	return fmt.Sprintf(pattern, values...)

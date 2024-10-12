@@ -6,11 +6,13 @@ import (
 )
 
 type IRepositoryQuery interface {
+	filePath() string
 	FindAll() []domain.Request
 	Find(key string) (*domain.Request, bool)
 	FindOptions(options repository.FilterOptions[domain.Request]) []domain.Request
 	Exists(key string) bool
-	filePath() string
+
 	insert(request domain.Request) (domain.Request, []any)
 	delete(request domain.Request) (domain.Request, []any)
+	deleteOptions(options repository.FilterOptions[domain.Request], mapper func(domain.Request) string) ([]string, []any)
 }

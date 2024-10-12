@@ -26,6 +26,11 @@ func (c *CollectionList[T]) Append(items ...T) *CollectionList[T] {
 	return c
 }
 
+func (c *CollectionList[T]) Merge(other CollectionList[T]) *CollectionList[T] {
+    c.items = append(c.items, other.items...)
+	return c
+}
+
 func (c *CollectionList[T]) Size() int {
 	return len(c.items)
 }
@@ -135,6 +140,28 @@ func (c *CollectionList[T]) Slice(start, end int) *CollectionList[T] {
 	return c
 }
 
+func (c *CollectionList[T]) Join(separator string) string {
+    if items, ok := interface{}(c.items).([]string); ok {
+        return strings.Join(items, separator)
+    }
+    return MapList(c, func(i T) string {
+        return fmt.Sprintf("%v", i)
+    }).Join(separator)
+}
+
+func (c *CollectionList[T]) Clean() *CollectionList[T] {
+	c.items = make([]T, 0)
+	return c
+}
+
+func (c *CollectionList[T]) Clone() *CollectionList[T] {
+	return FromList(c.items)
+}
+
+func (c CollectionList[T]) Collect() []T {
+	return c.items
+}
+
 func MapListFrom[T, K any](items []T, predicate func(T) K) *CollectionList[K] {
     return MapList(FromList(items), predicate)
 }
@@ -149,15 +176,14 @@ func MapList[T, K any](c *CollectionList[T], predicate func(T) K) *CollectionLis
 	}
 }
 
-func (c *CollectionList[T]) Join(separator string) string {
-    if items, ok := interface{}(c.items).([]string); ok {
-        return strings.Join(items, separator)
-    }
-    return MapList(c, func(i T) string {
-        return fmt.Sprintf("%v", i)
-    }).Join(separator)
+func MapperList[T comparable, K any](coll CollectionList[K], mapper func(K) T) *CollectionMap[T, K] {
+    return Mapper(coll.items, mapper)
 }
 
-func (c CollectionList[T]) Collect() []T {
-	return c.items
+func Mapper[T comparable, K any](coll []K, mapper func(K) T) *CollectionMap[T, K] {
+    mapp := EmptyMap[T, K]()
+    for _, v := range coll {
+        mapp.Put(mapper(v), v)
+    }
+    return mapp
 }

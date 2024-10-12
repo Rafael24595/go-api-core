@@ -2,6 +2,7 @@ package csvt_translator
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -15,74 +16,30 @@ func newDeserializerParser() *csvtParser {
 }
 
 func (p *csvtParser) parse(table string) (*ResourceNexus, TranslateError) {
-	rootCount := 0
-	headCount := 0
-	parseHead := false
-
-	arrowCount := 0
-	passArrow := false
-
-	name := ""
-	heads := []string{}
+	root := false
+	
 	items := []ResourceGroup{}
 
-	row := 0
-	buffer := ""
-	for _, v := range table {
-		if !parseHead {
-			if v == TBL_HEAD_BASE {
-				headCount++
-			} else if v == TBL_HEAD_ROOT {
-				rootCount++
-				headCount++
-			} else if v == '\n' && headCount == 3 {
-				parseHead = true
-				name = buffer
-				buffer = ""
-			} else if v == ' ' {
-				//
-			} else {
-				buffer += string(v)
-			}
-			continue
-		}
-		
-		isArrow, isHead := p.isArrowComponent(v)
-		if len(buffer) == 0 && isArrow && !passArrow {
-			if arrowCount > 0 {
-				passArrow = true
-			}
-			if isHead {
-				arrowCount++
-			}
-		} else if v == '\n' {
-			if row == 0 {
-				heads = p.parseHeaders(buffer)
-			} else {
-				row, err := p.parseRow(buffer, heads)
-				if err != nil {
-					return nil, err
-				}
-				items = append(items, *row)
-			}
-			buffer = ""
-			arrowCount = 0
-			passArrow = false
-			row++
-		} else {
-			buffer += string(v)
-		}
+	fragments := strings.Split(table, "\n")
+
+	if strings.Contains(fragments[0], string(TBL_HEAD_ROOT) + string(TBL_HEAD_ROOT)) {
+		root = true
 	}
 
-	if len(buffer) > 0 {
-		row, err := p.parseRow(buffer, heads)
+	re := regexp.MustCompile(`/\*\*\s|///\s`)
+	name := re.ReplaceAllString(fragments[0], "")
+
+	heads := p.parseHeaders(fragments[1])
+
+	for _, v := range fragments[1:] {
+		row, err := p.parseRow(v, heads)
 		if err != nil {
 			return nil, err
 		}
 		items = append(items, *row)
 	}
-
-	result := newNexus(name, rootCount == 2, items)
+	
+	result := newNexus(name, root, items)
 
 	return &result, nil
 }
@@ -230,44 +187,14 @@ func (p *csvtParser) parseStructure(row string) ([]ResourceNode, TranslateError)
 
 func (p *csvtParser) parseList(row string, separator, closing rune) ([]ResourceNode, TranslateError) {
 	lst := []ResourceNode{}
+	
+	for _, v := range strings.Split(row, string(separator)) {
+		re := regexp.MustCompile(`\d+-> `)
+		v := re.ReplaceAllString(v, "")
 
-	inString := false
-	escape := false
+		v = strings.ReplaceAll(v, string(closing), "")
 
-	buffer := ""
-	for _, v := range row {
-		isSpecialRuneInString := inString && (v == separator || v == closing)
-		isNotSpecialRune := v != separator && v != closing
-		if isNotSpecialRune || isSpecialRuneInString {
-			buffer += string(v)
-		}
-
-		if !inString {
-			if v == '"' {
-				inString = true
-			} else if v == separator {
-				node, err := p.parseObject(buffer)
-				if err != nil {
-					return nil, err
-				}
-				lst = append(lst, node)
-				buffer = ""
-			} else if v == closing {
-				break
-			}
-		} else if !escape {
-			if v == '"' {
-				inString = false
-			} else if v == '\\' {
-				escape = true
-			}
-		} else {
-			escape = false
-		}
-	}
-
-	if len(buffer) > 0 {
-		node, err := p.parseObject(buffer)
+		node, err := p.parseObject(v)
 		if err != nil {
 			return nil, err
 		}
@@ -311,25 +238,14 @@ func (p *csvtParser) isPointer(obj string) (string, int, bool, TranslateError) {
 		return obj, 0, false, nil
 	}
 
-	key := ""
+	fragments := strings.Split(obj[1:], string(PTR_SEPARATOR))
+
+	key := fragments[0]
 	index := 0
 
-	buffer := ""
-	for i, v := range obj {
-		if i == 0 {
-			continue
-		}
-		if v == PTR_SEPARATOR {
-			key = buffer
-			buffer = ""
-		} else {
-			buffer += string(v)
-		}
-	}
-
-	index, err := strconv.Atoi(buffer)
+	index, err := strconv.Atoi(fragments[1])
 	if err != nil {
-		message := fmt.Sprintf("Index \"%s\" type not recognized.", buffer)
+		message := fmt.Sprintf("Index \"%s\" type not recognized.", fragments[1])
 		return "", 0, false, TranslateErrorFromCause(message, err)
 	}
 

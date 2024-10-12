@@ -1,6 +1,7 @@
 package response
 
 import (
+	"encoding/json"
 	"sync"
 
 	"github.com/google/uuid"
@@ -8,7 +9,6 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/collection"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
-	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/csvt_translator"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/utils"
 )
 
@@ -47,6 +47,10 @@ func initializeMemoryQuery(path string) (*MemoryQuery, error) {
 	return instance, nil
 }
 
+func (r *MemoryQuery) filePath() string {
+	return r.path
+}
+
 func (r *MemoryQuery) FindAll() []domain.Response {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -54,6 +58,10 @@ func (r *MemoryQuery) FindAll() []domain.Response {
 }
 
 func (r *MemoryQuery) FindOptions(options repository.FilterOptions[domain.Response]) []domain.Response {
+	return r.findOptions(options).Collect()
+}
+
+func (r *MemoryQuery) findOptions(options repository.FilterOptions[domain.Response]) *collection.CollectionList[domain.Response] {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	values := r.collection.ValuesCollection()
@@ -66,18 +74,18 @@ func (r *MemoryQuery) FindOptions(options repository.FilterOptions[domain.Respon
 	}
 
 	from := 0
-	if options.From == 0 {
+	if options.From != 0 {
 		from = options.From
 	}
 
 	to := values.Size()
-	if options.To == 0 {
+	if options.To != 0 {
 		to = options.To
 	}
 
 	values.Slice(from, to)
 
-	return values.Collect()
+	return values
 }
 
 func (r *MemoryQuery) Find(key string) (*domain.Response, bool) {
@@ -120,27 +128,51 @@ func (r *MemoryQuery) delete(response domain.Response) (domain.Response, []any) 
 	return cursor, r.collection.ValuesInterface()
 }
 
+func (r *MemoryQuery) deleteOptions(options repository.FilterOptions[domain.Response], mapper func(domain.Response) string) ([]string, []any) {
+	optionsCopy := repository.FilterOptions[domain.Response]{
+		Predicate: options.Predicate,
+		From: 0,
+		To: 0,
+		Sort: options.Sort,
+	}
+
+	if optionsCopy.Predicate != nil {
+		optionsCopy.Predicate = func(r domain.Response) bool {
+			return !options.Predicate(r)
+		}
+	}
+
+	filtered := r.findOptions(optionsCopy)
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	result := filtered.Clone().Slice(0, options.From).
+		Merge(*filtered.Slice(options.To, filtered.Size()))
+
+	r.collection = collection.MapperList(*result, mapper)
+
+	return r.collection.Keys(), r.collection.ValuesInterface()
+}
+
 func (r *MemoryQuery) read() (map[string]domain.Response, error) {
 	buffer, err := utils.ReadFile(r.path)
 	if err != nil {
 		return nil, err
 	}
 
-	responses := map[string]domain.Response{}
+	if len(buffer) == 0 {
+		return make(map[string]domain.Response), nil
+	}
 
-	deserializer, err := csvt_translator.NewDeserialzer(string(buffer))
+	var requests []domain.Response
+	err = json.Unmarshal(buffer, &requests)
 	if err != nil {
 		return nil, err
 	}
-	iterator := deserializer.Iterate()
-	for iterator.Next() {
-		response := &domain.Response{}
-		_ , err := iterator.Deserialize(response)
-		if err != nil {
-			return nil, err
-		}
-		responses[response.Id] = *response
-	}
-
-	return responses, nil
+	
+	return collection.Mapper(requests, func(r domain.Response) string {
+		return r.Id
+	}).Collect(), nil
 }
+

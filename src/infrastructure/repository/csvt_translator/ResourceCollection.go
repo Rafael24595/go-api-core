@@ -14,7 +14,7 @@ func newCollection(nexus map[string]ResourceNexus) ResourceCollection {
 }
 
 func (r *ResourceCollection) root() (*ResourceNexus, bool) {
-	return r.nexus.FindOnePredicate(func(rn ResourceNexus) bool {
+	return r.nexus.FindOnePredicate(func(k string, rn ResourceNexus) bool {
 		return rn.root
 	})
 }
