@@ -179,7 +179,7 @@ func (d *CsvtDeserializer) makeArr(template any, root *ResourceGroup) (reflect.V
 		v := p.Value()
 		if v.index == -1 {
 			elem := reflect.ValueOf(v.value)
-			if elem.Type() != arrValuesType {
+			if elem.Type() != arrValuesType && !elem.CanConvert(arrValuesType) {
 				err := fmt.Sprintf("Array position \"%d\" type must be \"%s\", but \"%s\" found.", i, elem.Type().Name(), arrValuesType)
 				return reflect.Value{}, TranslateErrorFrom(err)
 			}

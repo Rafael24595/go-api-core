@@ -11,18 +11,17 @@ type csvtParser struct {
 }
 
 func newDeserializerParser() *csvtParser {
-	return &csvtParser{
-	}
+	return &csvtParser{}
 }
 
 func (p *csvtParser) parse(table string) (*ResourceNexus, TranslateError) {
 	root := false
-	
+
 	items := []ResourceGroup{}
 
 	fragments := strings.Split(table, "\n")
 
-	if strings.Contains(fragments[0], string(TBL_HEAD_ROOT) + string(TBL_HEAD_ROOT)) {
+	if strings.Contains(fragments[0], string(TBL_HEAD_ROOT)+string(TBL_HEAD_ROOT)) {
 		root = true
 	}
 
@@ -31,40 +30,35 @@ func (p *csvtParser) parse(table string) (*ResourceNexus, TranslateError) {
 
 	heads := p.parseHeaders(fragments[1])
 
-	for _, v := range fragments[1:] {
+	for _, v := range fragments[2:] {
+		if len(v) == 0 {
+			continue
+		}
 		row, err := p.parseRow(v, heads)
 		if err != nil {
 			return nil, err
 		}
 		items = append(items, *row)
 	}
-	
+
 	result := newNexus(name, root, items)
 
 	return &result, nil
 }
 
 func (p *csvtParser) parseHeaders(row string) []string {
-	heads := []string{}
-
-	buffer := ""
-	for _, v := range row {
-		if v != HEA_SEPARATOR {	
-			buffer += string(v)
-			continue
-		}
-		heads = append(heads, buffer)
-		buffer = ""
+	re := regexp.MustCompile(`[A-Za-z0-9]+->\s`)
+	row = re.ReplaceAllString(row, "")
+	if row == "" {
+		return []string{}
 	}
-
-	if len(buffer) > 0 {
-		heads = append(heads, buffer)
-	}
-
-	return heads
+	return strings.Split(row, string(HEA_SEPARATOR))
 }
 
 func (p *csvtParser) parseRow(row string, header []string) (*ResourceGroup, TranslateError) {
+	re := regexp.MustCompile(`\d+-> `)
+	row = re.ReplaceAllString(row, "")
+
 	instance := p.categoryOf(row, len(header) != 0)
 	var group interface{}
 	var err TranslateError
@@ -91,29 +85,13 @@ func (p *csvtParser) parseRow(row string, header []string) (*ResourceGroup, Tran
 }
 
 func (p *csvtParser) categoryOf(row string, header bool) GroupCategory {
-	inString := false
-	escape := false
-
-	for _, v := range row {
-		if !inString {
-			if v == '"' {
-				inString = true
-			} else if v == MAP_LINKER {
-				return MAP
-			} else if v == ARR_SEPARATOR || v == ARR_CLOSING {
-				return ARR
-			} else if v == STR_SEPARATOR || v == STR_CLOSING {
-				return STR
-			}
-		} else if !escape {
-			if v == '"' {
-				inString = false
-			} else if v == '\\' {
-				escape = true
-			}
-		} else {
-			escape = false
-		}
+	switch rune(row[len(row)-1]) {
+	case ARR_CLOSING:
+		return ARR
+	case MAP_CLOSING:
+		return MAP
+	case STR_CLOSING:
+		return STR
 	}
 
 	if !header {
@@ -126,53 +104,58 @@ func (p *csvtParser) categoryOf(row string, header bool) GroupCategory {
 func (p *csvtParser) parseMap(row string) (map[string]ResourceNode, TranslateError) {
 	mapp := map[string]ResourceNode{}
 
-	inString := false
-	escape := false
+	if rune(row[len(row)-1]) != MAP_CLOSING {
+		panic("Unsupported")
+	}
 
-	key := ""
+	row = row[:len(row)-1]
 
-	buffer := ""
-	for _, v := range row {
-		isSpecialRuneInString := inString && (v == MAP_LINKER || v == MAP_SEPARATOR)
-		isNotSpecialRune := v != MAP_LINKER && v != MAP_SEPARATOR
-		if isNotSpecialRune || isSpecialRuneInString {
-			buffer += string(v)
-		}
-
-		if !inString {
-			if v == '"' {
-				inString = true
-			} else if v == MAP_LINKER {
-				node, err := p.parseObject(buffer)
-				if err != nil {
-					return nil, err
-				}
-				key = node.key()
-				buffer = ""
-			} else if v == MAP_SEPARATOR {
-				node, err := p.parseObject(buffer)
-				if err != nil {
-					return nil, err
-				}
-				mapp[key] = node
-				buffer = ""
-			}
-		} else if !escape {
-			if v == '"' {
-				inString = false
-			} else if v == '\\' {
-				escape = true
-			}
+	buffer := row
+	for len(buffer) > 0 {
+		var index int
+		if buffer[0] == '"' {
+			index = strings.Index(buffer[1:], "\"") + 2
 		} else {
-			escape = false
+			index = strings.Index(buffer, string(MAP_LINKER))
 		}
-	}
 
-	node, err := p.parseObject(buffer)
-	if err != nil {
-		return nil, err
+		if index == -1 {
+			panic("Value undefined")
+		}
+
+		key := buffer[:index]
+		buffer = buffer[index+1:]
+
+		node, err := p.parseObject(key)
+		if err != nil {
+			return nil, err
+		}
+		key = node.key()
+
+		if buffer[0] == '"' {
+			index = strings.Index(buffer[1:], "\"") + 2
+		} else {
+			index = strings.Index(buffer, string(MAP_SEPARATOR))
+		}
+
+		var content string
+		if index != -1 {
+			if len(buffer) >= index && rune(buffer[index]) != MAP_SEPARATOR {
+				panic("Unsupported")
+			}
+			content = buffer[:index]
+			buffer = buffer[index+1:]
+		} else {
+			content = buffer
+			buffer = ""
+		}
+
+		node, err = p.parseObject(content)
+		if err != nil {
+			return nil, err
+		}
+		mapp[key] = node
 	}
-	mapp[key] = node
 
 	return mapp, nil
 }
@@ -187,14 +170,38 @@ func (p *csvtParser) parseStructure(row string) ([]ResourceNode, TranslateError)
 
 func (p *csvtParser) parseList(row string, separator, closing rune) ([]ResourceNode, TranslateError) {
 	lst := []ResourceNode{}
-	
-	for _, v := range strings.Split(row, string(separator)) {
-		re := regexp.MustCompile(`\d+-> `)
-		v := re.ReplaceAllString(v, "")
 
-		v = strings.ReplaceAll(v, string(closing), "")
+	if rune(row[len(row)-1]) != closing {
+		panic("Unsupported")
+	}
 
-		node, err := p.parseObject(v)
+	row = row[:len(row)-1]
+
+	buffer := row
+	for len(buffer) > 0 {
+		var index int
+		if buffer[0] == '"' {
+			index = strings.Index(buffer[1:], "\"") + 2
+			if len(buffer) == index {
+				index = -1
+			}
+		} else {
+			index = strings.Index(buffer, string(separator))
+		}
+
+		var content string
+		if index != -1 {
+			if len(buffer) >= index && rune(buffer[index]) != separator {
+				panic("Unsupported")
+			}
+			content = buffer[:index]
+			buffer = buffer[index+1:]
+		} else {
+			content = buffer
+			buffer = ""
+		}
+
+		node, err := p.parseObject(content)
 		if err != nil {
 			return nil, err
 		}
@@ -215,18 +222,22 @@ func (p *csvtParser) parseObject(obj string) (ResourceNode, TranslateError) {
 		return fromPointer(v, i), nil
 	}
 	if v, ok := p.isString(obj); ok {
-		return fromNonPointer(v) , nil
+		return fromNonPointer(v), nil
 	}
-	if v, err := strconv.ParseBool(obj); err == nil { 
-		return fromNonPointer(v) , nil
+	lower := strings.ToLower(obj) 
+	if lower == "false" {
+		return fromNonPointer(false), nil
+	}
+	if lower == "true" {
+		return fromNonPointer(true), nil
 	}
 	if strings.Contains(obj, ".") {
 		if v, err := strconv.ParseFloat(obj, 64); err == nil {
-			return fromNonPointer(v) , nil
+			return fromNonPointer(v), nil
 		}
 	}
 	if v, err := strconv.Atoi(obj); err == nil {
-		return fromNonPointer(v) , nil
+		return fromNonPointer(v), nil
 	}
 
 	err := fmt.Sprintf("Object type not recognized: \n%s.", obj)
@@ -255,11 +266,8 @@ func (p *csvtParser) isPointer(obj string) (string, int, bool, TranslateError) {
 func (p *csvtParser) isString(obj string) (string, bool) {
 	len := len(obj)
 	if obj[0] == '"' && obj[len-1] == '"' {
-		return obj[1 : len-1], true
+		fixed := strings.ReplaceAll(obj[1 : len-1], "\\'", "\"")
+		return fixed, true
 	}
 	return obj, false
-}
-
-func (p *csvtParser) isArrowComponent(v rune) (bool, bool) {
-	return (v >= '0' && v <= '9') || v == TBL_INDEX_HEAD || v == '-' || v == '>' || v == ' ', v == '>'
 }
