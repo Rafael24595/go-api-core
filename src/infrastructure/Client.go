@@ -21,6 +21,13 @@ func Client() *HttpClient {
 	return &HttpClient{}
 }
 
+func WarmUp() (*domain.Response, commons.ApiError) {
+	return Client().Fetch(domain.Request{
+		Method: domain.GET,
+		Uri: "https://www.google.es",
+	})
+}
+
 func (c *HttpClient) Fetch(request domain.Request) (*domain.Response, commons.ApiError) {
 	req, err := c.makeRequest(request)
 	if err != nil {

@@ -21,30 +21,31 @@ func NewMemoryCommand(query IRepositoryQuery) *MemoryCommand {
 }
 
 func (r *MemoryCommand) Insert(request domain.Request) *domain.Request {
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	cursor, requests := r.query.insert(request)
-	r.file.Write(requests)
+	go r.write(requests)
 	return &cursor
 }
 
 func (r *MemoryCommand) Delete(request domain.Request) *domain.Request {
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	cursor, requests := r.query.delete(request)
-	r.file.Write(requests)
+	go r.write(requests)
 	return &cursor
 }
 
 func (r *MemoryCommand) DeleteOptions(options repository.FilterOptions[domain.Request]) []string {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
 	ids, requests := r.query.deleteOptions(options, func(r domain.Request) string {
 		return r.Id
 	})
-
-	r.file.Write(requests)
-
+	go r.write(requests)
 	return ids
+}
+
+func (r *MemoryCommand) write(requests []any) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	err := r.file.Write(requests)
+	if err != nil {
+		println(err.Error())
+	}
 }
