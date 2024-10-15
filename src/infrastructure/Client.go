@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -22,10 +23,15 @@ func Client() *HttpClient {
 }
 
 func WarmUp() (*domain.Response, commons.ApiError) {
-	return Client().Fetch(domain.Request{
+	println("Warming up HTTP client...")
+	start := time.Now().UnixMilli()
+	response, result := Client().Fetch(domain.Request{
 		Method: domain.GET,
 		Uri: "https://www.google.es",
 	})
+	end := time.Now().UnixMilli()
+	println(fmt.Sprintf("Client initialized successfully in: %d ms", end - start))
+	return response, result
 }
 
 func (c *HttpClient) Fetch(request domain.Request) (*domain.Response, commons.ApiError) {
