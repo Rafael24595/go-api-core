@@ -185,8 +185,10 @@ func (s *CsvtSerializer) serializeArray(entity reflect.Value) string {
 		value := entity.Index(i).Interface()
 		if !isCommonType(value) {
 			value = s.serialize(value)
+		} else {
+			value = sprintf("%v", value)
 		}
-		arrayRow = append(arrayRow, sprintf("%v", value))
+		arrayRow = append(arrayRow, fmt.Sprintf("%v", value))
 	}
 	return fmt.Sprintf("%v%c", strings.Join(arrayRow, string(ARR_SEPARATOR)), ARR_CLOSING)
 }
