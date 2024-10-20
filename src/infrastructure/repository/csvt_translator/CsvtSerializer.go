@@ -120,7 +120,7 @@ func (s *CsvtSerializer) makeEmpty(entity reflect.Value) string {
 	case reflect.String:
 		return "\"\""
 	case reflect.Map:
-		return ""
+		return string(MAP_CLOSING)
 	case reflect.Slice, reflect.Array:
 		return string(ARR_CLOSING)
 	default:
@@ -176,7 +176,7 @@ func (s *CsvtSerializer) serializeMap(entity reflect.Value) string {
 		mapRow = append(mapRow, fmt.Sprintf("%v%c%v", key, MAP_LINKER, value))
 	}
 
-	return fmt.Sprintf("%v", strings.Join(mapRow, string(MAP_SEPARATOR)))
+	return fmt.Sprintf("%v%c", strings.Join(mapRow, string(MAP_SEPARATOR)), MAP_CLOSING)
 }
 
 func (s *CsvtSerializer) serializeArray(entity reflect.Value) string {
@@ -185,8 +185,10 @@ func (s *CsvtSerializer) serializeArray(entity reflect.Value) string {
 		value := entity.Index(i).Interface()
 		if !isCommonType(value) {
 			value = s.serialize(value)
+		} else {
+			value = sprintf("%v", value)
 		}
-		arrayRow = append(arrayRow, sprintf("%v", value))
+		arrayRow = append(arrayRow, fmt.Sprintf("%v", value))
 	}
 	return fmt.Sprintf("%v%c", strings.Join(arrayRow, string(ARR_SEPARATOR)), ARR_CLOSING)
 }
@@ -252,7 +254,7 @@ func sprintf(pattern string, values ...any) string {
 	for i, v := range values {
 		switch v := v.(type) {
 		case string:
-			fixed := strings.ReplaceAll(v, "\"", "\\\"")
+			fixed := strings.ReplaceAll(v, "\"", "\\'")
 			fixed = strings.ReplaceAll(fixed, "\n", "\\n")
 			values[i] = fmt.Sprintf("\"%v\"", fixed)
 		}

@@ -1,7 +1,6 @@
 package request
 
 import (
-	"encoding/json"
 	"sync"
 
 	"github.com/google/uuid"
@@ -9,37 +8,24 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/collection"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
-	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/utils"
 )
 
 type MemoryQuery struct {
 	mu         sync.RWMutex
 	collection *collection.CollectionMap[string, domain.Request]
-	path       string
+	file       IFileManager
 }
 
-func NewMemoryQuery() *MemoryQuery {
-	return newMemoryQuery(DEFAULT_FILE_PATH)
-}
-
-func newMemoryQuery(path string) *MemoryQuery {
+func NewMemoryQuery(file IFileManager) *MemoryQuery {
 	return &MemoryQuery{
 		collection: collection.EmptyMap[string, domain.Request](),
-		path:       path,
+		file:       file,
 	}
 }
 
-func InitializeMemoryQuery() (*MemoryQuery, error) {
-	return initializeMemoryQuery(DEFAULT_FILE_PATH)
-}
-
-func InitializeMemoryQueryPath(path string) (*MemoryQuery, error) {
-	return initializeMemoryQuery(path)
-}
-
-func initializeMemoryQuery(path string) (*MemoryQuery, error) {
-	instance := newMemoryQuery(path)
-	requests, err := instance.read()
+func InitializeMemoryQuery(file IFileManager) (*MemoryQuery, error) {
+	instance := NewMemoryQuery(file)
+	requests, err := instance.file.Read()
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +33,8 @@ func initializeMemoryQuery(path string) (*MemoryQuery, error) {
 	return instance, nil
 }
 
-func (r *MemoryQuery) filePath() string {
-	return r.path
+func (r *MemoryQuery) fileManager() IFileManager {
+	return r.file
 }
 
 func (r *MemoryQuery) FindAll() []domain.Request {
@@ -131,9 +117,9 @@ func (r *MemoryQuery) delete(request domain.Request) (domain.Request, []any) {
 func (r *MemoryQuery) deleteOptions(options repository.FilterOptions[domain.Request], mapper func(domain.Request) string) ([]string, []any) {
 	optionsCopy := repository.FilterOptions[domain.Request]{
 		Predicate: options.Predicate,
-		From: 0,
-		To: 0,
-		Sort: options.Sort,
+		From:      0,
+		To:        0,
+		Sort:      options.Sort,
 	}
 
 	if optionsCopy.Predicate != nil {
@@ -153,25 +139,4 @@ func (r *MemoryQuery) deleteOptions(options repository.FilterOptions[domain.Requ
 	r.collection = collection.MapperList(*result, mapper)
 
 	return r.collection.Keys(), r.collection.ValuesInterface()
-}
-
-func (r *MemoryQuery) read() (map[string]domain.Request, error) {
-	buffer, err := utils.ReadFile(r.path)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(buffer) == 0 {
-		return make(map[string]domain.Request), nil
-	}
-
-	var requests []domain.Request
-	err = json.Unmarshal(buffer, &requests)
-	if err != nil {
-		return nil, err
-	}
-
-	return collection.Mapper(requests, func(r domain.Request) string {
-		return r.Id
-	}).Collect(), nil
 }

@@ -4,6 +4,7 @@ const (
 	HEA_SEPARATOR rune = ';' 
 	MAP_SEPARATOR rune = ','
 	MAP_LINKER rune = '='
+	MAP_CLOSING rune = '^'
 	ARR_SEPARATOR rune = ','
 	ARR_CLOSING rune = '|'
 	STR_SEPARATOR rune = ';'
