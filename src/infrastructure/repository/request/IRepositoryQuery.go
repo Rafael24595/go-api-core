@@ -6,7 +6,7 @@ import (
 )
 
 type IRepositoryQuery interface {
-	fileManager() IFileManager
+	fileManager() repository.IFileManager[domain.Request]
 	FindAll() []domain.Request
 	Find(key string) (*domain.Request, bool)
 	FindOptions(options repository.FilterOptions[domain.Request]) []domain.Request

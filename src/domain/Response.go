@@ -17,3 +17,11 @@ type Response struct {
 	Body    body.Body      `json:"body"`
 	Size    int            `json:"size"`
 }
+
+func NewResponseDefault() *Response {
+	return &Response{}
+}
+
+func (r Response) PersistenceId() string {
+	return r.Id
+}

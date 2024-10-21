@@ -24,6 +24,10 @@ type Request struct {
 	Status    Status         `json:"status"`
 }
 
+func NewRequestDefault() *Request {
+	return &Request{}
+}
+
 func NewRequestEmpty() *Request {
 	return NewRequest("", GET, "")
 }
@@ -53,4 +57,8 @@ func NewRequest(name string, method HttpMethod, uri string) *Request {
 		},
 		Status: Historic,
 	}
+}
+
+func (r Request) PersistenceId() string {
+	return r.Id
 }

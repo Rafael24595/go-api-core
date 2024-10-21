@@ -13,17 +13,17 @@ import (
 type MemoryQuery struct {
 	mu         sync.RWMutex
 	collection *collection.CollectionMap[string, domain.Request]
-	file       IFileManager
+	file       repository.IFileManager[domain.Request]
 }
 
-func NewMemoryQuery(file IFileManager) *MemoryQuery {
+func NewMemoryQuery(file repository.IFileManager[domain.Request]) *MemoryQuery {
 	return &MemoryQuery{
 		collection: collection.EmptyMap[string, domain.Request](),
 		file:       file,
 	}
 }
 
-func InitializeMemoryQuery(file IFileManager) (*MemoryQuery, error) {
+func InitializeMemoryQuery(file repository.IFileManager[domain.Request]) (*MemoryQuery, error) {
 	instance := NewMemoryQuery(file)
 	requests, err := instance.file.Read()
 	if err != nil {
@@ -33,7 +33,7 @@ func InitializeMemoryQuery(file IFileManager) (*MemoryQuery, error) {
 	return instance, nil
 }
 
-func (r *MemoryQuery) fileManager() IFileManager {
+func (r *MemoryQuery) fileManager() repository.IFileManager[domain.Request] {
 	return r.file
 }
 

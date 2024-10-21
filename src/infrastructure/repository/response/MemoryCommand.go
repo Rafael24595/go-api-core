@@ -10,7 +10,7 @@ import (
 type MemoryCommand struct {
 	mu    sync.Mutex
 	query IRepositoryQuery
-	file  IFileManager
+	file  repository.IFileManager[domain.Response]
 }
 
 func NewMemoryCommand(query IRepositoryQuery) *MemoryCommand {

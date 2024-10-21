@@ -8,7 +8,7 @@ type Collection struct {
 	Nodes     []CollectionNode
 }
 
-func NewCollection() *Collection {
+func NewCollectionDefault() *Collection {
 	return &Collection{}
 }
 

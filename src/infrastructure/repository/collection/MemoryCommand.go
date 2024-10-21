@@ -22,7 +22,7 @@ func NewMemoryCommand(query IRepositoryQuery) *MemoryCommand {
 
 func (r *MemoryCommand) Insert(collection domain.Collection) *domain.Collection {
 	cursor, collections := r.query.insert(collection)
-	r.write(collections)
+	go r.write(collections)
 
 	return &cursor
 }
