@@ -11,6 +11,7 @@ type Status string
 
 const (
 	Historic Status = "HIST"
+	Saved    Status = "SAVE"
 )
 
 func (s Status) String() string {
