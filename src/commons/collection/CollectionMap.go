@@ -1,6 +1,6 @@
 package collection
 
-type CollectionMap [T comparable, K any] struct {
+type CollectionMap[T comparable, K any] struct {
 	items map[T]K
 }
 
@@ -23,7 +23,7 @@ func (c *CollectionMap[T, K]) Find(key T) (*K, bool) {
 	return &value, exists
 }
 
-func (c *CollectionMap[T, K]) FindOnePredicate(predicate func (T, K) bool) (*K, bool) {
+func (c *CollectionMap[T, K]) FindOnePredicate(predicate func(T, K) bool) (*K, bool) {
 	items := c.FindPredicate(predicate)
 	if len(items) == 0 {
 		return nil, false
@@ -31,7 +31,7 @@ func (c *CollectionMap[T, K]) FindOnePredicate(predicate func (T, K) bool) (*K, 
 	return &items[0], true
 }
 
-func (c *CollectionMap[T, K]) FindPredicate(predicate func (T, K) bool) []K {
+func (c *CollectionMap[T, K]) FindPredicate(predicate func(T, K) bool) []K {
 	filter := []K{}
 	for k, v := range c.items {
 		if predicate(k, v) {
@@ -42,18 +42,18 @@ func (c *CollectionMap[T, K]) FindPredicate(predicate func (T, K) bool) []K {
 }
 
 func (c *CollectionMap[T, K]) Filter(predicate func(T, K) bool) *CollectionMap[T, K] {
-    filter := map[T]K{}
-    for key, item := range c.items {
-        if predicate(key, item) {
+	filter := map[T]K{}
+	for key, item := range c.items {
+		if predicate(key, item) {
 			filter[key] = item
-        }
-    }
+		}
+	}
 	c.items = filter
-    return c
+	return c
 }
 
 func (c *CollectionMap[T, K]) MapSelf(predicate func(T, K) K) *CollectionMap[T, K] {
-    return MapMap(c, predicate)
+	return MapMap(c, predicate)
 }
 
 func (c *CollectionMap[T, K]) Exists(key T) bool {
@@ -76,9 +76,9 @@ func (c *CollectionMap[T, K]) PutIfAbsent(key T, item K) (*K, bool) {
 }
 
 func (c *CollectionMap[T, K]) Merge(other map[T]K) *CollectionMap[T, K] {
-    for key := range other {
-        c.items[key] = other[key]
-    }
+	for key := range other {
+		c.items[key] = other[key]
+	}
 	return c
 }
 
@@ -90,9 +90,9 @@ func (c *CollectionMap[T, K]) Remove(key T, item K) (*K, bool) {
 
 func (collection CollectionMap[T, K]) Keys() []T {
 	keys := make([]T, 0, len(collection.items))
-    for key := range collection.items {
-        keys = append(keys, key)
-    }
+	for key := range collection.items {
+		keys = append(keys, key)
+	}
 	return keys
 }
 
@@ -102,9 +102,9 @@ func (collection CollectionMap[T, K]) KeysCollection() *CollectionList[T] {
 
 func (c *CollectionMap[T, K]) Values() []K {
 	values := make([]K, 0, len(c.items))
-    for key := range c.items {
-        values = append(values, c.items[key])
-    }
+	for key := range c.items {
+		values = append(values, c.items[key])
+	}
 	return values
 }
 
@@ -114,20 +114,20 @@ func (collection CollectionMap[T, K]) ValuesCollection() *CollectionList[K] {
 
 func (c *CollectionMap[T, K]) ValuesInterface() []any {
 	values := make([]any, 0, len(c.items))
-    for key := range c.items {
-        values = append(values, c.items[key])
-    }
+	for key := range c.items {
+		values = append(values, c.items[key])
+	}
 	return values
 }
 
 func (c *CollectionMap[T, K]) Pairs() []Pair[T, K] {
 	pairs := make([]Pair[T, K], 0, len(c.items))
-    for key := range c.items {
-        pairs = append(pairs, Pair[T, K]{
-			key: key,
+	for key := range c.items {
+		pairs = append(pairs, Pair[T, K]{
+			key:   key,
 			value: c.items[key],
 		})
-    }
+	}
 	return pairs
 }
 
@@ -144,23 +144,34 @@ func (collection CollectionMap[T, K]) Collect() map[T]K {
 	return collection.items
 }
 
+func ListToMapFrom[T comparable, K, E any](list []K, predicate func(K) (T, E)) *CollectionMap[T, E] {
+	mapped := map[T]E{}
+	for _, item := range list {
+		t, e := predicate(item)
+		mapped[t] = e
+	}
+	return &CollectionMap[T, E]{
+		items: mapped,
+	}
+}
+
 func MapMapFrom[T comparable, K, E any](items map[T]K, predicate func(T, K) E) *CollectionMap[T, E] {
-    return MapMap(FromMap(items), predicate)
+	return MapMap(FromMap(items), predicate)
 }
 
 func MapMap[T comparable, K, E any](c *CollectionMap[T, K], predicate func(T, K) E) *CollectionMap[T, E] {
-    mapped := map[T]E{}
-    for key, item := range c.items {
+	mapped := map[T]E{}
+	for key, item := range c.items {
 		mapped[key] = predicate(key, item)
-    }
-    return &CollectionMap[T, E]{
+	}
+	return &CollectionMap[T, E]{
 		items: mapped,
 	}
 }
 
 func MapMerge[T comparable, K any](target, source map[T]K) map[T]K {
-    for k, v := range source {
-        target[k] = v
-    }
+	for k, v := range source {
+		target[k] = v
+	}
 	return target
 }
