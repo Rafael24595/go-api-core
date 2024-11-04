@@ -6,6 +6,7 @@ import (
 )
 
 type IRepositoryQuery interface {
+	SetPrefix(prefix string) IRepositoryQuery
 	fileManager() repository.IFileManager[domain.Request]
 	FindAll() []domain.Request
 	Find(key string) (*domain.Request, bool)

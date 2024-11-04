@@ -75,6 +75,11 @@ func (c *CollectionMap[T, K]) PutIfAbsent(key T, item K) (*K, bool) {
 	return old, exists
 }
 
+func (c *CollectionMap[T, K]) ComputeIfAbsent(key T, item K) *K {
+	result, _ := c.PutIfAbsent(key, item)
+	return result
+}
+
 func (c *CollectionMap[T, K]) Merge(other map[T]K) *CollectionMap[T, K] {
 	for key := range other {
 		c.items[key] = other[key]

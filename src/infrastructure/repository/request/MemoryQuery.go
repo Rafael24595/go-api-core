@@ -1,6 +1,7 @@
 package request
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/google/uuid"
@@ -12,12 +13,14 @@ import (
 
 type MemoryQuery struct {
 	mu         sync.RWMutex
+	prefix     string
 	collection *collection.CollectionMap[string, domain.Request]
 	file       repository.IFileManager[domain.Request]
 }
 
 func NewMemoryQuery(file repository.IFileManager[domain.Request]) *MemoryQuery {
 	return &MemoryQuery{
+		prefix:     "",
 		collection: collection.EmptyMap[string, domain.Request](),
 		file:       file,
 	}
@@ -31,6 +34,11 @@ func InitializeMemoryQuery(file repository.IFileManager[domain.Request]) (*Memor
 	}
 	instance.collection = collection.FromMap(requests)
 	return instance, nil
+}
+
+func (r *MemoryQuery) SetPrefix(prefix string) IRepositoryQuery {
+	r.prefix = prefix
+	return r
 }
 
 func (r *MemoryQuery) fileManager() repository.IFileManager[domain.Request] {
@@ -93,7 +101,12 @@ func (r *MemoryQuery) insert(request domain.Request) (domain.Request, []any) {
 		r.collection.Put(request.Id, request)
 		return request, r.collection.ValuesInterface()
 	}
+
 	key := uuid.New().String()
+	if r.prefix != "" {
+		key = fmt.Sprintf("%s-%s", r.prefix, key)
+	}
+
 	if r.collection.Exists(key) {
 		return r.insert(request)
 	}

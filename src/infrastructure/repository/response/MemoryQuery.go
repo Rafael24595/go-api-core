@@ -12,12 +12,14 @@ import (
 
 type MemoryQuery struct {
 	mu         sync.RWMutex
+	prefix     string
 	collection *collection.CollectionMap[string, domain.Response]
 	file       repository.IFileManager[domain.Response]
 }
 
 func NewMemoryQuery(file repository.IFileManager[domain.Response]) *MemoryQuery {
 	return &MemoryQuery{
+		prefix:     "",
 		collection: collection.EmptyMap[string, domain.Response](),
 		file:       file,
 	}
@@ -31,6 +33,11 @@ func InitializeMemoryQuery(file repository.IFileManager[domain.Response]) (*Memo
 	}
 	instance.collection = collection.FromMap(responses)
 	return instance, nil
+}
+
+func (r *MemoryQuery) SetPrefix(prefix string) IRepositoryQuery {
+	r.prefix = prefix
+	return r
 }
 
 func (r *MemoryQuery) fileManager() repository.IFileManager[domain.Response] {
