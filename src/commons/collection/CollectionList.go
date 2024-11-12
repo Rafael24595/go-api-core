@@ -149,6 +149,25 @@ func (c *CollectionList[T]) Join(separator string) string {
     }).Join(separator)
 }
 
+func (c *CollectionList[T]) JoinBy(indexer func(T) string, predicate func(i, j T) T) *CollectionList[T] {
+    dict := map[string]T{}
+    for _, item := range c.items {
+        key := indexer(item)
+        aux := item
+        if found, ok := dict[key]; ok {
+            aux = predicate(found, item)
+        }
+        dict[key] = aux
+    }
+
+    c.items = make([]T, 0)
+    for _, v := range dict {
+        c.items = append(c.items, v)
+    }
+
+    return c
+}
+
 func (c *CollectionList[T]) Clean() *CollectionList[T] {
 	c.items = make([]T, 0)
 	return c
