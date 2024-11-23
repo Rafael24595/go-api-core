@@ -3,19 +3,19 @@ hooks:
     repos:
       - id: run-linter
         origin: https://github.com/Rafael24595/hooks
-        tag: 0.0.2
+        tag: 0.0.3
         target: golang/sh
         name: run-linter.sh
 
       - id: run-tests
         origin: https://github.com/Rafael24595/hooks
-        tag: 0.0.2
+        tag: 0.0.3
         target: golang/sh
         name: run-tests.sh
 
       - id: check-large-files
         origin: https://github.com/Rafael24595/hooks
-        tag: 0.0.2
+        tag: 0.0.3
         target: golang/sh
         name: check-large-files.sh
         args:
