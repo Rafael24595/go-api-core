@@ -66,6 +66,11 @@ func (c *CollectionList[T]) IndexOf(predicate func(T) bool) (int, bool) {
 	return -1, false
 }
 
+func (c *CollectionList[T]) Contains(predicate func(T) bool) bool {
+	_, ok := c.Find(predicate)
+	return ok
+}
+
 func (c *CollectionList[T]) Find(predicate func(T) bool) (*T, bool) {
 	for _, item := range c.items {
         if predicate(item) {
