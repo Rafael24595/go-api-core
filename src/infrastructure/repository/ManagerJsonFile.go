@@ -3,8 +3,8 @@ package repository
 import (
 	"encoding/json"
 
-	"github.com/Rafael24595/go-api-core/src/commons/collection"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/utils"
+	"github.com/Rafael24595/go-collections/collection"
 )
 
 type ManagerJsonFile[T IStructure] struct {
@@ -35,7 +35,7 @@ func (m *ManagerJsonFile[T]) Read() (map[string]T, error) {
 		return nil, err
 	}
 
-	return collection.Mapper(items, func(r T) string {
+	return collection.DictionaryFromVector(*collection.VectorFromList(items), func(r T) string {
 		return r.PersistenceId()
 	}).Collect(), nil
 }

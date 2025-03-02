@@ -3,19 +3,19 @@ package csvt_translator
 import (
 	"strconv"
 
-	"github.com/Rafael24595/go-api-core/src/commons/collection"
+	"github.com/Rafael24595/go-collections/collection"
 )
 
 type ResourceGroup struct {
 	category GroupCategory
-	headers  collection.CollectionList[string]
+	headers  collection.Vector[string]
 	group    any
 }
 
 func newGroup[T any](category GroupCategory, headers []string, group T) ResourceGroup {
 	return ResourceGroup{
 		category: category,
-		headers: *collection.FromList(headers),
+		headers: *collection.VectorFromList(headers),
 		group: group,
 	}
 }

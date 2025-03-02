@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/Rafael24595/go-api-core/src/commons"
-	"github.com/Rafael24595/go-api-core/src/commons/collection"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/body"
 	"github.com/Rafael24595/go-api-core/src/domain/cookie"
 	"github.com/Rafael24595/go-api-core/src/domain/header"
+	"github.com/Rafael24595/go-collections/collection"
 )
 
 type HttpClient struct {
@@ -93,13 +93,15 @@ func (c *HttpClient) applyQuery(operation domain.Request, req *http.Request) *ht
 }
 
 func (c *HttpClient) applyHeader(operation domain.Request, req *http.Request) *http.Request {
-	req.Header = collection.MapMap(collection.FromMap(operation.Headers.Headers).
-		Filter(func(s string, h header.Header) bool {
+	filtered := collection.DictionaryFromMap(operation.Headers.Headers).
+		FilterSelf(func(s string, h header.Header) bool {
 			return h.Active
-		}), func(key string, value header.Header) []string {
+	})
+
+	req.Header = collection.DictionaryMap(filtered, func(key string, value header.Header) []string {
 		return value.Header
-	}).
-		Collect()
+	}).Collect()
+	
 	return req
 }
 
@@ -125,14 +127,16 @@ func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, re
 		return nil, commons.ApiErrorFromCause(500, "Failed to read response", err)
 	}
 
+	headersResponse := collection.DictionaryMap(collection.DictionaryFromMap(resp.Header), func(key string, value []string) header.Header {
+		return header.Header{
+			Active: true,
+			Key:    key,
+			Header: value,
+		}
+	}).Collect()
+
 	headers := header.Headers{
-		Headers: collection.MapMap(collection.FromMap(resp.Header), func(key string, value []string) header.Header {
-			return header.Header{
-				Active: true,
-				Key:    key,
-				Header: value,
-			}
-		}).Collect(),
+		Headers: headersResponse,
 	}
 
 	cookies := cookie.Cookies{

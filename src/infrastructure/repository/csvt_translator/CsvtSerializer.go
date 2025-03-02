@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Rafael24595/go-api-core/src/commons/collection"
+	"github.com/Rafael24595/go-collections/collection"
 )
 
 const (
@@ -43,8 +43,8 @@ func (s *CsvtSerializer) Serialize(entities ...any) string {
 }
 
 func (s *CsvtSerializer) makeTables(rootKey string) string {
-	keys := collection.FromMap(s.tables).
-		KeysCollection().
+	keys := collection.DictionaryFromMap(s.tables).
+		KeysVector().
 		Sort(func(a, b string) bool {
 			return a == rootKey
 		})

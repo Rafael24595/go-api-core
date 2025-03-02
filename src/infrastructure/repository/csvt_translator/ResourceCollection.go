@@ -1,26 +1,26 @@
 package csvt_translator
 
-import "github.com/Rafael24595/go-api-core/src/commons/collection"
+import "github.com/Rafael24595/go-collections/collection"
 
 type ResourceCollection struct {
-	nexus collection.CollectionMap[string, ResourceNexus]
+	nexus collection.Dictionary[string, ResourceNexus]
 }
 
 func newCollection(nexus map[string]ResourceNexus) ResourceCollection {
-	collection := collection.FromMap(nexus)
+	collection := collection.DictionaryFromMap(nexus)
 	return ResourceCollection{
 		nexus: *collection,
 	}
 }
 
 func (r *ResourceCollection) root() (*ResourceNexus, bool) {
-	return r.nexus.FindOnePredicate(func(k string, rn ResourceNexus) bool {
+	return r.nexus.FindOne(func(k string, rn ResourceNexus) bool {
 		return rn.root
 	})
 }
 
 func (r *ResourceCollection) Find(node *ResourceNode) (*ResourceGroup, bool) {
-	value, exists := r.nexus.Find(node.key())
+	value, exists := r.nexus.Get(node.key())
 	if !exists {
 		return nil, false
 	}
