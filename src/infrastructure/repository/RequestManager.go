@@ -6,7 +6,7 @@ import (
 	"github.com/Rafael24595/go-api-core/src/domain"
 )
 
-type policy func(IRepositoryRequest, IRepositoryResponse) error 
+type policy func(*domain.Request, IRepositoryRequest, IRepositoryResponse) error 
 
 const (
 	POLICY_INSERT = "insert"
@@ -81,7 +81,7 @@ func (m *RequestManager) Insert(request domain.Request, response *domain.Respons
 	}
 
 	for _, p := range policies {
-		p(m.request, m.response)
+		p(requestResult, m.request, m.response)
 	}
 
 	return requestResult, resultResponse
