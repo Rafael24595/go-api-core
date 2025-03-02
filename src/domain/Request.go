@@ -21,6 +21,7 @@ type Request struct {
 	Cookies   cookie.Cookies `json:"cookies"`
 	Body      body.Body      `json:"body"`
 	Auths     auth.Auths     `json:"auth"`
+	Owner     string         `json:"owner"`
 	Status    Status         `json:"status"`
 }
 
@@ -55,6 +56,7 @@ func NewRequest(name string, method HttpMethod, uri string) *Request {
 		Auths: auth.Auths{
 			Auths: make(map[string]auth.Auth),
 		},
+		Owner:  "anonymous",
 		Status: Historic,
 	}
 }
