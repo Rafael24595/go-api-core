@@ -41,10 +41,10 @@ func NewRequest(name string, method HttpMethod, uri string) *Request {
 		Method:    method,
 		Uri:       uri,
 		Queries: query.Queries{
-			Queries: make(map[string]query.Query),
+			Queries: make(map[string][]query.Query),
 		},
 		Headers: header.Headers{
-			Headers: make(map[string]header.Header),
+			Headers: make(map[string][]header.Header),
 		},
 		Cookies: cookie.Cookies{
 			Cookies: make(map[string]cookie.Cookie),

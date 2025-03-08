@@ -12,7 +12,6 @@ import (
 	"github.com/Rafael24595/go-api-core/src/domain/body"
 	"github.com/Rafael24595/go-api-core/src/domain/cookie"
 	"github.com/Rafael24595/go-api-core/src/domain/header"
-	"github.com/Rafael24595/go-collections/collection"
 )
 
 type HttpClient struct {
@@ -81,11 +80,11 @@ func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, commo
 func (c *HttpClient) applyQuery(operation domain.Request, req *http.Request) *http.Request {
 	query := req.URL.Query()
 	for k, q := range operation.Queries.Queries {
-		if !q.Active {
-			continue
-		}
-		for _, v := range q.Query {
-			query.Add(k, v)
+		for _, v := range q {
+			if !v.Active {
+				continue
+			}
+			query.Add(k, v.Value)
 		}
 	}
 	req.URL.RawQuery = query.Encode()
@@ -93,14 +92,20 @@ func (c *HttpClient) applyQuery(operation domain.Request, req *http.Request) *ht
 }
 
 func (c *HttpClient) applyHeader(operation domain.Request, req *http.Request) *http.Request {
-	filtered := collection.DictionaryFromMap(operation.Headers.Headers).
-		FilterSelf(func(s string, h header.Header) bool {
-			return h.Active
-	})
+	headers := map[string][]string{}
+	for k, h := range operation.Headers.Headers {
+		for _, v := range h {
+			if !v.Active {
+				continue
+			}
+			if _, ok := headers[k]; !ok {
+				headers[k] = make([]string, 0)
+			}
+			headers[k] = append(headers[k], v.Value)
+		}
+	}
 
-	req.Header = collection.DictionaryMap(filtered, func(key string, value header.Header) []string {
-		return value.Header
-	}).Collect()
+	req.Header = headers
 	
 	return req
 }
@@ -127,30 +132,11 @@ func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, re
 		return nil, commons.ApiErrorFromCause(500, "Failed to read response", err)
 	}
 
-	headersResponse := collection.DictionaryMap(collection.DictionaryFromMap(resp.Header), func(key string, value []string) header.Header {
-		return header.Header{
-			Active: true,
-			Key:    key,
-			Header: value,
-		}
-	}).Collect()
+	headers := c.makeHeaders(resp)
 
-	headers := header.Headers{
-		Headers: headersResponse,
-	}
-
-	cookies := cookie.Cookies{
-		Cookies: make(map[string]cookie.Cookie),
-	}
-
-	if setCookie, ok := headers.Headers["Set-Cookie"]; ok && len(setCookie.Header) > 0 {
-		for _, c := range setCookie.Header {
-			parsed, err := cookie.CookieFromString(c)
-			if err != nil {
-				return nil, err
-			}
-			cookies.Cookies[parsed.Code] = *parsed
-		}
+	cookies, err := c.makeCookies(headers)
+	if err != nil {
+		return nil, commons.ApiErrorFromCause(500, "Failed to read response", err)
 	}
 
 	contentType := body.Text
@@ -169,9 +155,51 @@ func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, re
 		Date:    start,
 		Time:    end - start,
 		Status:  int16(resp.StatusCode),
-		Headers: headers,
-		Cookies: cookies,
+		Headers: *headers,
+		Cookies: *cookies,
 		Body:    bodyData,
 		Size:    len(bodyResponse),
+	}, nil
+}
+
+func (c *HttpClient) makeHeaders(resp http.Response) *header.Headers {
+	headersResponse := map[string][]header.Header{}
+	for k, h := range resp.Header {
+		if _, ok := headersResponse[k]; !ok {
+			headersResponse[k] =  make([]header.Header, 0)
+		}
+		for _, v := range h {
+			headersResponse[k] = append(headersResponse[k], header.Header{
+				Active: true,
+				Key: k,
+				Value: v,
+			})
+		}
+	}
+
+	return &header.Headers{
+		Headers: headersResponse,
+	}
+}
+
+func (c *HttpClient) makeCookies(headers *header.Headers) (*cookie.Cookies, error) {
+	setCookie, ok := headers.Headers["Set-Cookie"];
+	if !ok && len(setCookie) > 0 {
+		return &cookie.Cookies{
+			Cookies: make(map[string]cookie.Cookie),
+		}, nil
+	}
+
+	cookies := map[string]cookie.Cookie{}
+	for _, c := range setCookie {
+		parsed, err := cookie.CookieFromString(c.Value)
+		if err != nil {
+			return nil, err
+		}
+		cookies[parsed.Code] = *parsed
+	}
+
+	return &cookie.Cookies{
+		Cookies: cookies,
 	}, nil
 }

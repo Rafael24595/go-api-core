@@ -5,12 +5,12 @@ import "strings"
 type ContentType string
 
 const (
-	None ContentType = "None"
-	Text ContentType = "Text"
-	Form ContentType = "Form"
-	Json ContentType = "Json"
-	Xml  ContentType = "Xml"
-	Html ContentType = "Html"
+	None ContentType = "none"
+	Text ContentType = "text"
+	Form ContentType = "form"
+	Json ContentType = "json"
+	Xml  ContentType = "xml"
+	Html ContentType = "html"
 )
 
 func (s ContentType) String() string {

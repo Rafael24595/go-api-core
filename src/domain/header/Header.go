@@ -1,15 +1,15 @@
 package header
 
 type Header struct {
-	Active bool     `json:"active"`
-	Key    string   `json:"key"`
-	Header []string `json:"header"`
+	Active bool   `json:"active"`
+	Key    string `json:"key"`
+	Value  string `json:"value"`
 }
 
-func NewHeader(active bool, key string, header ...string) Header {
+func NewHeader(active bool, key string, value string) Header {
 	return Header{
 		Active: active,
-		Key: key,
-		Header: header,
+		Key:    key,
+		Value:  value,
 	}
 }

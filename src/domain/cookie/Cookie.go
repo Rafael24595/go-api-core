@@ -9,15 +9,16 @@ import (
 )
 
 type Cookie struct {
-	Code       string
-	Value      string
-	Domain     string
-	Path       string
-	Expiration string
-	MaxAge     int
-	Secure     bool
-	HttpOnly   bool
-	SameSite   SameSite
+	Status     bool     `json:"status"`
+	Code       string   `json:"code"`
+	Value      string   `json:"value"`
+	Domain     string   `json:"domain"`
+	Path       string   `json:"path"`
+	Expiration string   `json:"expiration"`
+	MaxAge     int      `json:"maxage"`
+	Secure     bool     `json:"secure"`
+	HttpOnly   bool     `json:"httponly"`
+	SameSite   SameSite `json:"samesite"`
 }
 
 func CookieFromString(cookieString string) (*Cookie, error) {
@@ -32,6 +33,7 @@ func CookieFromString(cookieString string) (*Cookie, error) {
 	value := strings.TrimSpace(codeValue[1])
 
 	cookie := &Cookie{
+		Status:   true,
 		Code:     code,
 		Value:    value,
 		Secure:   false,

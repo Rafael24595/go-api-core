@@ -1,27 +1,21 @@
 package header
 
 type Headers struct {
-	Headers map[string]Header `json:"headers"`
+	Headers map[string][]Header `json:"headers"`
 }
 
 func NewHeaders() *Headers {
 	return &Headers{
-		Headers: make(map[string]Header),
+		Headers: make(map[string][]Header),
 	}
 }
 
 func (h *Headers) Add(header Header) *Headers {
-	param, ok := h.Headers[header.Key]
-	if !ok {
-		h.Headers[header.Key] = header
-		return h
+	if _, ok := h.Headers[header.Key]; !ok {
+		h.Headers[header.Key] = make([]Header, 0)
 	}
 
-	param.Header = append(param.Header, header.Header...)
-	
-	if header.Active && !param.Active {
-		param.Active = header.Active
-	}
+	h.Headers[header.Key] = append(h.Headers[header.Key], header)
 
 	return h
 }
