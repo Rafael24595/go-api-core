@@ -10,6 +10,8 @@ import (
 	"github.com/Rafael24595/go-api-core/src/domain/query"
 )
 
+const ANONYMOUS_OWNER = "anonymous"
+
 type Request struct {
 	Id        string         `json:"_id"`
 	Timestamp int64          `json:"timestamp"`
@@ -56,8 +58,8 @@ func NewRequest(name string, method HttpMethod, uri string) *Request {
 		Auths: auth.Auths{
 			Auths: make(map[string]auth.Auth),
 		},
-		Owner:  "anonymous",
-		Status: Historic,
+		Owner:  ANONYMOUS_OWNER,
+		Status: DRAFT,
 	}
 }
 

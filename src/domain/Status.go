@@ -10,8 +10,8 @@ import (
 type Status string
 
 const (
-	Historic Status = "HIST"
-	Saved    Status = "SAVE"
+	FINAL Status = "final"
+	DRAFT Status = "draft"
 )
 
 func (s Status) String() string {
@@ -20,8 +20,11 @@ func (s Status) String() string {
 
 func StatusFromString(value string) (*Status, commons.ApiError) {
 	switch strings.ToLower(value) {
-	case "HIST":
-		status := Historic
+	case string(FINAL):
+		status := FINAL
+		return &status, nil
+	case string(DRAFT):
+		status := DRAFT
 		return &status, nil
 	default:
 		return nil, commons.ApiErrorFrom(422, fmt.Sprintf("Unknown same-site value: '%s'", value))
