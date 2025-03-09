@@ -36,6 +36,9 @@ func (s *CsvtSerializer) Serialize(entities ...any) string {
 
 	rootKey := s.key(reflect.ValueOf(entities[0]))
 	for _, e := range entities {
+		if reflect.ValueOf(e).Kind() == reflect.Pointer {
+			panic("Not supported yet")
+		}
 		s.serialize(e)
 	}
 
