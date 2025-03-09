@@ -16,8 +16,8 @@ type RepositoryMemory struct {
 }
 
 func NewRepositoryMemory(
-		impl collection.IDictionary[string, domain.Historic], 
-		file repository.IFileManager[domain.Historic]) *RepositoryMemory {
+	impl collection.IDictionary[string, domain.Historic],
+	file repository.IFileManager[domain.Historic]) *RepositoryMemory {
 	return &RepositoryMemory{
 		collection: impl,
 		file:       file,
@@ -25,21 +25,21 @@ func NewRepositoryMemory(
 }
 
 func InitializeRepositoryMemory(
-		impl collection.IDictionary[string, domain.Historic], 
-		file repository.IFileManager[domain.Historic]) (*RepositoryMemory, error) {
-	requests, err := file.Read()
+	impl collection.IDictionary[string, domain.Historic],
+	file repository.IFileManager[domain.Historic]) (*RepositoryMemory, error) {
+	steps, err := file.Read()
 	if err != nil {
 		return nil, err
 	}
 	return NewRepositoryMemory(
-		impl.Merge(collection.DictionaryFromMap(requests)),
+		impl.Merge(collection.DictionaryFromMap(steps)),
 		file), nil
 }
 
-func (r *RepositoryMemory) FindAll() []domain.Historic {
+func (r *RepositoryMemory) Find(key string) (*domain.Historic, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Values()
+	return r.collection.Get(key)
 }
 
 func (r *RepositoryMemory) FindOptions(options repository.FilterOptions[domain.Historic]) []domain.Historic {
@@ -71,10 +71,15 @@ func (r *RepositoryMemory) findOptions(options repository.FilterOptions[domain.H
 	return values.Slice(from, to)
 }
 
-func (r *RepositoryMemory) Find(key string) (*domain.Historic, bool) {
+func (r *RepositoryMemory) FindByOwner(owner string) []domain.Historic {
+	//TODO: Implement grouping by owner.
+	return r.FindAll()
+}
+
+func (r *RepositoryMemory) FindAll() []domain.Historic {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(key)
+	return r.collection.Values()
 }
 
 func (r *RepositoryMemory) Exists(key string) bool {
@@ -83,21 +88,27 @@ func (r *RepositoryMemory) Exists(key string) bool {
 	return r.collection.Exists(key)
 }
 
-func (r *RepositoryMemory) Insert(request domain.Historic) *domain.Historic {
+func (r *RepositoryMemory) Insert(step domain.Historic) *domain.Historic {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
-	cursor, _ := r.collection.Put(request.Id, request)
+	if step.Id == "" {
+		//TODO: Manage error.
+		panic("Id is not defined.")
+	}
+
+	cursor, _ := r.collection.Put(step.Id, step)
+
 	go r.write(r.collection)
 
 	return cursor
 }
 
-func (r *RepositoryMemory) Delete(request domain.Historic) *domain.Historic {
+func (r *RepositoryMemory) Delete(step domain.Historic) *domain.Historic {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
-	cursor, _ := r.collection.Remove(request.Id)
+	cursor, _ := r.collection.Remove(step.Id)
 	go r.write(r.collection)
 
 	return cursor
@@ -149,7 +160,7 @@ func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, domain.
 	r.muFile.Lock()
 	defer r.muFile.Unlock()
 
-	items := collection.VectorEmpty[any]().Append(snapshot).Collect()
+	items := collection.VectorEmpty[any]().Append(snapshot.Values()).Collect()
 	err := r.file.Write(items)
 	if err != nil {
 		println(err.Error())

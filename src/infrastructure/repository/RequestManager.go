@@ -66,6 +66,10 @@ func (m *RequestManager) FindOptions(options FilterOptions[domain.Request]) []do
 	return m.request.FindOptions(options)
 }
 
+func (m *RequestManager) FindSteps(steps []domain.Historic) []domain.Request {
+	return m.request.FindSteps(steps)
+}
+
 func (m *RequestManager) Insert(request domain.Request, response *domain.Response) (*domain.Request, *domain.Response) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -77,14 +81,14 @@ func (m *RequestManager) Insert(request domain.Request, response *domain.Respons
 
 	policies, ok := m.policies[POLICY_INSERT]
 	if !ok {
-		return requestResult, resultResponse	
+		return &requestResult, &resultResponse	
 	}
 
 	for _, p := range policies {
-		p(requestResult, m.request, m.response)
+		p(&requestResult, m.request, m.response)
 	}
 
-	return requestResult, resultResponse
+	return &requestResult, &resultResponse
 }
 
 func (m *RequestManager) Delete(request domain.Request) (*domain.Request, *domain.Response) {

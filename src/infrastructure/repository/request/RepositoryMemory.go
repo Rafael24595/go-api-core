@@ -6,6 +6,7 @@ import (
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
+	"github.com/google/uuid"
 )
 
 type RepositoryMemory struct {
@@ -32,10 +33,10 @@ func InitializeRepositoryMemory(impl collection.IDictionary[string, domain.Reque
 		file), nil
 }
 
-func (r *RepositoryMemory) FindAll() []domain.Request {
+func (r *RepositoryMemory) Find(key string) (*domain.Request, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Values()
+	return r.collection.Get(key)
 }
 
 func (r *RepositoryMemory) FindOptions(options repository.FilterOptions[domain.Request]) []domain.Request {
@@ -67,10 +68,24 @@ func (r *RepositoryMemory) findOptions(options repository.FilterOptions[domain.R
 	return values.Slice(from, to)
 }
 
-func (r *RepositoryMemory) Find(key string) (*domain.Request, bool) {
+func (r *RepositoryMemory) FindSteps(steps []domain.Historic) []domain.Request {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(key)
+
+	requests := []domain.Request{}
+	for _, v := range steps {
+		if request, ok := r.collection.Get(v.Id); ok {
+			requests = append(requests, *request)
+		}
+	}
+
+	return requests
+}
+
+func (r *RepositoryMemory) FindAll() []domain.Request {
+	r.muMemory.RLock()
+	defer r.muMemory.RUnlock()
+	return r.collection.Values()
 }
 
 func (r *RepositoryMemory) Exists(key string) bool {
@@ -79,14 +94,27 @@ func (r *RepositoryMemory) Exists(key string) bool {
 	return r.collection.Exists(key)
 }
 
-func (r *RepositoryMemory) Insert(request domain.Request) *domain.Request {
+func (r *RepositoryMemory) Insert(request domain.Request) domain.Request {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
-	cursor, _ := r.collection.Put(request.Id, request)
+	if request.Id != "" {
+		r.collection.Put(request.Id, request)
+		go r.write(r.collection)
+		return request
+	}
+
+	key := uuid.New().String()
+	if r.collection.Exists(key) {
+		return r.Insert(request)
+	}
+
+	request.Id = key
+	r.collection.Put(key, request)
+
 	go r.write(r.collection)
 
-	return cursor
+	return request
 }
 
 func (r *RepositoryMemory) Delete(request domain.Request) *domain.Request {
@@ -145,7 +173,7 @@ func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, domain.
 	r.muFile.Lock()
 	defer r.muFile.Unlock()
 
-	items := collection.VectorEmpty[any]().Append(snapshot).Collect()
+	items := collection.VectorEmpty[any]().Append(snapshot.Values()).Collect()
 	err := r.file.Write(items)
 	if err != nil {
 		println(err.Error())

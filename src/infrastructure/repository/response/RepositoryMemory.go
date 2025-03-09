@@ -6,6 +6,7 @@ import (
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
+	"github.com/google/uuid"
 )
 
 type RepositoryMemory struct {
@@ -32,10 +33,10 @@ func InitializeRepositoryMemory(impl collection.IDictionary[string, domain.Respo
 		file), nil
 }
 
-func (r *RepositoryMemory) FindAll() []domain.Response {
+func (r *RepositoryMemory) Find(key string) (*domain.Response, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Values()
+	return r.collection.Get(key)
 }
 
 func (r *RepositoryMemory) FindOptions(options repository.FilterOptions[domain.Response]) []domain.Response {
@@ -67,10 +68,24 @@ func (r *RepositoryMemory) findOptions(options repository.FilterOptions[domain.R
 	return values.Slice(from, to)
 }
 
-func (r *RepositoryMemory) Find(key string) (*domain.Response, bool) {
+func (r *RepositoryMemory) FindSteps(steps []domain.Historic) []domain.Response {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(key)
+
+	responses := []domain.Response{}
+	for _, v := range steps {
+		if response, ok := r.collection.Get(v.Id); ok {
+			responses = append(responses, *response)
+		}
+	}
+
+	return responses
+}
+
+func (r *RepositoryMemory) FindAll() []domain.Response {
+	r.muMemory.RLock()
+	defer r.muMemory.RUnlock()
+	return r.collection.Values()
 }
 
 func (r *RepositoryMemory) Exists(key string) bool {
@@ -79,14 +94,27 @@ func (r *RepositoryMemory) Exists(key string) bool {
 	return r.collection.Exists(key)
 }
 
-func (r *RepositoryMemory) Insert(response domain.Response) *domain.Response {
+func (r *RepositoryMemory) Insert(response domain.Response) domain.Response {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
-	cursor, _ := r.collection.Put(response.Id, response)
+	if response.Id != "" {
+		r.collection.Put(response.Id, response)
+		go r.write(r.collection)
+		return response
+	}
+
+	key := uuid.New().String()
+	if r.collection.Exists(key) {
+		return r.Insert(response)
+	}
+
+	response.Id = key
+	r.collection.Put(key, response)
+
 	go r.write(r.collection)
 
-	return cursor
+	return response
 }
 
 func (r *RepositoryMemory) Delete(response domain.Response) *domain.Response {
@@ -145,7 +173,7 @@ func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, domain.
 	r.muFile.Lock()
 	defer r.muFile.Unlock()
 
-	items := collection.VectorEmpty[any]().Append(snapshot).Collect()
+	items := collection.VectorEmpty[any]().Append(snapshot.Values()).Collect()
 	err := r.file.Write(items)
 	if err != nil {
 		println(err.Error())
