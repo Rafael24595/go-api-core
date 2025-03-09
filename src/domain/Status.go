@@ -10,8 +10,8 @@ import (
 type Status string
 
 const (
-	FINAL Status = "final"
 	DRAFT Status = "draft"
+	FINAL Status = "final"
 )
 
 func (s Status) String() string {
