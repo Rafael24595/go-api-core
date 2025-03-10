@@ -2,11 +2,11 @@ package repository
 
 import (
 	"sync"
-	
+
 	"github.com/Rafael24595/go-api-core/src/domain"
 )
 
-type policy func(*domain.Request, IRepositoryRequest, IRepositoryResponse) error 
+type policy func(*domain.Request, IRepositoryRequest, IRepositoryResponse) error
 
 const (
 	POLICY_INSERT = "insert"
@@ -76,12 +76,13 @@ func (m *RequestManager) Insert(request domain.Request, response *domain.Respons
 
 	requestResult := m.request.Insert(request)
 
-	response.Id = request.Id
+	response.Id = requestResult.Id
+	response.Request = requestResult.Id
 	resultResponse := m.response.Insert(*response)
 
 	policies, ok := m.policies[POLICY_INSERT]
 	if !ok {
-		return &requestResult, &resultResponse	
+		return &requestResult, &resultResponse
 	}
 
 	for _, p := range policies {
