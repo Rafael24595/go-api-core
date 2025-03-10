@@ -173,7 +173,9 @@ func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, domain.
 	r.muFile.Lock()
 	defer r.muFile.Unlock()
 
-	items := collection.VectorEmpty[any]().Append(snapshot.Values()).Collect()
+	items := collection.DictionaryMap(snapshot, func(k string, v domain.Request) any {
+		return v
+	}).Values()
 	err := r.file.Write(items)
 	if err != nil {
 		println(err.Error())
