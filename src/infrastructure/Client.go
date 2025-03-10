@@ -79,7 +79,7 @@ func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, commo
 
 func (c *HttpClient) applyQuery(operation domain.Request, req *http.Request) *http.Request {
 	query := req.URL.Query()
-	for k, q := range operation.Queries.Queries {
+	for k, q := range operation.Query.Queries {
 		for _, v := range q {
 			if !v.Active {
 				continue
@@ -93,7 +93,7 @@ func (c *HttpClient) applyQuery(operation domain.Request, req *http.Request) *ht
 
 func (c *HttpClient) applyHeader(operation domain.Request, req *http.Request) *http.Request {
 	headers := map[string][]string{}
-	for k, h := range operation.Headers.Headers {
+	for k, h := range operation.Header.Headers {
 		for _, v := range h {
 			if !v.Active {
 				continue
@@ -111,10 +111,10 @@ func (c *HttpClient) applyHeader(operation domain.Request, req *http.Request) *h
 }
 
 func (c *HttpClient) applyAuth(operation domain.Request, req *http.Request) *http.Request {
-	if !operation.Auths.Status {
+	if !operation.Auth.Status {
 		return req
 	}
-	for _, a := range operation.Auths.Auths {
+	for _, a := range operation.Auth.Auths {
 		if !a.Active {
 			continue
 		}

@@ -18,11 +18,11 @@ type Request struct {
 	Name      string         `json:"name"`
 	Method    HttpMethod     `json:"method"`
 	Uri       string         `json:"uri"`
-	Queries   query.Queries  `json:"queries"`
-	Headers   header.Headers `json:"headers"`
-	Cookies   cookie.Cookies `json:"cookies"`
+	Query     query.Queries  `json:"query"`
+	Header    header.Headers `json:"header"`
+	Cookie    cookie.Cookies `json:"cookie"`
 	Body      body.Body      `json:"body"`
-	Auths     auth.Auths     `json:"auth"`
+	Auth      auth.Auths     `json:"auth"`
 	Owner     string         `json:"owner"`
 	Status    Status         `json:"status"`
 }
@@ -42,20 +42,20 @@ func NewRequest(name string, method HttpMethod, uri string) *Request {
 		Name:      name,
 		Method:    method,
 		Uri:       uri,
-		Queries: query.Queries{
+		Query: query.Queries{
 			Queries: make(map[string][]query.Query),
 		},
-		Headers: header.Headers{
+		Header: header.Headers{
 			Headers: make(map[string][]header.Header),
 		},
-		Cookies: cookie.Cookies{
+		Cookie: cookie.Cookies{
 			Cookies: make(map[string]cookie.Cookie),
 		},
 		Body: body.Body{
 			ContentType: body.None,
 			Bytes:       make([]byte, 0),
 		},
-		Auths: auth.Auths{
+		Auth: auth.Auths{
 			Auths: make(map[string]auth.Auth),
 		},
 		Owner:  ANONYMOUS_OWNER,
