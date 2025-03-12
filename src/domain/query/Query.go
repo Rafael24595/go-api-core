@@ -1,14 +1,14 @@
 package query
 
 type Query struct {
-	Active bool   `json:"active"`
+	Status bool   `json:"status"`
 	Key    string `json:"key"`
 	Value  string `json:"value"`
 }
 
-func NewQuery(active bool, key string, value string) Query {
+func NewQuery(status bool, key string, value string) Query {
 	return Query{
-		Active: active,
+		Status: status,
 		Key:    key,
 		Value:  value,
 	}

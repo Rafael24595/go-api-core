@@ -1,14 +1,14 @@
 package auth
 
 type Auths struct {
-	Status bool
-	Auths map[string]Auth `json:"auths"`
+	Status bool            `json:"status"`
+	Auths  map[string]Auth `json:"auths"`
 }
 
 func NewAuths(status bool) *Auths {
 	return &Auths{
 		Status: status,
-		Auths: make(map[string]Auth),
+		Auths:  make(map[string]Auth),
 	}
 }
 

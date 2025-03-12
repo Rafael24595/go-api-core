@@ -26,10 +26,10 @@ func WarmUp() (*domain.Response, commons.ApiError) {
 	start := time.Now().UnixMilli()
 	response, result := Client().Fetch(domain.Request{
 		Method: domain.GET,
-		Uri: "https://www.google.es",
+		Uri:    "https://www.google.es",
 	})
 	end := time.Now().UnixMilli()
-	println(fmt.Sprintf("Client initialized successfully in: %d ms", end - start))
+	println(fmt.Sprintf("Client initialized successfully in: %d ms", end-start))
 	return response, result
 }
 
@@ -61,7 +61,7 @@ func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, commo
 	url := operation.Uri
 
 	var body io.Reader
-	if !operation.Body.Empty() && method != "GET" && method != "HEAD" {
+	if !operation.Body.Empty() && operation.Body.Status && method != "GET" && method != "HEAD" {
 		body = bytes.NewBuffer(operation.Body.Bytes)
 	}
 
@@ -81,7 +81,7 @@ func (c *HttpClient) applyQuery(operation domain.Request, req *http.Request) *ht
 	query := req.URL.Query()
 	for k, q := range operation.Query.Queries {
 		for _, v := range q {
-			if !v.Active {
+			if !v.Status {
 				continue
 			}
 			query.Add(k, v.Value)
@@ -95,7 +95,7 @@ func (c *HttpClient) applyHeader(operation domain.Request, req *http.Request) *h
 	headers := map[string][]string{}
 	for k, h := range operation.Header.Headers {
 		for _, v := range h {
-			if !v.Active {
+			if !v.Status {
 				continue
 			}
 			if _, ok := headers[k]; !ok {
@@ -106,7 +106,7 @@ func (c *HttpClient) applyHeader(operation domain.Request, req *http.Request) *h
 	}
 
 	req.Header = headers
-	
+
 	return req
 }
 
@@ -146,6 +146,7 @@ func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, re
 	}
 
 	bodyData := body.Body{
+		Status:      true,
 		ContentType: contentType,
 		Bytes:       bodyResponse,
 	}
@@ -166,13 +167,13 @@ func (c *HttpClient) makeHeaders(resp http.Response) *header.Headers {
 	headersResponse := map[string][]header.Header{}
 	for k, h := range resp.Header {
 		if _, ok := headersResponse[k]; !ok {
-			headersResponse[k] =  make([]header.Header, 0)
+			headersResponse[k] = make([]header.Header, 0)
 		}
 		for _, v := range h {
 			headersResponse[k] = append(headersResponse[k], header.Header{
-				Active: true,
-				Key: k,
-				Value: v,
+				Status: true,
+				Key:    k,
+				Value:  v,
 			})
 		}
 	}
@@ -183,7 +184,7 @@ func (c *HttpClient) makeHeaders(resp http.Response) *header.Headers {
 }
 
 func (c *HttpClient) makeCookies(headers *header.Headers) (*cookie.Cookies, error) {
-	setCookie, ok := headers.Headers["Set-Cookie"];
+	setCookie, ok := headers.Headers["Set-Cookie"]
 	if !ok && len(setCookie) > 0 {
 		return &cookie.Cookies{
 			Cookies: make(map[string]cookie.Cookie),
