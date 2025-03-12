@@ -118,10 +118,14 @@ func (r *RepositoryMemory) Insert(request domain.Request) domain.Request {
 }
 
 func (r *RepositoryMemory) Delete(request domain.Request) *domain.Request {
+	return r.DeleteById(request.Id)
+}
+
+func (r *RepositoryMemory) DeleteById(id string) *domain.Request {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
-	cursor, _ := r.collection.Remove(request.Id)
+	cursor, _ := r.collection.Remove(id)
 	go r.write(r.collection)
 
 	return cursor

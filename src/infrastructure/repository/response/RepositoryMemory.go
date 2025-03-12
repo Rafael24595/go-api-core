@@ -118,10 +118,14 @@ func (r *RepositoryMemory) Insert(response domain.Response) domain.Response {
 }
 
 func (r *RepositoryMemory) Delete(response domain.Response) *domain.Response {
+	return r.DeleteById(response.Id)
+}
+
+func (r *RepositoryMemory) DeleteById(id string) *domain.Response {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
-	cursor, _ := r.collection.Remove(response.Id)
+	cursor, _ := r.collection.Remove(id)
 	go r.write(r.collection)
 
 	return cursor

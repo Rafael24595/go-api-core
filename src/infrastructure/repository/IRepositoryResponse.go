@@ -12,5 +12,6 @@ type IRepositoryResponse interface {
 	FindAll() []domain.Response
 	Insert(response domain.Response) domain.Response
 	Delete(response domain.Response) *domain.Response
+	DeleteById(id string) *domain.Response 
 	DeleteOptions(options FilterOptions[domain.Response]) []string
 }

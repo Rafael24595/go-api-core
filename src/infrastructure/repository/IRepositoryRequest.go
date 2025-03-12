@@ -12,5 +12,6 @@ type IRepositoryRequest interface {
 	FindAll() []domain.Request
 	Insert(request domain.Request) domain.Request
 	Delete(request domain.Request) *domain.Request
+	DeleteById(id string) *domain.Request 
 	DeleteOptions(options FilterOptions[domain.Request]) []string
 }

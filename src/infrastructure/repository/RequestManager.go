@@ -93,10 +93,11 @@ func (m *RequestManager) Insert(request domain.Request, response *domain.Respons
 }
 
 func (m *RequestManager) Delete(request domain.Request) (*domain.Request, *domain.Response) {
-	requestResult := m.request.Delete(request)
-	response, ok := m.response.Find(request.Id)
-	if ok {
-		m.response.Delete(*response)
-	}
-	return requestResult, response
+	return m.DeleteById(request.Id)
+}
+
+func (m *RequestManager) DeleteById(id string) (*domain.Request, *domain.Response) {
+	request := m.request.DeleteById(id)
+	response := m.response.DeleteById(id)
+	return request, response
 }
