@@ -2,6 +2,7 @@ package request
 
 import (
 	"sync"
+	"time"
 
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
@@ -49,7 +50,7 @@ func (r *RepositoryMemory) findOptions(options repository.FilterOptions[domain.R
 	values := r.collection.ValuesVector()
 
 	if options.Predicate != nil {
-		values.Filter(options.Predicate)
+		values.FilterSelf(options.Predicate)
 	}
 	if options.Sort != nil {
 		values.Sort(options.Sort)
@@ -97,6 +98,12 @@ func (r *RepositoryMemory) Exists(key string) bool {
 func (r *RepositoryMemory) Insert(request domain.Request) domain.Request {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
+
+	if request.Timestamp == 0 {
+		request.Timestamp = time.Now().UnixMilli()
+	}
+
+	request.Modified = time.Now().UnixMilli()
 
 	if request.Id != "" {
 		r.collection.Put(request.Id, request)

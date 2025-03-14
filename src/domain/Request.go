@@ -24,6 +24,7 @@ type Request struct {
 	Body      body.Body      `json:"body"`
 	Auth      auth.Auths     `json:"auth"`
 	Owner     string         `json:"owner"`
+	Modified  int64          `json:"modified"`
 	Status    Status         `json:"status"`
 }
 
@@ -59,6 +60,7 @@ func NewRequest(name string, method HttpMethod, uri string) *Request {
 			Auths: make(map[string]auth.Auth),
 		},
 		Owner:  ANONYMOUS_OWNER,
+		Modified: time.Now().UnixMilli(),
 		Status: DRAFT,
 	}
 }
