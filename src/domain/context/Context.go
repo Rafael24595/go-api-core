@@ -15,7 +15,7 @@ import (
 	"github.com/Rafael24595/go-collections/collection"
 )
 
-type DictionaryVariables = collection.Dictionary[string, string]
+type DictionaryVariables = collection.Dictionary[string, ItemContext]
 type DictionaryCategory = collection.Dictionary[string, DictionaryVariables]
 
 type Context struct {
@@ -38,10 +38,10 @@ func NewContext(owner string) *Context {
 	}
 }
 
-func (c *Context) PutAll(category string, context map[string]string) *Context {
+func (c *Context) PutAll(category string, context map[string]ItemContext) *Context {
 	variables, ok := c.Dictionary.Get(category)
 	if !ok {
-		c.Dictionary.Put(category, *collection.DictionaryEmpty[string, string]())
+		c.Dictionary.Put(category, *collection.DictionaryEmpty[string, ItemContext]())
 		variables, _ = c.Dictionary.Get(category)
 	}
 	variables.PutAll(context)
@@ -55,8 +55,8 @@ func (c Context) Apply(category, source string) string {
 		categoryGroup, ok := c.Dictionary.Get(v.Key())
 		if ok {
 			keyValue, ok := categoryGroup.Get(v.Value())
-			if ok {
-				value = *keyValue
+			if keyValue.Status && ok {
+				value = keyValue.Value
 			}
 		}
 		fix = strings.ReplaceAll(fix, fmt.Sprintf("${%s}", v.Value()), value)
@@ -118,11 +118,9 @@ func processQuery(queries query.Queries, context Context) *query.Queries {
 		key := context.Apply("query", k)
 		queryCollection := []query.Query{}
 		for _, q := range qs {
-			key := context.Apply("query", q.Key)
 			value := context.Apply("query", q.Value)
 			queryCollection = append(queryCollection, query.Query{
 				Status: q.Status,
-				Key:    key,
 				Value:  value,
 			})
 		}
@@ -140,11 +138,9 @@ func processHeader(headers header.Headers, context Context) *header.Headers {
 		key := context.Apply("header", k)
 		headerCollection := []header.Header{}
 		for _, h := range hs {
-			key := context.Apply("header", h.Key)
 			value := context.Apply("header", h.Value)
 			headerCollection = append(headerCollection, header.Header{
 				Status: h.Status,
-				Key:    key,
 				Value:  value,
 			})
 		}

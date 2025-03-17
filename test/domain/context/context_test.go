@@ -49,19 +49,20 @@ func TestIdenfyVariables(t *testing.T) {
 }
 
 func TestContextApply(t *testing.T) {
-	source := "Lorem ${var_1} dolor ${global.var_2} amet, ${query.var_3} adipiscing ${var_4}. Morbi eleifend odio quis ${global.var_1} commodo sodales."
-	context := context.NewContext("anonymous").
-		PutAll("global", map[string]string{
-			"var_1": "ipsum",
-			"var_2": "sit",
-			"var_4": "elit",
+	source := "Lorem ${var_1} dolor ${global.var_2} amet, ${query.var_3} adipiscing ${var_4}. Morbi eleifend odio quis ${global.var_1} commodo ${query.var_5}."
+	ctx := context.NewContext("anonymous").
+		PutAll("global", map[string]context.ItemContext{
+			"var_1": context.NewItemContext(true, "ipsum"),
+			"var_2": context.NewItemContext(true, "sit"),
+			"var_4": context.NewItemContext(true, "elit"),
 		}).
-		PutAll("query", map[string]string{
-			"var_3": "consectetur",
+		PutAll("query", map[string]context.ItemContext{
+			"var_3": context.NewItemContext(true, "consectetur"),
+			"var_5": context.NewItemContext(false, "sodales"),
 		})
 
-	fixSource := context.Apply("global", source)
-	expected := "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi eleifend odio quis ipsum commodo sodales."
+	fixSource := ctx.Apply("global", source)
+	expected := "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi eleifend odio quis ipsum commodo ."
 	if fixSource != expected {
 		t.Errorf("Found source %s but %s expected", fixSource, expected)
 	}
@@ -82,23 +83,23 @@ func TestProcessRequest(t *testing.T) {
 	}
 
 	ctx := context.NewContext("anonymous").
-		PutAll("global", map[string]string{
-			"user": "Rafael24595",
+		PutAll("global", map[string]context.ItemContext{
+			"user": context.NewItemContext(true, "Rafael24595"),
 		}).
-		PutAll("uri", map[string]string{
-			"repository": "go-api-core",
+		PutAll("uri", map[string]context.ItemContext{
+			"repository": context.NewItemContext(true, "go-api-core"),
 		}).
-		PutAll("query", map[string]string{
-			"branch": "dev",
+		PutAll("query", map[string]context.ItemContext{
+			"branch": context.NewItemContext(true, "dev"),
 		}).
-		PutAll("header", map[string]string{
-			"type": "application/json",
+		PutAll("header", map[string]context.ItemContext{
+			"type": context.NewItemContext(true, "application/json"),
 		}).
-		PutAll("payload", map[string]string{
-			"status": "\"true\"",
+		PutAll("payload", map[string]context.ItemContext{
+			"status": context.NewItemContext(true, "\"true\""),
 		}).
-		PutAll("auth", map[string]string{
-			"pass": "secret-key",
+		PutAll("auth", map[string]context.ItemContext{
+			"pass": context.NewItemContext(true, "secret-key"),
 		})
 
 	request := context.ProcessRequest(&requestRaw, *ctx)
