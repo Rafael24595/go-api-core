@@ -1,18 +1,18 @@
 package auth
 
 type Auth struct {
-	Active     bool                 `json:"active"`
+	Status     bool                 `json:"status"`
 	Type       Type                 `json:"type"`
 	Parameters map[string]Parameter `json:"parameters"`
 }
 
-func NewAuthEmpty(active bool, typ Type) *Auth {
-	return NewAuth(active, typ, make(map[string]Parameter))
+func NewAuthEmpty(status bool, typ Type) *Auth {
+	return NewAuth(status, typ, make(map[string]Parameter))
 }
 
-func NewAuth(active bool, typ Type, parameters map[string]Parameter) *Auth {
+func NewAuth(status bool, typ Type, parameters map[string]Parameter) *Auth {
 	return &Auth{
-		Active: active,
+		Status: status,
 		Type: typ,
 		Parameters: parameters,
 	}

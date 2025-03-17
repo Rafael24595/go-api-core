@@ -115,7 +115,7 @@ func (c *HttpClient) applyAuth(operation domain.Request, req *http.Request) *htt
 		return req
 	}
 	for _, a := range operation.Auth.Auths {
-		if !a.Active {
+		if !a.Status {
 			continue
 		}
 		strategy := a.Type.LoadStrategy()
