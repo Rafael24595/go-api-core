@@ -10,12 +10,12 @@ func NewQueries() *Queries {
 	}
 }
 
-func (q *Queries) Add(query Query) *Queries {
-	if _, ok := q.Queries[query.Key]; !ok {
-		q.Queries[query.Key] = make([]Query, 0)
+func (q *Queries) Add(key string, query Query) *Queries {
+	if _, ok := q.Queries[key]; !ok {
+		q.Queries[key] = make([]Query, 0)
 	}
 
-	q.Queries[query.Key] = append(q.Queries[query.Key], query)
+	q.Queries[key] = append(q.Queries[key], query)
 
 	return q
 }
