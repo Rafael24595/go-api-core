@@ -10,12 +10,12 @@ func NewHeaders() *Headers {
 	}
 }
 
-func (h *Headers) Add(header Header) *Headers {
-	if _, ok := h.Headers[header.Key]; !ok {
-		h.Headers[header.Key] = make([]Header, 0)
+func (h *Headers) Add(key string, header Header) *Headers {
+	if _, ok := h.Headers[key]; !ok {
+		h.Headers[key] = make([]Header, 0)
 	}
 
-	h.Headers[header.Key] = append(h.Headers[header.Key], header)
+	h.Headers[key] = append(h.Headers[key], header)
 
 	return h
 }

@@ -172,7 +172,6 @@ func (c *HttpClient) makeHeaders(resp http.Response) *header.Headers {
 		for _, v := range h {
 			headersResponse[k] = append(headersResponse[k], header.Header{
 				Status: true,
-				Key:    k,
 				Value:  v,
 			})
 		}
