@@ -1,10 +1,14 @@
 package test_context
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 	"testing"
 
+	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-collections/collection"
 )
@@ -19,7 +23,7 @@ func TestIdenfyVariables(t *testing.T) {
 
 	variables = collection.VectorFromList(variables).Sort(func(i, j collection.Pair[string, string]) bool {
 		return strings.Compare(
-			fmt.Sprintf("%s.%s", i.Key(), i.Value()), 
+			fmt.Sprintf("%s.%s", i.Key(), i.Value()),
 			fmt.Sprintf("%s.%s", j.Key(), j.Value())) == -1
 	}).Collect()
 
@@ -61,4 +65,98 @@ func TestContextApply(t *testing.T) {
 	if fixSource != expected {
 		t.Errorf("Found source %s but %s expected", fixSource, expected)
 	}
+}
+
+func TestProcessRequest(t *testing.T) {
+	var requestRaw domain.Request
+	var requestExpected domain.Request
+
+	err := json.Unmarshal(readJSON("sources/request001_raw.json"), &requestRaw)
+	if err != nil {
+		panic(err)
+	}
+
+	err = json.Unmarshal(readJSON("sources/request001_expected.json"), &requestExpected)
+	if err != nil {
+		panic(err)
+	}
+
+	ctx := context.NewContext("anonymous").
+		PutAll("global", map[string]string{
+			"user": "Rafael24595",
+		}).
+		PutAll("uri", map[string]string{
+			"repository": "go-api-core",
+		}).
+		PutAll("query", map[string]string{
+			"branch": "dev",
+		}).
+		PutAll("header", map[string]string{
+			"type": "application/json",
+		}).
+		PutAll("payload", map[string]string{
+			"status": "\"true\"",
+		}).
+		PutAll("auth", map[string]string{
+			"pass": "secret-key",
+		})
+
+	request := context.ProcessRequest(&requestRaw, *ctx)
+
+	found := request.Uri
+	expected := requestExpected.Uri
+	if found != expected {
+		t.Errorf("Found source %s but %s expected", found, expected)
+	}
+
+	found = request.Query.Queries["branch"][0].Value
+	expected = requestExpected.Query.Queries["branch"][0].Value
+	if found != expected {
+		t.Errorf("Found source %s but %s expected", found, expected)
+	}
+
+	found = request.Header.Headers["content-type"][0].Value
+	expected = requestExpected.Header.Headers["content-type"][0].Value
+	if found != expected {
+		t.Errorf("Found source %s but %s expected", found, expected)
+	}
+
+	foundType := request.Body.ContentType
+	expectedType := requestExpected.Body.ContentType
+	if foundType != expectedType {
+		t.Errorf("Found source %s but %s expected", foundType, expectedType)
+	}
+
+	found = string(request.Body.Bytes)
+	expected = string(requestExpected.Body.Bytes)
+	if found != expected {
+		t.Errorf("Found source %s but %s expected", found, expected)
+	}
+
+	found = request.Auth.Auths["basic"].Parameters["username"].Value
+	expected = requestExpected.Auth.Auths["basic"].Parameters["username"].Value
+	if found != expected {
+		t.Errorf("Found source %s but %s expected", found, expected)
+	}
+
+	found = request.Auth.Auths["basic"].Parameters["password"].Value
+	expected = requestExpected.Auth.Auths["basic"].Parameters["password"].Value
+	if found != expected {
+		t.Errorf("Found source %s but %s expected", found, expected)
+	}
+}
+
+func readJSON(filename string) []byte {
+	file, err := os.Open(filename)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	bytes, err := io.ReadAll(file)
+	if err != nil {
+		panic(err)
+	}
+
+	return bytes
 }

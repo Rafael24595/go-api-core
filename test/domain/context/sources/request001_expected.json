@@ -1,0 +1,59 @@
+{
+    "_id": "123456789",
+    "timestamp": 1710685845,
+    "name": "Sample Request",
+    "method": "POST",
+    "uri": "https://testhub.com/Rafael24595/go-api-core",
+    "query": {
+      "queries": {
+        "branch": [
+            {
+              "status": true,
+              "code": "branch",
+              "value": "dev"
+            }
+          ]
+      }
+    },
+    "header": {
+      "headers": {
+        "content-type": [
+            {
+              "status": true,
+              "code": "content-type",
+              "value": "application/json"
+            }
+          ]
+      }
+    },
+    "cookie": {
+      "cookies": {  }
+    },
+    "body": {
+      "status": true,
+      "contentType": "application/json",
+      "payload": "{\"status\":\"true\"}"
+    },
+    "auth": {
+      "status": true,
+      "auths": {
+        "basic": {
+          "status": true,
+          "code": "basic",
+          "parameters": {
+            "username": {
+              "key": "username",
+              "value": "Rafael24595"
+            },
+            "password": {
+              "key": "password",
+              "value": "secret-key"
+            }
+          }
+        }
+      }
+    },
+    "modified": 1710686000,
+    "status": "draft"
+  }
+  
