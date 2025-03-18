@@ -16,6 +16,7 @@ type Response struct {
 	Cookies cookie.Cookies `json:"cookies"`
 	Body    body.Body      `json:"body"`
 	Size    int            `json:"size"`
+	Owner   string         `json:"owner"`
 }
 
 func NewResponseDefault() *Response {

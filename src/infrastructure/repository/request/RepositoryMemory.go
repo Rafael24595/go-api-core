@@ -95,9 +95,11 @@ func (r *RepositoryMemory) Exists(key string) bool {
 	return r.collection.Exists(key)
 }
 
-func (r *RepositoryMemory) Insert(request domain.Request) domain.Request {
+func (r *RepositoryMemory) Insert(owner string, request *domain.Request) *domain.Request {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
+
+	request.Owner = owner
 
 	if request.Timestamp == 0 {
 		request.Timestamp = time.Now().UnixMilli()
@@ -106,18 +108,18 @@ func (r *RepositoryMemory) Insert(request domain.Request) domain.Request {
 	request.Modified = time.Now().UnixMilli()
 
 	if request.Id != "" {
-		r.collection.Put(request.Id, request)
+		r.collection.Put(request.Id, *request)
 		go r.write(r.collection)
 		return request
 	}
 
 	key := uuid.New().String()
 	if r.collection.Exists(key) {
-		return r.Insert(request)
+		return r.Insert(owner, request)
 	}
 
 	request.Id = key
-	r.collection.Put(key, request)
+	r.collection.Put(key, *request)
 
 	go r.write(r.collection)
 
@@ -187,6 +189,7 @@ func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, domain.
 	items := collection.DictionaryMap(snapshot, func(k string, v domain.Request) any {
 		return v
 	}).Values()
+
 	err := r.file.Write(items)
 	if err != nil {
 		println(err.Error())

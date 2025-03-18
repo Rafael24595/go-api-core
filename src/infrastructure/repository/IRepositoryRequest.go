@@ -10,7 +10,7 @@ type IRepositoryRequest interface {
 	FindOptions(options FilterOptions[domain.Request]) []domain.Request
 	FindSteps(steps []domain.Historic) []domain.Request
 	FindAll() []domain.Request
-	Insert(request domain.Request) domain.Request
+	Insert(owner string, request *domain.Request) *domain.Request
 	Delete(request domain.Request) *domain.Request
 	DeleteById(id string) *domain.Request 
 	DeleteOptions(options FilterOptions[domain.Request]) []string
