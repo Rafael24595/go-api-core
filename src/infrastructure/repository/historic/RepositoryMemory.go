@@ -163,6 +163,7 @@ func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, domain.
 	items := collection.DictionaryMap(snapshot, func(k string, v domain.Historic) any {
 		return v
 	}).Values()
+	
 	err := r.file.Write(items)
 	if err != nil {
 		println(err.Error())
