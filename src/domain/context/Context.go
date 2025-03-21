@@ -90,7 +90,7 @@ func (c Context) IdentifyVariables(category, source string) []collection.Pair[st
 	return results.Values()
 }
 
-func ProcessRequest(request *domain.Request, context Context) *domain.Request {
+func ProcessRequest(request *domain.Request, context *Context) *domain.Request {
 	if !context.Status {
 		return request
 	}
@@ -112,7 +112,7 @@ func ProcessRequest(request *domain.Request, context Context) *domain.Request {
 	}
 }
 
-func processQuery(queries query.Queries, context Context) *query.Queries {
+func processQuery(queries query.Queries, context *Context) *query.Queries {
 	queryCategory := map[string][]query.Query{}
 	for k, qs := range queries.Queries {
 		key := context.Apply("query", k)
@@ -132,7 +132,7 @@ func processQuery(queries query.Queries, context Context) *query.Queries {
 	}
 }
 
-func processHeader(headers header.Headers, context Context) *header.Headers {
+func processHeader(headers header.Headers, context *Context) *header.Headers {
 	headerCategory := map[string][]header.Header{}
 	for k, hs := range headers.Headers {
 		key := context.Apply("header", k)
@@ -152,7 +152,7 @@ func processHeader(headers header.Headers, context Context) *header.Headers {
 	}
 }
 
-func processCookie(cookies cookie.Cookies, context Context) *cookie.Cookies {
+func processCookie(cookies cookie.Cookies, context *Context) *cookie.Cookies {
 	cookieCategory := map[string]cookie.Cookie{}
 	for k, c := range cookies.Cookies {
 		key := context.Apply("cookie", k)
@@ -175,7 +175,7 @@ func processCookie(cookies cookie.Cookies, context Context) *cookie.Cookies {
 	}
 }
 
-func processBody(payload body.Body, context Context) *body.Body {
+func processBody(payload body.Body, context *Context) *body.Body {
 	bodyFixed := context.Apply("payload", string(payload.Bytes))
 	return &body.Body{
 		Status:      payload.Status,
@@ -184,7 +184,7 @@ func processBody(payload body.Body, context Context) *body.Body {
 	}
 }
 
-func processAuth(auths auth.Auths, context Context) *auth.Auths {
+func processAuth(auths auth.Auths, context *Context) *auth.Auths {
 	authCategory := map[string]auth.Auth{}
 
 	for k, a := range auths.Auths {

@@ -102,7 +102,7 @@ func TestProcessRequest(t *testing.T) {
 			"pass": context.NewItemContext(true, "secret-key"),
 		})
 
-	request := context.ProcessRequest(&requestRaw, *ctx)
+	request := context.ProcessRequest(&requestRaw, ctx)
 
 	found := request.Uri
 	expected := requestExpected.Uri
