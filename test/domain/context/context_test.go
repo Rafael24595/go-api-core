@@ -52,13 +52,13 @@ func TestContextApply(t *testing.T) {
 	source := "Lorem ${var_1} dolor ${global.var_2} amet, ${query.var_3} adipiscing ${var_4}. Morbi eleifend odio quis ${global.var_1} commodo ${query.var_5}."
 	ctx := context.NewContext("anonymous").
 		PutAll("global", map[string]context.ItemContext{
-			"var_1": context.NewItemContext(true, "ipsum"),
-			"var_2": context.NewItemContext(true, "sit"),
-			"var_4": context.NewItemContext(true, "elit"),
+			"var_1": context.NewItemContext(0, true, "ipsum"),
+			"var_2": context.NewItemContext(1, true, "sit"),
+			"var_4": context.NewItemContext(2, true, "elit"),
 		}).
 		PutAll("query", map[string]context.ItemContext{
-			"var_3": context.NewItemContext(true, "consectetur"),
-			"var_5": context.NewItemContext(false, "sodales"),
+			"var_3": context.NewItemContext(0, true, "consectetur"),
+			"var_5": context.NewItemContext(1, false, "sodales"),
 		})
 
 	fixSource := ctx.Apply("global", source)
@@ -84,22 +84,22 @@ func TestProcessRequest(t *testing.T) {
 
 	ctx := context.NewContext("anonymous").
 		PutAll("global", map[string]context.ItemContext{
-			"user": context.NewItemContext(true, "Rafael24595"),
+			"user": context.NewItemContext(0, true, "Rafael24595"),
 		}).
 		PutAll("uri", map[string]context.ItemContext{
-			"repository": context.NewItemContext(true, "go-api-core"),
+			"repository": context.NewItemContext(0, true, "go-api-core"),
 		}).
 		PutAll("query", map[string]context.ItemContext{
-			"branch": context.NewItemContext(true, "dev"),
+			"branch": context.NewItemContext(0, true, "dev"),
 		}).
 		PutAll("header", map[string]context.ItemContext{
-			"type": context.NewItemContext(true, "application/json"),
+			"type": context.NewItemContext(0, true, "application/json"),
 		}).
 		PutAll("payload", map[string]context.ItemContext{
-			"status": context.NewItemContext(true, "\"true\""),
+			"status": context.NewItemContext(0, true, "\"true\""),
 		}).
 		PutAll("auth", map[string]context.ItemContext{
-			"pass": context.NewItemContext(true, "secret-key"),
+			"pass": context.NewItemContext(0, true, "secret-key"),
 		})
 
 	request := context.ProcessRequest(&requestRaw, ctx)

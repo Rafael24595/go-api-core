@@ -1,6 +1,7 @@
 package dto
 
 type DtoItemContext struct {
-	Status   bool   `json:"status"`
-	Value    string `json:"value"`
+	Order  int64  `json:"order"`
+	Status bool   `json:"status"`
+	Value  string `json:"value"`
 }
