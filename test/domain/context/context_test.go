@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
+	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-collections/collection"
 )
 
@@ -69,10 +69,10 @@ func TestContextApply(t *testing.T) {
 }
 
 func TestProcessRequest(t *testing.T) {
-	var requestRaw domain.Request
-	var requestExpected domain.Request
+	var dtoRequestRaw dto.DtoRequest
+	var requestExpected dto.DtoRequest
 
-	err := json.Unmarshal(readJSON("sources/request001_raw.json"), &requestRaw)
+	err := json.Unmarshal(readJSON("sources/request001_raw.json"), &dtoRequestRaw)
 	if err != nil {
 		panic(err)
 	}
@@ -96,13 +96,13 @@ func TestProcessRequest(t *testing.T) {
 			"type": context.NewItemContext(0, true, "application/json"),
 		}).
 		PutAll("payload", map[string]context.ItemContext{
-			"status": context.NewItemContext(0, true, "\"true\""),
+			"status": context.NewItemContext(0, true, "true"),
 		}).
 		PutAll("auth", map[string]context.ItemContext{
 			"pass": context.NewItemContext(0, true, "secret-key"),
 		})
 
-	request := context.ProcessRequest(&requestRaw, ctx)
+	request := context.ProcessRequest(dto.ToRequest(&dtoRequestRaw), ctx)
 
 	found := request.Uri
 	expected := requestExpected.Uri
@@ -128,8 +128,8 @@ func TestProcessRequest(t *testing.T) {
 		t.Errorf("Found source %s but %s expected", foundType, expectedType)
 	}
 
-	found = string(request.Body.Bytes)
-	expected = string(requestExpected.Body.Bytes)
+	found = string(request.Body.Payload)
+	expected = string(requestExpected.Body.Payload)
 	if found != expected {
 		t.Errorf("Found source %s but %s expected", found, expected)
 	}

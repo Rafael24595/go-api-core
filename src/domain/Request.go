@@ -54,14 +54,14 @@ func NewRequest(name string, method HttpMethod, uri string) *Request {
 		},
 		Body: body.Body{
 			ContentType: body.None,
-			Bytes:       make([]byte, 0),
+			Payload:     make([]byte, 0),
 		},
 		Auth: auth.Auths{
 			Auths: make(map[string]auth.Auth),
 		},
-		Owner:  ANONYMOUS_OWNER,
+		Owner:    ANONYMOUS_OWNER,
 		Modified: time.Now().UnixMilli(),
-		Status: DRAFT,
+		Status:   DRAFT,
 	}
 }
 

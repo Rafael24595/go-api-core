@@ -176,11 +176,11 @@ func processCookie(cookies cookie.Cookies, context *Context) *cookie.Cookies {
 }
 
 func processBody(payload body.Body, context *Context) *body.Body {
-	bodyFixed := context.Apply("payload", string(payload.Bytes))
+	bodyFixed := context.Apply("payload", string(payload.Payload))
 	return &body.Body{
 		Status:      payload.Status,
 		ContentType: payload.ContentType,
-		Bytes:       []byte(bodyFixed),
+		Payload:     []byte(bodyFixed),
 	}
 }
 

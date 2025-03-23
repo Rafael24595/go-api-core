@@ -62,7 +62,7 @@ func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, commo
 
 	var body io.Reader
 	if !operation.Body.Empty() && operation.Body.Status && method != "GET" && method != "HEAD" {
-		body = bytes.NewBuffer(operation.Body.Bytes)
+		body = bytes.NewBuffer(operation.Body.Payload)
 	}
 
 	req, err := http.NewRequest(method, url, body)
@@ -148,7 +148,7 @@ func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, re
 	bodyData := body.Body{
 		Status:      true,
 		ContentType: contentType,
-		Bytes:       bodyResponse,
+		Payload:     bodyResponse,
 	}
 
 	return &domain.Response{

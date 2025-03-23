@@ -3,7 +3,7 @@ package body
 type Body struct {
 	Status      bool        `json:"status"`
 	ContentType ContentType `json:"content_type"`
-	Bytes       []byte      `json:"bytes"`
+	Payload     []byte      `json:"payload"`
 }
 
 func NewBodyString(status bool, contentType ContentType, payload string) *Body {
@@ -14,7 +14,7 @@ func NewBody(status bool, contentType ContentType, bytes []byte) *Body {
 	return &Body{
 		Status:      status,
 		ContentType: contentType,
-		Bytes:       bytes,
+		Payload:     bytes,
 	}
 }
 
