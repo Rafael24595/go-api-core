@@ -6,9 +6,7 @@ import (
 
 type IRepositoryCollection interface {
 	Exists(key string) bool
-	Find(key string) (*domain.Collection, bool)
-	FindOptions(options FilterOptions[domain.Collection]) []domain.Collection 
-	FindAll() []domain.Collection
-	Insert(collection domain.Collection) *domain.Collection
+	FindByOwner(owner string) []domain.Collection
+	Insert(owner string, collection *domain.Collection) *domain.Collection
 	Delete(collection domain.Collection) *domain.Collection
 }

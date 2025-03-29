@@ -1,6 +1,7 @@
 package request
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -83,6 +84,23 @@ func (r *RepositoryMemory) FindSteps(steps []domain.Historic) []domain.Request {
 	return requests
 }
 
+func (r *RepositoryMemory) FindNodes(references []domain.NodeReference) []domain.Node {
+	r.muMemory.RLock()
+	defer r.muMemory.RUnlock()
+
+	requests := make([]domain.Node, len(references))
+	for i, v := range references {
+		if request, ok := r.collection.Get(v.Request); ok {
+			requests[i] = domain.Node{
+				Order: v.Order,
+				Request: *request,
+			} 
+		}
+	}
+
+	return requests
+}
+
 func (r *RepositoryMemory) FindAll() []domain.Request {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
@@ -106,6 +124,10 @@ func (r *RepositoryMemory) Insert(owner string, request *domain.Request) *domain
 	}
 
 	request.Modified = time.Now().UnixMilli()
+
+	if request.Name == "" {
+		request.Name = fmt.Sprintf("%s-%s-%d", request.Owner, request.Method, request.Timestamp)
+	}
 
 	if request.Id != "" {
 		r.collection.Put(request.Id, *request)

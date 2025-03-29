@@ -2,6 +2,7 @@ package repository
 
 import (
 	"sync"
+	"time"
 
 	"github.com/Rafael24595/go-api-core/src/domain"
 )
@@ -70,9 +71,30 @@ func (m *RequestManager) FindSteps(steps []domain.Historic) []domain.Request {
 	return m.request.FindSteps(steps)
 }
 
+func (m *RequestManager) FindNodes(nodes []domain.NodeReference) []domain.Node {
+	return m.request.FindNodes(nodes)
+}
+
+func (m *RequestManager) Release(owner string, request *domain.Request, response *domain.Response) (*domain.Request, *domain.Response) {
+	if request.Status == domain.DRAFT {
+		request.Status = domain.FINAL
+		request.Id = ""
+		request.Timestamp = time.Now().UnixMilli()
+		request.Modified = request.Timestamp
+	}
+
+	return m.Insert(owner, request, response)
+}
+
 func (m *RequestManager) Insert(owner string, request *domain.Request, response *domain.Response) (*domain.Request, *domain.Response) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	if _, err := domain.StatusFromString(string(request.Status)); err != nil {
+		request.Status = domain.DRAFT
+	}
+
+	request.Owner = owner
 
 	requestResult := m.request.Insert(owner, request)
 

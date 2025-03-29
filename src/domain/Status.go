@@ -12,6 +12,7 @@ type Status string
 const (
 	DRAFT Status = "draft"
 	FINAL Status = "final"
+	GROUP Status = "group"
 )
 
 func (s Status) String() string {
@@ -25,6 +26,9 @@ func StatusFromString(value string) (*Status, commons.ApiError) {
 		return &status, nil
 	case string(DRAFT):
 		status := DRAFT
+		return &status, nil
+	case string(GROUP):
+		status := GROUP
 		return &status, nil
 	default:
 		return nil, commons.ApiErrorFrom(422, fmt.Sprintf("Unknown same-site value: '%s'", value))

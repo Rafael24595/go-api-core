@@ -9,6 +9,7 @@ type IRepositoryRequest interface {
 	Find(key string) (*domain.Request, bool)
 	FindOptions(options FilterOptions[domain.Request]) []domain.Request
 	FindSteps(steps []domain.Historic) []domain.Request
+	FindNodes(steps []domain.NodeReference) []domain.Node
 	FindAll() []domain.Request
 	Insert(owner string, request *domain.Request) *domain.Request
 	Delete(request domain.Request) *domain.Request

@@ -74,6 +74,10 @@ func (r *RepositoryMemory) Insert(owner string, context *context.Context) *conte
 	return context
 }
 
+func (r *RepositoryMemory) InsertFromCollection(owner, collection string, context *context.Context) *context.Context {
+	return r.Insert(fmt.Sprintf("%s-%s", owner, collection), context)
+}
+
 func (r *RepositoryMemory) Delete(context context.Context) *context.Context {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
