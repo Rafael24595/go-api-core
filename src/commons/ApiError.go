@@ -29,5 +29,5 @@ func (e *apiErrorImpl) Error() string {
 	if e.Cause != nil {
 		message = fmt.Sprintf("%s -> %s", message, e.Cause)
 	}
-	return fmt.Sprintf("[%d]: %s", e.Status, message)
+	return message
 }
