@@ -34,7 +34,7 @@ func ToResponse(dto *DtoResponse) *domain.Response {
 	}
 }
 
-func FromToResponse(request *domain.Response) *DtoResponse {
+func FromResponse(request *domain.Response) *DtoResponse {
 	return &DtoResponse{
 		Id: request.Id,
 		Request: request.Request,

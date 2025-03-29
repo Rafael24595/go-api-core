@@ -44,7 +44,7 @@ func ToRequest(dto *DtoRequest) *domain.Request {
 	}
 }
 
-func FromToRequest(request *domain.Request) *DtoRequest {
+func FromRequest(request *domain.Request) *DtoRequest {
 	return &DtoRequest{
 		Id: request.Id,
 		Timestamp: request.Timestamp,
