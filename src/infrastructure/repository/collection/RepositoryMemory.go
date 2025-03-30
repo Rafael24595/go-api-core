@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/Rafael24595/go-api-core/src/domain"
-	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
 	"github.com/google/uuid"
@@ -17,31 +16,27 @@ type RepositoryMemory struct {
 	muFile            sync.RWMutex
 	collection        collection.IDictionary[string, domain.Collection]
 	file              repository.IFileManager[domain.Collection]
-	repositoryContext repository.IRepositoryContext
 }
 
 func NewRepositoryMemory(
-		impl collection.IDictionary[string, domain.Collection], 
-		file repository.IFileManager[domain.Collection],
-		 repositoryContext repository.IRepositoryContext) *RepositoryMemory {
+	impl collection.IDictionary[string, domain.Collection],
+	file repository.IFileManager[domain.Collection]) *RepositoryMemory {
 	return &RepositoryMemory{
-		collection: impl,
-		file:       file,
-		repositoryContext: repositoryContext,
+		collection:        impl,
+		file:              file,
 	}
 }
 
 func InitializeRepositoryMemory(
-		impl collection.IDictionary[string, domain.Collection], 
-		file repository.IFileManager[domain.Collection], 
-		repositoryContext repository.IRepositoryContext) (*RepositoryMemory, error) {
+	impl collection.IDictionary[string, domain.Collection],
+	file repository.IFileManager[domain.Collection]) (*RepositoryMemory, error) {
 	collections, err := file.Read()
 	if err != nil {
 		return nil, err
 	}
 	return NewRepositoryMemory(
 		impl.Merge(collection.DictionaryFromMap(collections)),
-		file, repositoryContext), nil
+		file), nil
 }
 
 func (r *RepositoryMemory) FindByOwner(owner string) []domain.Collection {
@@ -91,14 +86,17 @@ func (r *RepositoryMemory) Exists(key string) bool {
 
 func (r *RepositoryMemory) Insert(owner string, collection *domain.Collection) *domain.Collection {
 	r.muMemory.Lock()
+	return r.resolve(owner, collection)
+}
 
+func (r *RepositoryMemory) resolve(owner string, collection *domain.Collection) *domain.Collection {
 	if collection.Id != "" {
 		return r.insert(owner, collection)
 	}
 
 	key := uuid.New().String()
 	if r.collection.Exists(key) {
-		return r.Insert(owner, collection)
+		return r.resolve(owner, collection)
 	}
 
 	collection.Id = key
@@ -107,7 +105,7 @@ func (r *RepositoryMemory) Insert(owner string, collection *domain.Collection) *
 }
 
 func (r *RepositoryMemory) insert(owner string, collection *domain.Collection) *domain.Collection {
-	defer r.muMemory.Unlock()
+	r.muMemory.Unlock()
 
 	collection.Owner = owner
 
@@ -121,14 +119,37 @@ func (r *RepositoryMemory) insert(owner string, collection *domain.Collection) *
 		collection.Name = fmt.Sprintf("%s-%d", collection.Owner, collection.Timestamp)
 	}
 
-	if _, exists := r.repositoryContext.FindByCollection(owner, collection.Id); !exists {
-		context := r.repositoryContext.InsertFromCollection(owner, collection.Id, context.NewContext(owner))
-		collection.Context = context.Id
-	}
-
 	r.collection.Put(collection.Id, *collection)
 	go r.write(r.collection)
 	return collection
+}
+
+func (r *RepositoryMemory) PushToCollection(owner string, collectionId string, collectionName string, request *domain.Request) *domain.Collection {
+	collection, exists := r.collection.Get(collectionId)
+	if !exists {
+		collection = domain.NewCollection(owner)
+	}
+
+	r.muMemory.Lock()
+
+	collection.Name = collectionName
+
+	contains := false
+	for _, v := range collection.Nodes {
+		if v.Request == request.Id {
+			contains = true
+			break
+		}
+	}
+
+	if !contains {
+		collection.Nodes = append(collection.Nodes, domain.NodeReference{
+			Order: len(collection.Nodes),
+			Request: request.Id,
+		})
+	}
+
+	return r.resolve(owner, collection)
 }
 
 func (r *RepositoryMemory) Delete(collection domain.Collection) *domain.Collection {

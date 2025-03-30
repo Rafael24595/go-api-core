@@ -14,6 +14,18 @@ func NewCollectionDefault() *Collection {
 	return &Collection{}
 }
 
+func NewCollection(owner string) *Collection {
+	return &Collection{
+		Id: "",
+		Name: "",
+		Timestamp: 0,
+		Context: "",
+		Nodes: make([]NodeReference, 0),
+		Owner: owner,
+		Modified: 0,
+	}
+}
+
 func (c Collection) PersistenceId() string {
 	return c.Id
 }
