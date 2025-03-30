@@ -13,26 +13,26 @@ const (
 	POLICY_INSERT = "insert"
 )
 
-type RequestManager struct {
+type ManagerRequest struct {
 	mu       sync.Mutex
 	request  IRepositoryRequest
 	response IRepositoryResponse
 	policies map[string][]policy
 }
 
-func NewRequestManager(request IRepositoryRequest, response IRepositoryResponse) *RequestManager {
-	return NewRequestManagerLimited(request, response)
+func NewManagerRequest(request IRepositoryRequest, response IRepositoryResponse) *ManagerRequest {
+	return NewManagerRequestLimited(request, response)
 }
 
-func NewRequestManagerLimited(request IRepositoryRequest, response IRepositoryResponse) *RequestManager {
-	return &RequestManager{
+func NewManagerRequestLimited(request IRepositoryRequest, response IRepositoryResponse) *ManagerRequest {
+	return &ManagerRequest{
 		request:  request,
 		response: response,
 		policies: make(map[string][]policy),
 	}
 }
 
-func (m *RequestManager) SetInsertPolicy(function policy) *RequestManager {
+func (m *ManagerRequest) SetInsertPolicy(function policy) *ManagerRequest {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -44,17 +44,17 @@ func (m *RequestManager) SetInsertPolicy(function policy) *RequestManager {
 	return m
 }
 
-func (m *RequestManager) Exists(key string) (bool, bool) {
+func (m *ManagerRequest) Exists(key string) (bool, bool) {
 	_, okReq := m.request.Find(key)
 	_, okRes := m.response.Find(key)
 	return okReq, okRes
 }
 
-func (m *RequestManager) FindAll() []domain.Request {
+func (m *ManagerRequest) FindAll() []domain.Request {
 	return m.request.FindAll()
 }
 
-func (m *RequestManager) Find(key string) (*domain.Request, *domain.Response, bool) {
+func (m *ManagerRequest) Find(key string) (*domain.Request, *domain.Response, bool) {
 	request, ok := m.request.Find(key)
 	if !ok {
 		return nil, nil, ok
@@ -63,19 +63,19 @@ func (m *RequestManager) Find(key string) (*domain.Request, *domain.Response, bo
 	return request, response, ok
 }
 
-func (m *RequestManager) FindOptions(options FilterOptions[domain.Request]) []domain.Request {
+func (m *ManagerRequest) FindOptions(options FilterOptions[domain.Request]) []domain.Request {
 	return m.request.FindOptions(options)
 }
 
-func (m *RequestManager) FindSteps(steps []domain.Historic) []domain.Request {
+func (m *ManagerRequest) FindSteps(steps []domain.Historic) []domain.Request {
 	return m.request.FindSteps(steps)
 }
 
-func (m *RequestManager) FindNodes(nodes []domain.NodeReference) []domain.Node {
+func (m *ManagerRequest) FindNodes(nodes []domain.NodeReference) []domain.Node {
 	return m.request.FindNodes(nodes)
 }
 
-func (m *RequestManager) Release(owner string, request *domain.Request, response *domain.Response) (*domain.Request, *domain.Response) {
+func (m *ManagerRequest) Release(owner string, request *domain.Request, response *domain.Response) (*domain.Request, *domain.Response) {
 	if request.Status == domain.DRAFT {
 		request.Status = domain.FINAL
 		request.Id = ""
@@ -86,7 +86,7 @@ func (m *RequestManager) Release(owner string, request *domain.Request, response
 	return m.Insert(owner, request, response)
 }
 
-func (m *RequestManager) Insert(owner string, request *domain.Request, response *domain.Response) (*domain.Request, *domain.Response) {
+func (m *ManagerRequest) Insert(owner string, request *domain.Request, response *domain.Response) (*domain.Request, *domain.Response) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -114,11 +114,11 @@ func (m *RequestManager) Insert(owner string, request *domain.Request, response 
 	return requestResult, resultResponse
 }
 
-func (m *RequestManager) Delete(request domain.Request) (*domain.Request, *domain.Response) {
+func (m *ManagerRequest) Delete(request domain.Request) (*domain.Request, *domain.Response) {
 	return m.DeleteById(request.Id)
 }
 
-func (m *RequestManager) DeleteById(id string) (*domain.Request, *domain.Response) {
+func (m *ManagerRequest) DeleteById(id string) (*domain.Request, *domain.Response) {
 	request := m.request.DeleteById(id)
 	response := m.response.DeleteById(id)
 	return request, response
