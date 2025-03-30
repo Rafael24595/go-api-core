@@ -39,6 +39,12 @@ func InitializeRepositoryMemory(
 		file), nil
 }
 
+func (r *RepositoryMemory) Find(id string) (*domain.Collection, bool) {
+	r.muMemory.RLock()
+	defer r.muMemory.RUnlock()
+	return r.collection.Get(id)
+}
+
 func (r *RepositoryMemory) FindByOwner(owner string) []domain.Collection {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
@@ -124,15 +130,8 @@ func (r *RepositoryMemory) insert(owner string, collection *domain.Collection) *
 	return collection
 }
 
-func (r *RepositoryMemory) PushToCollection(owner string, collectionId string, collectionName string, request *domain.Request) *domain.Collection {
-	collection, exists := r.collection.Get(collectionId)
-	if !exists {
-		collection = domain.NewCollection(owner)
-	}
-
+func (r *RepositoryMemory) PushToCollection(owner string, collection *domain.Collection, request *domain.Request) *domain.Collection {
 	r.muMemory.Lock()
-
-	collection.Name = collectionName
 
 	contains := false
 	for _, v := range collection.Nodes {

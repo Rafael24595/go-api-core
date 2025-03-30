@@ -25,6 +25,7 @@ type Context struct {
 	Dictionary DictionaryCategory `json:"dictionary"`
 	Owner      string             `json:"owner"`
 	Modified   int64              `json:"modified"`
+	Domain     Domain             `json:"domain"`
 }
 
 func NewContext(owner string) *Context {

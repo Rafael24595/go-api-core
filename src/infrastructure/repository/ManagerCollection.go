@@ -36,6 +36,10 @@ func (m *ManagerCollection) Insert(owner string, collection *domain.Collection) 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if collection.Id == "" {
+		collection = m.collection.Insert(owner, collection)
+	}
+
 	if _, exists := m.context.FindByCollection(owner, collection.Id); !exists {
 		context := m.context.InsertFromCollection(owner, collection.Id, context.NewContext(owner))
 		collection.Context = context.Id
@@ -45,14 +49,22 @@ func (m *ManagerCollection) Insert(owner string, collection *domain.Collection) 
 }
 
 func (m *ManagerCollection) PushToCollection(owner string, collectionId string, collectionName string, request *domain.Request, requestName string) *domain.Collection {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
+	if request.Status == domain.DRAFT {
+		request.Id = ""
+	}
+	
 	request.Name = requestName
 	request.Status = domain.GROUP
 	request = m.request.Insert(owner, request)
 
-	return m.collection.PushToCollection(owner, collectionId, collectionName, request)
+	collection, exists := m.collection.Find(collectionId)
+	if !exists {
+		collection = domain.NewCollection(owner)
+		collection.Name = collectionName
+		collection = m.Insert(owner, collection)
+	}
+
+	return m.collection.PushToCollection(owner, collection, request)
 }
 
 func (m *ManagerCollection) Delete(collection domain.Collection) *domain.Collection {

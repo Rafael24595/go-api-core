@@ -9,6 +9,7 @@ import (
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
+	"github.com/google/uuid"
 )
 
 type RepositoryMemory struct {
@@ -44,38 +45,58 @@ func InitializeRepositoryMemory(
 		file), nil
 }
 
+func (r *RepositoryMemory) Find(id string) (*context.Context, bool) {
+	r.muMemory.RLock()
+	defer r.muMemory.RUnlock()
+	return r.collection.Get(id)
+}
+
 func (r *RepositoryMemory) FindByOwner(owner string) (*context.Context, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(owner)
+	return r.collection.FindOne(func(s string, ctx context.Context) bool {
+		return ctx.Owner == owner
+	})
 }
 
 func (r *RepositoryMemory) FindByCollection(owner, collection string) (*context.Context, bool) {
 	return r.FindByOwner(fmt.Sprintf("%s-%s", owner, collection))
 }
 
-func (r *RepositoryMemory) Insert(owner string, context *context.Context) *context.Context {
+func (r *RepositoryMemory) InsertFromOwner(owner string, ctx *context.Context) *context.Context {
+	ctx.Domain = context.USER
+	return r.insert(owner, ctx)
+}
+
+func (r *RepositoryMemory) InsertFromCollection(owner, collection string, ctx *context.Context) *context.Context {
+	ctx.Domain = context.COLLECTION
+	return r.insert(fmt.Sprintf("%s-%s", owner, collection), ctx)
+}
+
+func (r *RepositoryMemory) insert(owner string, ctx *context.Context) *context.Context {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
-	context.Id = owner
-	context.Owner = owner
+	ctx.Owner = owner
 
-	if context.Timestamp == 0 {
-		context.Timestamp = time.Now().UnixMilli()
+	if ctx.Timestamp == 0 {
+		ctx.Timestamp = time.Now().UnixMilli()
 	}
 
-	context.Modified = time.Now().UnixMilli()
+	ctx.Modified = time.Now().UnixMilli()
 
-	r.collection.Put(owner, *context)
+	key := uuid.New().String()
+	if r.collection.Exists(key) {
+		return r.insert(owner, ctx)
+	}
+
+	ctx.Id = key
+
+	r.collection.Put(key, *ctx)
 
 	go r.write(r.collection)
 
-	return context
-}
-
-func (r *RepositoryMemory) InsertFromCollection(owner, collection string, context *context.Context) *context.Context {
-	return r.Insert(fmt.Sprintf("%s-%s", owner, collection), context)
+	return ctx
 }
 
 func (r *RepositoryMemory) Delete(context context.Context) *context.Context {

@@ -12,6 +12,7 @@ type DtoContext struct {
 	Dictionary map[string]map[string]DtoItemContext `json:"dictionary"`
 	Owner      string                               `json:"owner"`
 	Modified   int64                                `json:"modified"`
+	Domain     context.Domain                       `json:"domain"`
 }
 
 func NewDtoContextDefault() *DtoContext {
@@ -43,6 +44,7 @@ func ToContext(dto *DtoContext) *context.Context {
 		Dictionary: *categories,
 		Owner:      dto.Owner,
 		Modified:   dto.Modified,
+		Domain:     dto.Domain,
 	}
 }
 
@@ -68,5 +70,6 @@ func FromContext(ctx *context.Context) *DtoContext {
 		Dictionary: categories,
 		Owner:      ctx.Owner,
 		Modified:   ctx.Modified,
+		Domain:     ctx.Domain,
 	}
 }
