@@ -14,5 +14,6 @@ type IRepositoryRequest interface {
 	Insert(owner string, request *domain.Request) *domain.Request
 	Delete(request domain.Request) *domain.Request
 	DeleteById(id string) *domain.Request 
+	DeleteMany(ids ...string) []domain.Request
 	DeleteOptions(options FilterOptions[domain.Request]) []string
 }

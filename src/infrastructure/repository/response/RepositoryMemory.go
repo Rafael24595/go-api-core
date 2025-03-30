@@ -133,6 +133,21 @@ func (r *RepositoryMemory) DeleteById(id string) *domain.Response {
 	return cursor
 }
 
+func (r *RepositoryMemory) DeleteMany(ids ...string) []domain.Response {
+	r.muMemory.Lock()
+	defer r.muMemory.Unlock()
+
+	deleted := make([]domain.Response, 0)
+	for _, id := range ids {
+		cursor, _ := r.collection.Remove(id)
+		deleted = append(deleted, *cursor)
+	}
+
+	go r.write(r.collection)
+
+	return deleted
+}
+
 func (r *RepositoryMemory) DeleteOptions(options repository.FilterOptions[domain.Response]) []string {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
