@@ -54,17 +54,18 @@ func (m *ManagerRequest) FindAll() []domain.Request {
 	return m.request.FindAll()
 }
 
-func (m *ManagerRequest) Find(key string) (*domain.Request, *domain.Response, bool) {
-	request, ok := m.request.Find(key)
-	if !ok {
-		return nil, nil, ok
+func (m *ManagerRequest) Find(owner string, key string) (*domain.Request, *domain.Response, bool) {
+	request, exits := m.request.Find(key)
+	if !exits || request.Owner != owner  {
+		return nil, nil, exits
 	}
 	response, _ := m.response.Find(key)
-	return request, response, ok
+
+	return request, response, exits
 }
 
-func (m *ManagerRequest) FindOptions(options FilterOptions[domain.Request]) []domain.Request {
-	return m.request.FindOptions(options)
+func (m *ManagerRequest) FindOwner(owner string, status *domain.Status) []domain.Request {
+	return m.request.FindOwner(owner, status)
 }
 
 func (m *ManagerRequest) FindSteps(steps []domain.Historic) []domain.Request {
@@ -114,12 +115,17 @@ func (m *ManagerRequest) Insert(owner string, request *domain.Request, response 
 	return requestResult, resultResponse
 }
 
-func (m *ManagerRequest) Delete(request domain.Request) (*domain.Request, *domain.Response) {
-	return m.DeleteById(request.Id)
+func (m *ManagerRequest) Delete(owner string, request domain.Request) (*domain.Request, *domain.Response) {
+	return m.DeleteById(owner, request.Id)
 }
 
-func (m *ManagerRequest) DeleteById(id string) (*domain.Request, *domain.Response) {
-	request := m.request.DeleteById(id)
+func (m *ManagerRequest) DeleteById(owner, id string) (*domain.Request, *domain.Response) {
+	request, exists := m.request.Find(id)
+	if exists && request.Owner != owner {
+		panic("//TODO: Manage error")	
+	}
+
+	request = m.request.DeleteById(id)
 	response := m.response.DeleteById(id)
 	return request, response
 }
