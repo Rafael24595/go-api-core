@@ -41,8 +41,15 @@ func (r *RepositoryMemory) Find(key string) (*domain.Request, bool) {
 	return r.collection.Get(key)
 }
 
-func (r *RepositoryMemory) FindOptions(options repository.FilterOptions[domain.Request]) []domain.Request {
-	return r.findOptions(options).Collect()
+func (r *RepositoryMemory) FindOwner(owner string, status *domain.Status) []domain.Request {
+	return r.findOptions(repository.FilterOptions[domain.Request]{
+		Predicate: func(r domain.Request) bool {
+			if status == nil {
+				return r.Owner == owner
+			}
+			return r.Owner == owner && r.Status == *status
+		},
+	}).Collect()
 }
 
 func (r *RepositoryMemory) findOptions(options repository.FilterOptions[domain.Request]) *collection.Vector[domain.Request] {
@@ -148,7 +155,7 @@ func (r *RepositoryMemory) Insert(owner string, request *domain.Request) *domain
 	return request
 }
 
-func (r *RepositoryMemory) Delete(request domain.Request) *domain.Request {
+func (r *RepositoryMemory) Delete(request *domain.Request) *domain.Request {
 	return r.DeleteById(request.Id)
 }
 
