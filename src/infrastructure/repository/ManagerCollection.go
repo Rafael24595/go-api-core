@@ -48,31 +48,139 @@ func (m *ManagerCollection) Insert(owner string, collection *domain.Collection) 
 	return m.collection.Insert(owner, collection)
 }
 
-func (m *ManagerCollection) PushToCollection(owner string, collectionId string, collectionName string, request *domain.Request, requestName string) *domain.Collection {
-	if request.Status == domain.DRAFT {
-		request.Id = ""
+func (m *ManagerCollection) PushToCollection(owner string, payload PayloadPushToCollection) *domain.Collection {
+	request := &payload.Request
+
+	if source, exists := m.collection.Find(payload.SourceId); exists {
+		_, exists := source.TakeRequest(request.Id)
+		if exists {
+			m.Insert(owner, source)
+		}
 	}
+
+	if payload.Movement == MOVE && request.Status != domain.DRAFT  {
+		request = m.request.Delete(request)
+	}
+
+	request.Id = ""
 	
-	request.Name = requestName
+	request.Name = payload.RequestName
 	request.Status = domain.GROUP
 	request = m.request.Insert(owner, request)
 
-	collection, exists := m.collection.Find(collectionId)
+	collection, exists := m.collection.Find(payload.TargetId)
 	if !exists {
 		collection = domain.NewCollection(owner)
-		collection.Name = collectionName
+		collection.Name = payload.TargetName
 		collection = m.Insert(owner, collection)
 	}
 
 	return m.collection.PushToCollection(owner, collection, request)
 }
 
-func (m *ManagerCollection) Delete(collection domain.Collection) *domain.Collection {
+func (m *ManagerCollection) TakeFromCollection(owner, collectionId, requestId string) (*domain.Collection, *domain.Request) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if context, exists := m.context.FindByCollection(collection.Owner, collection.Id); !exists {
-		m.context.Delete(*context)
+	collection, exists := m.collection.Find(collectionId)
+	if !exists || collection.Owner != owner {
+		return nil, nil
+	}
+
+	_, exists = collection.TakeRequest(requestId)
+	if !exists {
+		return nil, nil
+	}
+
+	collection = m.collection.Insert(owner, collection)
+
+	request, exists := m.request.Find(requestId)
+	if !exists {
+		return collection, nil
+	}
+
+	request.Status = domain.FINAL
+	request = m.request.Insert(owner, request)
+
+	return collection, request
+}
+
+func (m *ManagerCollection) RemoveFromCollection(owner string, collectionId string, requestId string) (*domain.Collection, *domain.Request) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	collection, exists := m.collection.Find(collectionId)
+	if !exists || collection.Owner != owner {
+		return nil, nil
+	}
+
+	_, exists = collection.TakeRequest(requestId)
+	if !exists {
+		return nil, nil
+	}
+
+	collection = m.collection.Insert(owner, collection)
+
+	request, exists := m.request.Find(requestId)
+	if !exists {
+		return collection, nil
+	}
+
+	request = m.request.Delete(request)
+
+	return collection, request
+}
+
+func (m *ManagerCollection) CloneCollection(owner, id, name string) *domain.Collection {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	collection, exists := m.collection.Find(id)
+	if !exists || collection.Owner != owner {
+		return nil
+	}
+
+	nodes := make([]domain.NodeReference, 0)
+	for i, v := range collection.Nodes {
+		request, exists := m.request.Find(v.Request)
+		if !exists {
+			continue
+		}
+		request.Id = ""
+		request = m.request.Insert(owner, request)
+		nodes = append(nodes, domain.NodeReference{
+			Order: i,
+			Request: request.Id,
+		})
+	}
+	
+	if context, exists := m.context.Find(collection.Context); exists {
+		context.Id = ""
+		context = m.context.InsertFromCollection(owner, collection.Id, context)
+		collection.Context = context.Id
+	} else {
+		collection.Context = ""
+	}
+
+	collection.Id = ""
+	collection.Name = name
+	collection.Nodes = nodes
+	collection.Timestamp = 0
+
+	return m.collection.Insert(owner, collection)
+}
+
+func (m *ManagerCollection) Delete(owner, id string) *domain.Collection {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	collection, exists := m.collection.Find(id)
+	if !exists || collection.Owner != owner {
+		return nil
+	}
+
+	if context, exists := m.context.Find(collection.Context); !exists {
+		m.context.Delete(context)
 	}
 
 	requests := make([]string, len(collection.Nodes))
