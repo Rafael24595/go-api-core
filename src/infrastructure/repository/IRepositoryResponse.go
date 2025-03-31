@@ -11,7 +11,7 @@ type IRepositoryResponse interface {
 	FindSteps(steps []domain.Historic) []domain.Response
 	FindAll() []domain.Response
 	Insert(owner string, response *domain.Response) *domain.Response
-	Delete(response domain.Response) *domain.Response
+	Delete(response *domain.Response) *domain.Response
 	DeleteById(id string) *domain.Response 
 	DeleteMany(ids ...string) []domain.Response
 	DeleteOptions(options FilterOptions[domain.Response]) []string

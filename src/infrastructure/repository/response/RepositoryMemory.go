@@ -119,7 +119,7 @@ func (r *RepositoryMemory) Insert(owner string, response *domain.Response) *doma
 	return response
 }
 
-func (r *RepositoryMemory) Delete(response domain.Response) *domain.Response {
+func (r *RepositoryMemory) Delete(response *domain.Response) *domain.Response {
 	return r.DeleteById(response.Id)
 }
 

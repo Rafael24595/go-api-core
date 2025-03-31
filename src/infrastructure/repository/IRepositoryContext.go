@@ -10,5 +10,5 @@ type IRepositoryContext interface {
 	FindByCollection(owner, collection string) (*context.Context, bool)
 	InsertFromOwner(owner string, context *context.Context) *context.Context
 	InsertFromCollection(owner, collection string, context *context.Context) *context.Context
-	Delete(context context.Context) *context.Context
+	Delete(context *context.Context) *context.Context
 }

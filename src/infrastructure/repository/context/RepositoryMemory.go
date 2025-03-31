@@ -99,7 +99,7 @@ func (r *RepositoryMemory) insert(owner string, ctx *context.Context) *context.C
 	return ctx
 }
 
-func (r *RepositoryMemory) Delete(context context.Context) *context.Context {
+func (r *RepositoryMemory) Delete(context *context.Context) *context.Context {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
