@@ -133,15 +133,7 @@ func (r *RepositoryMemory) insert(owner string, collection *domain.Collection) *
 func (r *RepositoryMemory) PushToCollection(owner string, collection *domain.Collection, request *domain.Request) *domain.Collection {
 	r.muMemory.Lock()
 
-	contains := false
-	for _, v := range collection.Nodes {
-		if v.Request == request.Id {
-			contains = true
-			break
-		}
-	}
-
-	if !contains {
+	if !collection.ExistsRequest(request.Id) {
 		collection.Nodes = append(collection.Nodes, domain.NodeReference{
 			Order: len(collection.Nodes),
 			Request: request.Id,
@@ -151,7 +143,7 @@ func (r *RepositoryMemory) PushToCollection(owner string, collection *domain.Col
 	return r.resolve(owner, collection)
 }
 
-func (r *RepositoryMemory) Delete(collection domain.Collection) *domain.Collection {
+func (r *RepositoryMemory) Delete(collection *domain.Collection) *domain.Collection {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
