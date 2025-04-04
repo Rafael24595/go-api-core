@@ -19,3 +19,10 @@ func (h *Headers) Add(key string, header Header) *Headers {
 
 	return h
 }
+
+func (q *Headers) SizeOf(key string) int {
+	if headers, ok := q.Headers[key]; ok {
+		return len(headers)
+	}
+	return 0
+}

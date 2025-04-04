@@ -18,6 +18,21 @@ import (
 type DictionaryVariables = collection.Dictionary[string, ItemContext]
 type DictionaryCategory = collection.Dictionary[string, DictionaryVariables]
 
+type ContextCategoy string
+
+const (
+	URI     ContextCategoy = "uri"
+	QUERY   ContextCategoy = "query"
+	HEADER  ContextCategoy = "header"
+	COOKIE  ContextCategoy = "cookie"
+	PAYLOAD ContextCategoy = "payload"
+	AUTH    ContextCategoy = "auth"
+)
+
+func (s ContextCategoy) String() string {
+	return string(s)
+}
+
 type Context struct {
 	Id         string             `json:"_id"`
 	Status     bool               `json:"status"`
@@ -37,6 +52,20 @@ func NewContext(owner string) *Context {
 		Owner:      owner,
 		Modified:   time.Now().UnixMilli(),
 	}
+}
+
+func (c *Context) Put(category ContextCategoy, key, value string) *Context {
+	variables, ok := c.Dictionary.Get(category.String())
+	if !ok {
+		c.Dictionary.Put(category.String(), *collection.DictionaryEmpty[string, ItemContext]())
+		variables, _ = c.Dictionary.Get(category.String())
+	}
+	variables.Put(key, ItemContext{
+		Order:  int64(variables.Size()),
+		Status: true,
+		Value:  value,
+	})
+	return c
 }
 
 func (c *Context) PutAll(category string, context map[string]ItemContext) *Context {

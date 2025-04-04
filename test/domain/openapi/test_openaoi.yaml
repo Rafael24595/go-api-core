@@ -1,0 +1,136 @@
+openapi: 3.0.0
+info:
+  title: Task Management API
+  description: API for managing projects and tasks
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+
+paths:
+
+  /request:
+    post:
+      tags:
+        - Request
+      summary: Create a new request
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InsertRequest'
+      responses:
+        '201':
+          description: Request created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+
+  /collection/{userId}:
+    get:
+      tags:
+        - Collection
+      summary: Get collection data
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The ID of the user
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of user's collection
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Collection'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      
+  schemas:
+    Request:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "0001"
+        name:
+          type: string
+          example: "Request name"
+        method:
+          type: string
+          enum: ["get", "post", "put", "delete"]
+          example: "Request method"
+        uri:
+          type: string
+          example: "Request Uri"
+        timestamp:
+          type: "number"
+          example: "1743433941068"
+
+    InsertRequest:
+      type: object
+      required:
+        - name
+        - method
+        - uri
+      properties:
+        name:
+          type: string
+          example: "Request name"
+        method:
+          type: string
+          enum: ["get", "post", "put", "delete"]
+          example: "Request method"
+        uri:
+          type: string
+          example: "Request Uri"
+
+    Collection:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "000A1"
+        context:
+           $ref: '#/components/schemas/Context'
+        requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/Request'
+        timestamp:
+          type: "number"
+          example: "1743433941068"
+
+    Context:
+      type: object
+      required:
+        - context
+      properties:
+        id:
+          type: string
+          example: "AAAA1"
+        status:
+          type: string
+          enum: ["enabled", "disabled"]
+          example: "pending"
+
+security:
+  - BearerAuth: []

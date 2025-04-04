@@ -19,3 +19,10 @@ func (q *Queries) Add(key string, query Query) *Queries {
 
 	return q
 }
+
+func (q *Queries) SizeOf(key string) int {
+	if queries, ok := q.Queries[key]; ok {
+		return len(queries)
+	}
+	return 0
+}
