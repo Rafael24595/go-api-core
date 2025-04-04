@@ -12,6 +12,20 @@ servers:
 
 paths:
 
+  /login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticates a user and returns a JWT token
+      security:
+        - BasicAuth: []
+      responses:
+        '200':
+          description: Successful login
+        '401':
+          description: Invalid credentials
+
   /request:
     post:
       tags:
@@ -39,7 +53,7 @@ paths:
         - Collection
       summary: Get collection data
       security:
-        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: userId
           in: path
@@ -47,6 +61,26 @@ paths:
           description: The ID of the user
           schema:
             type: string
+
+        - name: limit
+          in: query
+          description: The limit of items to return
+          schema:
+           type: integer
+
+        - name: skip
+          in: query
+          description: The skip of items to return
+          schema:
+           type: integer
+
+        - name: X-Request-ID
+          in: header
+          description: X-Request-ID header
+          schema:
+            type: string
+            format: uuid
+          required: true
       responses:
         '200':
           description: A list of user's collection
@@ -59,10 +93,19 @@ paths:
 
 components:
   securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+
     BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
       
   schemas:
     Request:

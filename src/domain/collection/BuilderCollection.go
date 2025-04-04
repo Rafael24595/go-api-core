@@ -8,8 +8,10 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/auth"
 	"github.com/Rafael24595/go-api-core/src/domain/body"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
+	"github.com/Rafael24595/go-api-core/src/domain/cookie"
 	"github.com/Rafael24595/go-api-core/src/domain/header"
 	"github.com/Rafael24595/go-api-core/src/domain/openapi"
 	"github.com/Rafael24595/go-api-core/src/domain/query"
@@ -40,29 +42,30 @@ func (b *BuilderCollection) Make() (*domain.Collection, *context.Context, []doma
 	ctx := context.NewContext(b.owner)
 	nodes := make([]domain.Request, 0)
 
+	server := ""
 	for i, v := range b.openapi.Servers {
+		key := fmt.Sprintf("server-%d", i)
 		ctx.Put(context.URI, fmt.Sprintf("server-%d", i), v.URL)
+		server = fmt.Sprintf("${%s}", key)
 	}
 
+	var node *domain.Request
 	for path, v := range b.openapi.Paths {
+		pathFull := fmt.Sprintf("%s%s", server, path)
 		if operation := v.Get; operation != nil {
-			var node *domain.Request
-			ctx, node = b.makeFromOperation(domain.GET, path, operation, ctx)
+			ctx, node = b.MakeFromOperation(domain.GET, pathFull, operation, ctx)
 			nodes = append(nodes, *node)
 		}
 		if operation := v.Post; operation != nil {
-			var node *domain.Request
-			ctx, node = b.makeFromOperation(domain.POST, path, operation, ctx)
+			ctx, node = b.MakeFromOperation(domain.POST, pathFull, operation, ctx)
 			nodes = append(nodes, *node)
 		}
 		if operation := v.Put; operation != nil {
-			var node *domain.Request
-			ctx, node = b.makeFromOperation(domain.PUT, path, operation, ctx)
+			ctx, node = b.MakeFromOperation(domain.PUT, pathFull, operation, ctx)
 			nodes = append(nodes, *node)
 		}
 		if operation := v.Delete; operation != nil {
-			var node *domain.Request
-			ctx, node = b.makeFromOperation(domain.DELETE, path, operation, ctx)
+			ctx, node = b.MakeFromOperation(domain.DELETE, pathFull, operation, ctx)
 			nodes = append(nodes, *node)
 		}
 	}
@@ -78,7 +81,7 @@ func (b *BuilderCollection) Make() (*domain.Collection, *context.Context, []doma
 	}, ctx, nodes, nil
 }
 
-func (b *BuilderCollection) makeFromOperation(method domain.HttpMethod, path string, operation *openapi.Operation, ctx *context.Context) (*context.Context, *domain.Request) {
+func (b *BuilderCollection) MakeFromOperation(method domain.HttpMethod, path string, operation *openapi.Operation, ctx *context.Context) (*context.Context, *domain.Request) {
 	now := time.Now().UnixMilli()
 
 	name := path
@@ -86,8 +89,9 @@ func (b *BuilderCollection) makeFromOperation(method domain.HttpMethod, path str
 		name = operation.Summary
 	}
 
-	path, ctx, queries, headers := b.makeFromParameters(path, operation.Parameters, ctx)
+	path, ctx, queries, headers := b.MakeFromParameters(path, operation.Parameters, ctx)
 	payload := b.MakeFromRequestBody(operation.RequestBody)
+	auth := b.MakeFromSecurity(operation.Security, headers)
 
 	return ctx, &domain.Request{
 		Id:        "",
@@ -97,16 +101,16 @@ func (b *BuilderCollection) makeFromOperation(method domain.HttpMethod, path str
 		Uri:       path,
 		Query:     *queries,
 		Header:    *headers,
-		//Cookie: ,
-		Body: *payload,
-		//Auth: ,
-		Owner:    b.owner,
-		Modified: now,
-		Status:   domain.GROUP,
+		Cookie:    *cookie.NewCookies(),
+		Body:      *payload,
+		Auth:      *auth,
+		Owner:     b.owner,
+		Modified:  now,
+		Status:    domain.GROUP,
 	}
 }
 
-func (b *BuilderCollection) makeFromParameters(path string, parameters []openapi.Parameter, ctx *context.Context) (string, *context.Context, *query.Queries, *header.Headers) {
+func (b *BuilderCollection) MakeFromParameters(path string, parameters []openapi.Parameter, ctx *context.Context) (string, *context.Context, *query.Queries, *header.Headers) {
 	queries := query.NewQueries()
 	headers := header.NewHeaders()
 
@@ -130,6 +134,10 @@ func (b *BuilderCollection) makeFromParameters(path string, parameters []openapi
 }
 
 func (b *BuilderCollection) MakeFromRequestBody(requestBody *openapi.RequestBody) *body.Body {
+	if requestBody == nil {
+		return body.NewBody(false, body.None, make([]byte, 0))
+	}
+	
 	for _, v := range requestBody.Content {
 		schema, err := b.findSchema(&v.Schema)
 		if schema == nil {
@@ -173,13 +181,12 @@ func (b *BuilderCollection) MakeFromSchema(schema *openapi.Schema) string {
 }
 
 func (b *BuilderCollection) makeFromExample(schema *openapi.Schema) string {
-	example, err := json.Marshal(schema.Example) 
+	example, err := json.Marshal(schema.Example)
 	if err != nil {
 		fmt.Printf("%s", err.Error())
 	}
 	return string(example)
 }
-
 
 func (b *BuilderCollection) makeFromReference(schema *openapi.Schema) string {
 	ref, err := b.findReference(schema)
@@ -217,6 +224,62 @@ func (b *BuilderCollection) makeFromProperties(schema *openapi.Schema) string {
 	return body
 }
 
+func (b *BuilderCollection) MakeFromSecurity(security []openapi.SecurityRequirement, queries *header.Headers) *auth.Auths {
+	auths := auth.NewAuths(false)
+
+	for _, v := range security {
+		for k := range v {
+			schema, err := b.findAuth(k)
+			if err != nil {
+				fmt.Printf("%s", err.Error())
+			}
+
+			if schema.In == "header" {
+				name := schema.Name
+				order := queries.SizeOf(name)
+				header := header.NewHeader(int64(order), true, name)
+				queries.Add(schema.Name, header)
+			}
+
+			switch schema.Scheme {
+			case "basic":
+				auths.PutAuth(*auth.NewAuth(true, auth.Basic, map[string]auth.Parameter{
+					auth.BASIC_PARAM_USER: {
+						Key:   auth.BASIC_PARAM_USER,
+						Value: auth.BASIC_PARAM_USER,
+					},
+					auth.BASIC_PARAM_PASSWORD: {
+						Key:   auth.BASIC_PARAM_PASSWORD,
+						Value: auth.BASIC_PARAM_PASSWORD,
+					},
+				}))
+			case "bearer":
+				bearer := schema.BearerFormat
+				if bearer == "" {
+					bearer = auth.BEARER_PARAM_PREFIX
+				}
+
+				auths.PutAuth(*auth.NewAuth(true, auth.Bearer, map[string]auth.Parameter{
+					auth.BEARER_PARAM_PREFIX: {
+						Key:   auth.BEARER_PARAM_PREFIX,
+						Value: schema.BearerFormat,
+					},
+					auth.BEARER_PARAM_TOKEN: {
+						Key:   auth.BEARER_PARAM_TOKEN,
+						Value: auth.BEARER_PARAM_TOKEN,
+					},
+				}))
+			}
+		}
+	}
+
+	if len(auths.Auths) > 0 {
+		auths.Status = true
+	}
+
+	return auths
+}
+
 func (b *BuilderCollection) findSchema(schema *openapi.Schema) (*openapi.Schema, error) {
 	if schema.Ref == "" {
 		return schema, nil
@@ -241,4 +304,12 @@ func (b *BuilderCollection) findReference(schema *openapi.Schema) (*openapi.Sche
 	err := utils.FindJson(fixRef, b.raw, schema)
 
 	return schema, err
+}
+
+func (b *BuilderCollection) findAuth(auth string) (*openapi.SecurityScheme, error) {
+	schema, exists := b.openapi.Components.SecuritySchemes[auth]
+	if !exists {
+		return nil, fmt.Errorf("schema not found: %s", auth)
+	}
+	return &schema, nil
 }

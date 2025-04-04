@@ -75,6 +75,8 @@ type SecurityRequirement map[string][]string
 
 type SecurityScheme struct {
 	Type         string `json:"type"`
+	In           string `json:"in"`
+	Name         string `json:"name"`
 	Scheme       string `json:"scheme,omitempty"`
 	BearerFormat string `json:"bearerFormat,omitempty"`
 }
