@@ -12,6 +12,7 @@ type IRepositoryRequest interface {
 	FindNodes(steps []domain.NodeReference) []domain.Node
 	FindAll() []domain.Request
 	Insert(owner string, request *domain.Request) *domain.Request
+	InsertMany(owner string, requests []domain.Request) []domain.Request
 	Delete(request *domain.Request) *domain.Request
 	DeleteById(id string) *domain.Request 
 	DeleteMany(ids ...string) []domain.Request

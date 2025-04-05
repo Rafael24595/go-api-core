@@ -155,6 +155,14 @@ func (r *RepositoryMemory) Insert(owner string, request *domain.Request) *domain
 	return request
 }
 
+func (r *RepositoryMemory) InsertMany(owner string, requests []domain.Request) []domain.Request {
+	for i, v := range requests {
+		req := r.Insert(owner, &v)
+		requests[i] = *req
+	}
+	return requests
+}
+
 func (r *RepositoryMemory) Delete(request *domain.Request) *domain.Request {
 	return r.DeleteById(request.Id)
 }
