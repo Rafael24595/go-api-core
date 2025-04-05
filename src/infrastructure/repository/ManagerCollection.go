@@ -1,10 +1,12 @@
 package repository
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
+	"github.com/Rafael24595/go-api-core/src/domain/openapi"
 )
 
 type ManagerCollection struct {
@@ -30,6 +32,45 @@ func (m *ManagerCollection) Exists(key string) bool {
 
 func (m *ManagerCollection) FindByOwner(owner string) []domain.Collection {
 	return m.collection.FindByOwner(owner)
+}
+
+func (m *ManagerCollection) InsertOpenApi(owner string, file []byte) (*domain.Collection, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	oapi, raw, err := openapi.MakeFromJson(file)
+	if err != nil {
+		oapi, raw, err = openapi.MakeFromYaml(file)
+		if err != nil {
+			err = errors.New("the file provide has not valid format, it must be an JSON or YAML")
+			return nil, err
+		}
+	}
+
+	collection, ctx, requests, err := openapi.NewFactoryCollection(owner, oapi).SetRaw(*raw).Make();
+	if err != nil {
+		return nil, err
+	}
+
+	collection = m.collection.Insert(owner, collection)
+
+	ctx = m.context.InsertFromCollection(owner, collection.Id, ctx)
+	collection.Context = ctx.Id
+
+	collection = m.collection.Insert(owner, collection)
+
+	requests = m.request.InsertMany(owner, requests)
+	for i, v := range requests {
+		node := domain.NodeReference{
+			Order: i,
+			Request: v.Id,
+		}
+		collection.Nodes = append(collection.Nodes, node)
+	}
+
+	collection = m.collection.Insert(owner, collection)
+
+	return collection, nil
 }
 
 func (m *ManagerCollection) Insert(owner string, collection *domain.Collection) *domain.Collection {
