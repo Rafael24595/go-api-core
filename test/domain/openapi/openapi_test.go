@@ -8,7 +8,6 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/auth"
-	"github.com/Rafael24595/go-api-core/src/domain/collection"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/domain/header"
 	"github.com/Rafael24595/go-api-core/src/domain/openapi"
@@ -17,7 +16,7 @@ import (
 
 const TEST_OWNER = "anonymoys"
 
-func makeOpenApiArguments(t *testing.T) (*openapi.OpenAPI, map[string]any) {
+func makeOpenApiArguments(t *testing.T) (*openapi.OpenAPI, *map[string]any) {
 	file, err := os.Open("test_openaoi.yaml")
 	if err != nil {
 		t.Error(err)
@@ -29,12 +28,7 @@ func makeOpenApiArguments(t *testing.T) (*openapi.OpenAPI, map[string]any) {
 		t.Error(err)
 	}
 
-	oapi, err := openapi.MakeFromYaml(yaml)
-	if err != nil {
-		t.Error(err)
-	}
-
-	raw, err := openapi.DeserializeFromYaml(yaml)
+	oapi, raw, err := openapi.MakeFromYaml(yaml)
 	if err != nil {
 		t.Error(err)
 	}
@@ -45,7 +39,7 @@ func makeOpenApiArguments(t *testing.T) (*openapi.OpenAPI, map[string]any) {
 func TestMake(t *testing.T) {
 	oapi, raw := makeOpenApiArguments(t)
 
-	builder := collection.NewBuilderCollection(TEST_OWNER, oapi).SetRaw(raw)
+	builder := openapi.NewFactoryCollection(TEST_OWNER, oapi).SetRaw(*raw)
 
 	collection, ctx, requests, err := builder.Make()
 	if err != nil {
@@ -102,7 +96,7 @@ func valideRequests(t *testing.T, requests []domain.Request) {
 func TestMakeFromOperation(t *testing.T) {
 	oapi, raw := makeOpenApiArguments(t)
 
-	builder := collection.NewBuilderCollection(TEST_OWNER, oapi).SetRaw(raw)
+	builder := openapi.NewFactoryCollection(TEST_OWNER, oapi).SetRaw(*raw)
 
 	ctx := context.NewContext(TEST_OWNER)
 
@@ -120,7 +114,7 @@ func TestMakeFromOperation(t *testing.T) {
 func TestMakeFromParameters(t *testing.T) {
 	oapi, raw := makeOpenApiArguments(t)
 
-	builder := collection.NewBuilderCollection(TEST_OWNER, oapi).SetRaw(raw)
+	builder := openapi.NewFactoryCollection(TEST_OWNER, oapi).SetRaw(*raw)
 
 	ctx := context.NewContext(TEST_OWNER)
 
@@ -206,7 +200,7 @@ func valideParametersHeader(t *testing.T, headers *header.Headers) {
 func TestMakeFromRequestBody(t *testing.T) {
 	oapi, raw := makeOpenApiArguments(t)
 
-	builder := collection.NewBuilderCollection(TEST_OWNER, oapi).SetRaw(raw)
+	builder := openapi.NewFactoryCollection(TEST_OWNER, oapi).SetRaw(*raw)
 
 	payload := oapi.Paths["/request"].Post.RequestBody
 	result := builder.MakeFromRequestBody(payload)
@@ -232,7 +226,7 @@ func TestMakeFromRequestBody(t *testing.T) {
 func TestMakeFromSchema(t *testing.T) {
 	oapi, raw := makeOpenApiArguments(t)
 
-	builder := collection.NewBuilderCollection(TEST_OWNER, oapi).SetRaw(raw)
+	builder := openapi.NewFactoryCollection(TEST_OWNER, oapi).SetRaw(*raw)
 
 	schema := oapi.Paths["/collection/{userId}"].Get.Responses["200"].Content["application/json"].Schema
 	example := builder.MakeFromSchema(&schema)
@@ -299,7 +293,7 @@ func valideSchemaCollectionRequests(t *testing.T, collection map[string]any) {
 func TestMakeFromSecurityBasic(t *testing.T) {
 	oapi, raw := makeOpenApiArguments(t)
 
-	builder := collection.NewBuilderCollection(TEST_OWNER, oapi).SetRaw(raw)
+	builder := openapi.NewFactoryCollection(TEST_OWNER, oapi).SetRaw(*raw)
 
 	security := oapi.Paths["/login"].Post.Security
 	result := builder.MakeFromSecurity(security, header.NewHeaders())
@@ -329,7 +323,7 @@ func TestMakeFromSecurityBasic(t *testing.T) {
 func TestMakeFromSecurityBearer(t *testing.T) {
 	oapi, raw := makeOpenApiArguments(t)
 
-	builder := collection.NewBuilderCollection(TEST_OWNER, oapi).SetRaw(raw)
+	builder := openapi.NewFactoryCollection(TEST_OWNER, oapi).SetRaw(*raw)
 
 	security := oapi.Paths["/request"].Post.Security
 	result := builder.MakeFromSecurity(security, header.NewHeaders())
@@ -353,7 +347,7 @@ func TestMakeFromSecurityBearer(t *testing.T) {
 func TestMakeFromSecurityApiKey(t *testing.T) {
 	oapi, raw := makeOpenApiArguments(t)
 
-	builder := collection.NewBuilderCollection(TEST_OWNER, oapi).SetRaw(raw)
+	builder := openapi.NewFactoryCollection(TEST_OWNER, oapi).SetRaw(*raw)
 
 	headers := header.NewHeaders()
 
