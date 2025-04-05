@@ -1,4 +1,4 @@
-package collection
+package openapi
 
 import (
 	"encoding/json"
@@ -13,30 +13,29 @@ import (
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/domain/cookie"
 	"github.com/Rafael24595/go-api-core/src/domain/header"
-	"github.com/Rafael24595/go-api-core/src/domain/openapi"
 	"github.com/Rafael24595/go-api-core/src/domain/query"
 )
 
-type BuilderCollection struct {
+type FactoryCollection struct {
 	owner   string
-	openapi openapi.OpenAPI
+	openapi OpenAPI
 	raw     map[string]any
 }
 
-func NewBuilderCollection(owner string, openapi *openapi.OpenAPI) *BuilderCollection {
-	return &BuilderCollection{
+func NewFactoryCollection(owner string, openapi *OpenAPI) *FactoryCollection {
+	return &FactoryCollection{
 		owner:   owner,
 		openapi: *openapi,
 		raw:     make(map[string]any),
 	}
 }
 
-func (b *BuilderCollection) SetRaw(raw map[string]any) *BuilderCollection {
+func (b *FactoryCollection) SetRaw(raw map[string]any) *FactoryCollection {
 	b.raw = raw
 	return b
 }
 
-func (b *BuilderCollection) Make() (*domain.Collection, *context.Context, []domain.Request, error) {
+func (b *FactoryCollection) Make() (*domain.Collection, *context.Context, []domain.Request, error) {
 	now := time.Now().UnixMilli()
 
 	ctx := context.NewContext(b.owner)
@@ -81,7 +80,7 @@ func (b *BuilderCollection) Make() (*domain.Collection, *context.Context, []doma
 	}, ctx, nodes, nil
 }
 
-func (b *BuilderCollection) MakeFromOperation(method domain.HttpMethod, path string, operation *openapi.Operation, ctx *context.Context) (*context.Context, *domain.Request) {
+func (b *FactoryCollection) MakeFromOperation(method domain.HttpMethod, path string, operation *Operation, ctx *context.Context) (*context.Context, *domain.Request) {
 	now := time.Now().UnixMilli()
 
 	name := path
@@ -110,7 +109,7 @@ func (b *BuilderCollection) MakeFromOperation(method domain.HttpMethod, path str
 	}
 }
 
-func (b *BuilderCollection) MakeFromParameters(path string, parameters []openapi.Parameter, ctx *context.Context) (string, *context.Context, *query.Queries, *header.Headers) {
+func (b *FactoryCollection) MakeFromParameters(path string, parameters []Parameter, ctx *context.Context) (string, *context.Context, *query.Queries, *header.Headers) {
 	queries := query.NewQueries()
 	headers := header.NewHeaders()
 
@@ -133,11 +132,11 @@ func (b *BuilderCollection) MakeFromParameters(path string, parameters []openapi
 	return path, ctx, queries, headers
 }
 
-func (b *BuilderCollection) MakeFromRequestBody(requestBody *openapi.RequestBody) *body.Body {
+func (b *FactoryCollection) MakeFromRequestBody(requestBody *RequestBody) *body.Body {
 	if requestBody == nil {
 		return body.NewBody(false, body.None, make([]byte, 0))
 	}
-	
+
 	for _, v := range requestBody.Content {
 		schema, err := b.findSchema(&v.Schema)
 		if schema == nil {
@@ -154,7 +153,7 @@ func (b *BuilderCollection) MakeFromRequestBody(requestBody *openapi.RequestBody
 	return body.NewBody(false, body.None, make([]byte, 0))
 }
 
-func (b *BuilderCollection) MakeFromSchema(schema *openapi.Schema) string {
+func (b *FactoryCollection) MakeFromSchema(schema *Schema) string {
 	if schema.Example != nil && schema.Example != "" {
 		return b.makeFromExample(schema)
 	}
@@ -180,7 +179,7 @@ func (b *BuilderCollection) MakeFromSchema(schema *openapi.Schema) string {
 	return payload
 }
 
-func (b *BuilderCollection) makeFromExample(schema *openapi.Schema) string {
+func (b *FactoryCollection) makeFromExample(schema *Schema) string {
 	example, err := json.Marshal(schema.Example)
 	if err != nil {
 		fmt.Printf("%s", err.Error())
@@ -188,7 +187,7 @@ func (b *BuilderCollection) makeFromExample(schema *openapi.Schema) string {
 	return string(example)
 }
 
-func (b *BuilderCollection) makeFromReference(schema *openapi.Schema) string {
+func (b *FactoryCollection) makeFromReference(schema *Schema) string {
 	ref, err := b.findReference(schema)
 	if err != nil {
 		fmt.Printf("%s", err.Error())
@@ -200,7 +199,7 @@ func (b *BuilderCollection) makeFromReference(schema *openapi.Schema) string {
 	return ""
 }
 
-func (b *BuilderCollection) makeFromProperties(schema *openapi.Schema) string {
+func (b *FactoryCollection) makeFromProperties(schema *Schema) string {
 	lines := []string{}
 
 	for key, v := range schema.Properties {
@@ -224,7 +223,7 @@ func (b *BuilderCollection) makeFromProperties(schema *openapi.Schema) string {
 	return body
 }
 
-func (b *BuilderCollection) MakeFromSecurity(security []openapi.SecurityRequirement, queries *header.Headers) *auth.Auths {
+func (b *FactoryCollection) MakeFromSecurity(security []SecurityRequirement, queries *header.Headers) *auth.Auths {
 	auths := auth.NewAuths(false)
 
 	for _, v := range security {
@@ -280,7 +279,7 @@ func (b *BuilderCollection) MakeFromSecurity(security []openapi.SecurityRequirem
 	return auths
 }
 
-func (b *BuilderCollection) findSchema(schema *openapi.Schema) (*openapi.Schema, error) {
+func (b *FactoryCollection) findSchema(schema *Schema) (*Schema, error) {
 	if schema.Ref == "" {
 		return schema, nil
 	}
@@ -288,7 +287,7 @@ func (b *BuilderCollection) findSchema(schema *openapi.Schema) (*openapi.Schema,
 	return b.findReference(schema)
 }
 
-func (b *BuilderCollection) findReference(schema *openapi.Schema) (*openapi.Schema, error) {
+func (b *FactoryCollection) findReference(schema *Schema) (*Schema, error) {
 	if strings.HasPrefix(schema.Ref, "#/components/schemas/") {
 		schemaName := strings.TrimPrefix(schema.Ref, "#/components/schemas/")
 		schema, exists := b.openapi.Components.Schemas[schemaName]
@@ -306,7 +305,7 @@ func (b *BuilderCollection) findReference(schema *openapi.Schema) (*openapi.Sche
 	return schema, err
 }
 
-func (b *BuilderCollection) findAuth(auth string) (*openapi.SecurityScheme, error) {
+func (b *FactoryCollection) findAuth(auth string) (*SecurityScheme, error) {
 	schema, exists := b.openapi.Components.SecuritySchemes[auth]
 	if !exists {
 		return nil, fmt.Errorf("schema not found: %s", auth)
