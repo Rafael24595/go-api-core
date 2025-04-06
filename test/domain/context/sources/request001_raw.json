@@ -41,14 +41,8 @@
           "status": true,
           "code": "basic",
           "parameters": {
-            "username": {
-              "key": "username",
-              "value": "${global.user}"
-            },
-            "password": {
-              "key": "password",
-              "value": "${pass}"
-            }
+            "username": "${global.user}",
+            "password": "${pass}"
           }
         }
       }

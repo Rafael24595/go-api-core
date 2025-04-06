@@ -219,13 +219,10 @@ func processAuth(auths auth.Auths, context *Context) *auth.Auths {
 
 	for k, a := range auths.Auths {
 		key := context.Apply("auth", k)
-		parameters := map[string]auth.Parameter{}
+		parameters := map[string]string{}
 		for k, p := range a.Parameters {
 			key := context.Apply("auth", k)
-			parameters[key] = auth.Parameter{
-				Key:   context.Apply("auth", p.Key),
-				Value: context.Apply("auth", p.Value),
-			}
+			parameters[key] = context.Apply("auth", p)
 		}
 		authCategory[key] = auth.Auth{
 			Status:     a.Status,

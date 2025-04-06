@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 )
 
 type policy func(*domain.Request, IRepositoryRequest, IRepositoryResponse) error
@@ -72,7 +73,7 @@ func (m *ManagerRequest) FindSteps(steps []domain.Historic) []domain.Request {
 	return m.request.FindSteps(steps)
 }
 
-func (m *ManagerRequest) FindNodes(nodes []domain.NodeReference) []domain.Node {
+func (m *ManagerRequest) FindNodes(nodes []domain.NodeReference) []dto.DtoNode {
 	return m.request.FindNodes(nodes)
 }
 

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
 	"github.com/google/uuid"
@@ -91,16 +92,16 @@ func (r *RepositoryMemory) FindSteps(steps []domain.Historic) []domain.Request {
 	return requests
 }
 
-func (r *RepositoryMemory) FindNodes(references []domain.NodeReference) []domain.Node {
+func (r *RepositoryMemory) FindNodes(references []domain.NodeReference) []dto.DtoNode {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 
-	requests := make([]domain.Node, len(references))
+	requests := make([]dto.DtoNode, len(references))
 	for i, v := range references {
 		if request, ok := r.collection.Get(v.Request); ok {
-			requests[i] = domain.Node{
+			requests[i] = dto.DtoNode{
 				Order: v.Order,
-				Request: *request,
+				Request: *dto.FromRequest(request),
 			} 
 		}
 	}

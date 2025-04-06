@@ -41,14 +41,8 @@
           "status": true,
           "code": "basic",
           "parameters": {
-            "username": {
-              "key": "username",
-              "value": "Rafael24595"
-            },
-            "password": {
-              "key": "password",
-              "value": "secret-key"
-            }
+            "username": "Rafael24595",
+            "password": "secret-key"
           }
         }
       }

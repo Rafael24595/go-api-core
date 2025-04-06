@@ -13,12 +13,12 @@ const (
 func applyBearerAuth(a Auth, r *http.Request) *http.Request {
 	prefix := DEFAULT_BEARER_PREFIX
 	if pPrefix, ok := a.Parameters[BEARER_PARAM_PREFIX]; ok {
-		prefix = pPrefix.Value
+		prefix = pPrefix
 	}
 
 	token := ""
 	if pToken, ok := a.Parameters[BEARER_PARAM_TOKEN]; ok {
-		token = pToken.Value
+		token = pToken
 	}
 
 	return applyHeaderAuth("Authorization", prefix, token, r)

@@ -242,15 +242,9 @@ func (b *FactoryCollection) MakeFromSecurity(security []SecurityRequirement, que
 
 			switch schema.Scheme {
 			case "basic":
-				auths.PutAuth(*auth.NewAuth(true, auth.Basic, map[string]auth.Parameter{
-					auth.BASIC_PARAM_USER: {
-						Key:   auth.BASIC_PARAM_USER,
-						Value: auth.BASIC_PARAM_USER,
-					},
-					auth.BASIC_PARAM_PASSWORD: {
-						Key:   auth.BASIC_PARAM_PASSWORD,
-						Value: auth.BASIC_PARAM_PASSWORD,
-					},
+				auths.PutAuth(*auth.NewAuth(true, auth.Basic, map[string]string{
+					auth.BASIC_PARAM_USER: auth.BASIC_PARAM_USER,
+					auth.BASIC_PARAM_PASSWORD: auth.BASIC_PARAM_PASSWORD,
 				}))
 			case "bearer":
 				bearer := schema.BearerFormat
@@ -258,15 +252,9 @@ func (b *FactoryCollection) MakeFromSecurity(security []SecurityRequirement, que
 					bearer = auth.BEARER_PARAM_PREFIX
 				}
 
-				auths.PutAuth(*auth.NewAuth(true, auth.Bearer, map[string]auth.Parameter{
-					auth.BEARER_PARAM_PREFIX: {
-						Key:   auth.BEARER_PARAM_PREFIX,
-						Value: schema.BearerFormat,
-					},
-					auth.BEARER_PARAM_TOKEN: {
-						Key:   auth.BEARER_PARAM_TOKEN,
-						Value: auth.BEARER_PARAM_TOKEN,
-					},
+				auths.PutAuth(*auth.NewAuth(true, auth.Bearer, map[string]string{
+					auth.BEARER_PARAM_PREFIX: schema.BearerFormat,
+					auth.BEARER_PARAM_TOKEN: auth.BEARER_PARAM_TOKEN,
 				}))
 			}
 		}

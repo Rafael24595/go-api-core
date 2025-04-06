@@ -134,14 +134,14 @@ func TestProcessRequest(t *testing.T) {
 		t.Errorf("Found source %s but %s expected", found, expected)
 	}
 
-	found = request.Auth.Auths["basic"].Parameters["username"].Value
-	expected = requestExpected.Auth.Auths["basic"].Parameters["username"].Value
+	found = request.Auth.Auths["basic"].Parameters["username"]
+	expected = requestExpected.Auth.Auths["basic"].Parameters["username"]
 	if found != expected {
 		t.Errorf("Found source %s but %s expected", found, expected)
 	}
 
-	found = request.Auth.Auths["basic"].Parameters["password"].Value
-	expected = requestExpected.Auth.Auths["basic"].Parameters["password"].Value
+	found = request.Auth.Auths["basic"].Parameters["password"]
+	expected = requestExpected.Auth.Auths["basic"].Parameters["password"]
 	if found != expected {
 		t.Errorf("Found source %s but %s expected", found, expected)
 	}

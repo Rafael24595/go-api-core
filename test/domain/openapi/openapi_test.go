@@ -307,13 +307,13 @@ func TestMakeFromSecurityBasic(t *testing.T) {
 		t.Error("Basic authentication not found.")
 	}
 
-	value := authResult.Parameters[auth.BASIC_PARAM_USER].Value
+	value := authResult.Parameters[auth.BASIC_PARAM_USER]
 	expected := auth.BASIC_PARAM_USER
 	if value != expected {
 		t.Errorf("Found variable %v but %v expected", value, expected)
 	}
 
-	value = authResult.Parameters[auth.BASIC_PARAM_PASSWORD].Value
+	value = authResult.Parameters[auth.BASIC_PARAM_PASSWORD]
 	expected = auth.BASIC_PARAM_PASSWORD
 	if value != expected {
 		t.Errorf("Found variable %v but %v expected", value, expected)
@@ -337,7 +337,7 @@ func TestMakeFromSecurityBearer(t *testing.T) {
 		t.Error("Bearer authentication not found.")
 	}
 
-	value := authResult.Parameters[auth.BEARER_PARAM_PREFIX].Value
+	value := authResult.Parameters[auth.BEARER_PARAM_PREFIX]
 	expected := "JWT"
 	if value != expected {
 		t.Errorf("Found variable %v but %v expected", value, expected)

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 )
 
 type IRepositoryRequest interface {
@@ -9,7 +10,7 @@ type IRepositoryRequest interface {
 	Find(key string) (*domain.Request, bool)
 	FindOwner(owner string, status *domain.Status) []domain.Request
 	FindSteps(steps []domain.Historic) []domain.Request
-	FindNodes(steps []domain.NodeReference) []domain.Node
+	FindNodes(steps []domain.NodeReference) []dto.DtoNode
 	FindAll() []domain.Request
 	Insert(owner string, request *domain.Request) *domain.Request
 	InsertMany(owner string, requests []domain.Request) []domain.Request
