@@ -7,6 +7,7 @@ import (
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/domain/openapi"
+	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 )
 
 type ManagerCollection struct {
@@ -34,10 +35,42 @@ func (m *ManagerCollection) FindByOwner(owner string) []domain.Collection {
 	return m.collection.FindByOwner(owner)
 }
 
-func (m *ManagerCollection) InsertOpenApi(owner string, file []byte) (*domain.Collection, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (m *ManagerCollection) ImportDtoCollections(owner string, dtos []dto.DtoCollection) ([]domain.Collection, error) {
+	collections := make([]domain.Collection, len(dtos))
 
+	for i, v := range dtos {
+		requests := m.cleanRequests(v.Nodes)
+		
+		v.Context.Id = "";
+		ctx := dto.ToContext(&v.Context)
+
+		v.Id = ""
+		v.Nodes = make([]dto.DtoNode, 0)
+		collection := dto.ToCollection(&v)
+
+		collection, err := m.insertResources(owner, collection, ctx, requests)
+		if err != nil {
+			return make([]domain.Collection, 0), err
+		}
+
+		collections[i] = *collection
+	}
+
+	return collections, nil
+}
+
+func (m *ManagerCollection) cleanRequests(dtos []dto.DtoNode) []domain.Request {
+	requests := make([]domain.Request, len(dtos))
+
+	for i, v := range dtos {
+		v.Request.Id = ""
+		requests[i] = *dto.ToRequest(&v.Request)
+	}
+
+	return requests
+}
+
+func (m *ManagerCollection) InsertOpenApi(owner string, file []byte) (*domain.Collection, error) {
 	oapi, raw, err := openapi.MakeFromJson(file)
 	if err != nil {
 		oapi, raw, err = openapi.MakeFromYaml(file)
@@ -51,6 +84,13 @@ func (m *ManagerCollection) InsertOpenApi(owner string, file []byte) (*domain.Co
 	if err != nil {
 		return nil, err
 	}
+
+	return m.insertResources(owner, collection, ctx, requests)
+}
+
+func (m *ManagerCollection) insertResources(owner string, collection *domain.Collection, ctx *context.Context, requests []domain.Request) (*domain.Collection, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	collection = m.collection.Insert(owner, collection)
 
