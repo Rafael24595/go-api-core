@@ -204,6 +204,18 @@ func (b *FactoryCollection) makeFromProperties(schema *Schema) string {
 
 	for key, v := range schema.Properties {
 		value := v.Example
+		if value == nil {
+			if v.Type == "integer" {
+				value = "0"
+			}
+			if v.Type == "boolean" {
+				value = "false"
+			}
+		}
+
+		if value == nil {
+			value = key
+		}
 
 		if v.Ref != "" || v.Items != nil {
 			value = b.MakeFromSchema(&v)
