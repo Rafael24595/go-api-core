@@ -1,5 +1,7 @@
 github.com/Rafael24595/go-collections v0.2.2 h1:fgKbftKmdBZMSCkkZt12D+QHg9WVna5aCaQfzYsqntY=
 github.com/Rafael24595/go-collections v0.2.2/go.mod h1:XanWz5msL1Wf4gv2PkApCW2EaRLzM/VUVUBCNewo/j8=
+github.com/Rafael24595/go-collections v0.2.3 h1:bN+EzgWXh98cAGXjXSd0hGC2KyjBUmssrss9zTdCfd8=
+github.com/Rafael24595/go-collections v0.2.3/go.mod h1:XanWz5msL1Wf4gv2PkApCW2EaRLzM/VUVUBCNewo/j8=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=
