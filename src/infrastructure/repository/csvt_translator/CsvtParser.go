@@ -133,7 +133,12 @@ func (p *csvtParser) parseMap(row string) (map[string]ResourceNode, TranslateErr
 		key = node.key()
 
 		if buffer[0] == '"' {
-			index = strings.Index(buffer[1:], "\"") + 2
+			index = strings.Index(buffer[1:], "\"") + 1
+			if (index < len(buffer) - 1 && buffer[index+1] == byte(MAP_SEPARATOR)) {
+				index = index + 1
+			} else {
+				index = -1
+			}
 		} else {
 			index = strings.Index(buffer, string(MAP_SEPARATOR))
 		}
