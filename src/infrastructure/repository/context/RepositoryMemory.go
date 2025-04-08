@@ -63,14 +63,33 @@ func (r *RepositoryMemory) FindByCollection(owner, collection string) (*context.
 	return r.FindByOwner(fmt.Sprintf("%s-%s", owner, collection))
 }
 
+func (r *RepositoryMemory) Insert(owner string, ctx *context.Context) *context.Context {
+	return r.resolve(owner, ctx)
+}
+
 func (r *RepositoryMemory) InsertFromOwner(owner string, ctx *context.Context) *context.Context {
 	ctx.Domain = context.USER
-	return r.insert(owner, ctx)
+	return r.resolve(owner, ctx)
 }
 
 func (r *RepositoryMemory) InsertFromCollection(owner, collection string, ctx *context.Context) *context.Context {
 	ctx.Domain = context.COLLECTION
-	return r.insert(fmt.Sprintf("%s-%s", owner, collection), ctx)
+	return r.resolve(fmt.Sprintf("%s-%s", owner, collection), ctx)
+}
+
+func (r *RepositoryMemory) resolve(owner string, ctx *context.Context) *context.Context {
+	if ctx.Id != "" {
+		return r.insert(owner, ctx)
+	}
+
+	key := uuid.New().String()
+	if r.collection.Exists(key) {
+		return r.resolve(owner, ctx)
+	}
+
+	ctx.Id = key
+
+	return r.insert(owner, ctx)
 }
 
 func (r *RepositoryMemory) insert(owner string, ctx *context.Context) *context.Context {
@@ -85,14 +104,7 @@ func (r *RepositoryMemory) insert(owner string, ctx *context.Context) *context.C
 
 	ctx.Modified = time.Now().UnixMilli()
 
-	key := uuid.New().String()
-	if r.collection.Exists(key) {
-		return r.insert(owner, ctx)
-	}
-
-	ctx.Id = key
-
-	r.collection.Put(key, *ctx)
+	r.collection.Put(ctx.Id, *ctx)
 
 	go r.write(r.collection)
 
