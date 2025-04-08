@@ -59,6 +59,39 @@ func (m *ManagerCollection) ImportDtoCollections(owner string, dtos []dto.DtoCol
 	return collections, nil
 }
 
+func (m *ManagerCollection) ImportDtoRequests(owner string, id string, dtos []dto.DtoRequest) (*domain.Collection, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	collection, exists := m.collection.Find(id)
+	if !exists || collection.Owner != owner {
+		return nil, nil
+	}
+
+	if len(dtos) == 0{
+		return collection, nil
+	}
+
+	len := len(collection.Nodes)
+
+	for i, v := range dtos {
+		v.Id = ""
+		v.Status = domain.GROUP
+		request := dto.ToRequest(&v)
+
+		request = m.request.Insert(owner, request)
+
+		collection.Nodes = append(collection.Nodes, domain.NodeReference{
+			Order: len + i,
+			Request: request.Id,
+		})
+	}
+
+	collection = m.collection.Insert(owner, collection)
+
+	return collection, nil
+}
+
 func (m *ManagerCollection) cleanRequests(dtos []dto.DtoNode) []domain.Request {
 	requests := make([]domain.Request, len(dtos))
 
@@ -70,7 +103,7 @@ func (m *ManagerCollection) cleanRequests(dtos []dto.DtoNode) []domain.Request {
 	return requests
 }
 
-func (m *ManagerCollection) InsertOpenApi(owner string, file []byte) (*domain.Collection, error) {
+func (m *ManagerCollection) ImportOpenApi(owner string, file []byte) (*domain.Collection, error) {
 	oapi, raw, err := openapi.MakeFromJson(file)
 	if err != nil {
 		oapi, raw, err = openapi.MakeFromYaml(file)

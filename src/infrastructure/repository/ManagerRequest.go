@@ -88,6 +88,22 @@ func (m *ManagerRequest) Release(owner string, request *domain.Request, response
 	return m.Insert(owner, request, response)
 }
 
+func (m *ManagerRequest) ImportDtoRequests(owner string, dtos []dto.DtoRequest) []domain.Request {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	requests := make([]domain.Request, len(dtos))
+
+	for i, v := range dtos {
+		v.Id = ""
+		request := dto.ToRequest(&v)
+		request = m.request.Insert(owner, request)
+		requests[i] = *request
+	}
+	
+	return requests
+}
+
 func (m *ManagerRequest) Insert(owner string, request *domain.Request, response *domain.Response) (*domain.Request, *domain.Response) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
