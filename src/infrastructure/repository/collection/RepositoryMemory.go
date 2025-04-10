@@ -48,11 +48,11 @@ func (r *RepositoryMemory) Find(id string) (*domain.Collection, bool) {
 func (r *RepositoryMemory) FindByOwner(owner string) []domain.Collection {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.FindOptions(repository.FilterOptions[domain.Collection]{
-		Predicate: func(c domain.Collection) bool {
+	return r.collection.ValuesVector().
+		Filter(func(c domain.Collection) bool {
 			return c.Owner == owner
-		},
-	})
+		}).
+		Collect()
 }
 
 func (r *RepositoryMemory) FindOptions(options repository.FilterOptions[domain.Collection]) []domain.Collection {
