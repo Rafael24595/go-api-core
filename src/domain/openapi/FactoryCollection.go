@@ -255,7 +255,7 @@ func (b *FactoryCollection) MakeFromSecurity(security []SecurityRequirement, que
 			switch schema.Scheme {
 			case "basic":
 				auths.PutAuth(*auth.NewAuth(true, auth.Basic, map[string]string{
-					auth.BASIC_PARAM_USER: auth.BASIC_PARAM_USER,
+					auth.BASIC_PARAM_USER:     auth.BASIC_PARAM_USER,
 					auth.BASIC_PARAM_PASSWORD: auth.BASIC_PARAM_PASSWORD,
 				}))
 			case "bearer":
@@ -266,7 +266,7 @@ func (b *FactoryCollection) MakeFromSecurity(security []SecurityRequirement, que
 
 				auths.PutAuth(*auth.NewAuth(true, auth.Bearer, map[string]string{
 					auth.BEARER_PARAM_PREFIX: schema.BearerFormat,
-					auth.BEARER_PARAM_TOKEN: auth.BEARER_PARAM_TOKEN,
+					auth.BEARER_PARAM_TOKEN:  auth.BEARER_PARAM_TOKEN,
 				}))
 			}
 		}
