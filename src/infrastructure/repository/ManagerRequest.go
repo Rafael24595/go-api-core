@@ -130,6 +130,10 @@ func (m *ManagerRequest) Insert(owner string, request *domain.Request, response 
 	return requestResult, resultResponse
 }
 
+func (m *ManagerRequest) InsertResponse(owner string, response *domain.Response) *domain.Response {
+	return  m.response.Insert(owner, response)
+}
+
 func (m *ManagerRequest) Update(owner string, request *domain.Request) *domain.Request {
 	oldRequest, exists := m.request.Find(request.Id)
 	if !exists || oldRequest.Owner != owner {
