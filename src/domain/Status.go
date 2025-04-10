@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Rafael24595/go-api-core/src/commons"
+	"github.com/Rafael24595/go-api-core/src/commons/exception"
 )
 
 type Status string
@@ -19,7 +19,7 @@ func (s Status) String() string {
 	return string(s)
 }
 
-func StatusFromString(value string) (*Status, commons.ApiError) {
+func StatusFromString(value string) (*Status, exception.ApiError) {
 	switch strings.ToLower(value) {
 	case string(FINAL):
 		status := FINAL
@@ -31,6 +31,6 @@ func StatusFromString(value string) (*Status, commons.ApiError) {
 		status := GROUP
 		return &status, nil
 	default:
-		return nil, commons.ApiErrorFrom(422, fmt.Sprintf("Unknown same-site value: '%s'", value))
+		return nil, exception.ApiErrorFrom(422, fmt.Sprintf("Unknown same-site value: '%s'", value))
 	}
 }

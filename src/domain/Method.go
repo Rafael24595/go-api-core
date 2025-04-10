@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Rafael24595/go-api-core/src/commons"
+	"github.com/Rafael24595/go-api-core/src/commons/exception"
 )
 
 type HttpMethod string
@@ -25,7 +25,7 @@ func (m HttpMethod) String() string {
 	return string(m)
 }
 
-func HttpMethodFromString(value string) (*HttpMethod, commons.ApiError) {
+func HttpMethodFromString(value string) (*HttpMethod, exception.ApiError) {
 	switch strings.ToUpper(value) {
 	case string(GET):
 		GET := GET
@@ -55,7 +55,7 @@ func HttpMethodFromString(value string) (*HttpMethod, commons.ApiError) {
 		CONNECT := CONNECT
 		return &CONNECT, nil
 	default:
-		return nil, commons.ApiErrorFrom(422, fmt.Sprintf("Unknown method value: '%s'", value))
+		return nil, exception.ApiErrorFrom(422, fmt.Sprintf("Unknown method value: '%s'", value))
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Rafael24595/go-api-core/src/commons"
+	"github.com/Rafael24595/go-api-core/src/commons/exception"
 )
 
 type Cookie struct {
@@ -26,7 +26,7 @@ func CookieFromString(cookieString string) (*Cookie, error) {
 
 	codeValue := strings.SplitN(strings.TrimSpace(parts[0]), "=", 2)
 	if len(codeValue) != 2 {
-		return nil, commons.ApiErrorFrom(422, "Invalid cookie format")
+		return nil, exception.ApiErrorFrom(422, "Invalid cookie format")
 	}
 
 	code := strings.TrimSpace(codeValue[0])
@@ -64,7 +64,7 @@ func CookieFromString(cookieString string) (*Cookie, error) {
 			if value != "" {
 				maxAge, err := strconv.Atoi(value)
 				if err != nil {
-					return nil, commons.ApiErrorFromCause(422, "Invalid Max-Age value", err)
+					return nil, exception.ApiErrorFromCause(422, "Invalid Max-Age value", err)
 				}
 				cookie.MaxAge = maxAge
 			}
@@ -72,12 +72,12 @@ func CookieFromString(cookieString string) (*Cookie, error) {
 			if value != "" {
 				sameSite, err := SameSiteFromString(value)
 				if err != nil {
-					return nil, commons.ApiErrorFromCause(422, fmt.Sprintf("Unknown SameSite value: '%s'", value), err)
+					return nil, exception.ApiErrorFromCause(422, fmt.Sprintf("Unknown SameSite value: '%s'", value), err)
 				}
 				cookie.SameSite = *sameSite
 			}
 		default:
-			return nil, commons.ApiErrorFrom(422, fmt.Sprintf("Unknown field code: '%s'", key))
+			return nil, exception.ApiErrorFrom(422, fmt.Sprintf("Unknown field code: '%s'", key))
 		}
 	}
 

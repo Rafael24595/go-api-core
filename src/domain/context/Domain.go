@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Rafael24595/go-api-core/src/commons"
+	"github.com/Rafael24595/go-api-core/src/commons/exception"
 )
 
 type Domain string
@@ -18,7 +18,7 @@ func (s Domain) String() string {
 	return string(s)
 }
 
-func DomainFromString(value string) (*Domain, commons.ApiError) {
+func DomainFromString(value string) (*Domain, exception.ApiError) {
 	switch strings.ToLower(value) {
 	case string(USER):
 		status := USER
@@ -27,6 +27,6 @@ func DomainFromString(value string) (*Domain, commons.ApiError) {
 		status := COLLECTION
 		return &status, nil
 	default:
-		return nil, commons.ApiErrorFrom(422, fmt.Sprintf("Unknown context domain value: '%s'", value))
+		return nil, exception.ApiErrorFrom(422, fmt.Sprintf("Unknown context domain value: '%s'", value))
 	}
 }

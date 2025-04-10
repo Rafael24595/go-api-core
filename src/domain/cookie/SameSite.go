@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Rafael24595/go-api-core/src/commons"
+	"github.com/Rafael24595/go-api-core/src/commons/exception"
 )
 
 type SameSite string
@@ -19,7 +19,7 @@ func (s SameSite) String() string {
 	return string(s)
 }
 
-func SameSiteFromString(value string) (*SameSite, commons.ApiError) {
+func SameSiteFromString(value string) (*SameSite, exception.ApiError) {
 	switch strings.ToLower(value) {
 	case "strict":
 		sameSite := Strict
@@ -31,6 +31,6 @@ func SameSiteFromString(value string) (*SameSite, commons.ApiError) {
 		sameSite := None
 		return &sameSite, nil
 	default:
-		return nil, commons.ApiErrorFrom(422, fmt.Sprintf("Unknown same-site value: '%s'", value))
+		return nil, exception.ApiErrorFrom(422, fmt.Sprintf("Unknown same-site value: '%s'", value))
 	}
 }
