@@ -10,15 +10,30 @@ import (
 var instance *Configuration
 
 type Configuration struct {
-	kargs map[string]string
+	admin  string
+	secret []byte
+	kargs  map[string]string
 }
 
 func Initialize(kargs map[string]string) Configuration {
 	if instance != nil {
 		panic("")
 	}
+
+	admin, ok := kargs["ADMIN_USER"]
+	if !ok {
+		panic("Admin is not defined")
+	}
+
+	secret, ok := kargs["ADMIN_SECRET"]
+	if !ok {
+		panic("Secret is not defined")
+	}
+
 	instance = &Configuration{
-		kargs: kargs,
+		admin:  admin,
+		secret: []byte(secret),
+		kargs:  kargs,
 	}
 
 	return *instance
@@ -29,6 +44,14 @@ func Instance() Configuration {
 		panic("")
 	}
 	return *instance
+}
+
+func (c Configuration) Admin() string {
+	return c.admin
+}
+
+func (c Configuration) Secret() []byte {
+	return c.secret
 }
 
 func ReadEnv(file string) map[string]string {
