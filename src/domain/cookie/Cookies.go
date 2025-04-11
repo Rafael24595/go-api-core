@@ -1,11 +1,21 @@
 package cookie
 
-type Cookies struct {
-	Cookies map[string]Cookie `json:"cookies"`
+type CookiesClient struct {
+	Cookies map[string]CookieClient `json:"cookies"`
 }
 
-func NewCookies() *Cookies {
-	return &Cookies{
-		Cookies: make(map[string]Cookie),
+func NewCookiesClient() *CookiesClient {
+	return &CookiesClient{
+		Cookies: make(map[string]CookieClient),
+	}
+}
+
+type CookiesServer struct {
+	Cookies map[string]CookieServer `json:"cookies"`
+}
+
+func NewCookiesServer() *CookiesServer {
+	return &CookiesServer{
+		Cookies: make(map[string]CookieServer),
 	}
 }

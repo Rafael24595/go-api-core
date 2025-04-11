@@ -100,7 +100,7 @@ func (b *FactoryCollection) MakeFromOperation(method domain.HttpMethod, path str
 		Uri:       path,
 		Query:     *queries,
 		Header:    *headers,
-		Cookie:    *cookie.NewCookies(),
+		Cookie:    *cookie.NewCookiesClient(),
 		Body:      *payload,
 		Auth:      *auth,
 		Owner:     b.owner,

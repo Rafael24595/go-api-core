@@ -7,16 +7,16 @@ import (
 )
 
 type Response struct {
-	Id      string         `json:"_id"`
-	Request string         `json:"request"`
-	Date    int64          `json:"date"`
-	Time    int64          `json:"time"`
-	Status  int16          `json:"status"`
-	Headers header.Headers `json:"headers"`
-	Cookies cookie.Cookies `json:"cookies"`
-	Body    body.Body      `json:"body"`
-	Size    int            `json:"size"`
-	Owner   string         `json:"owner"`
+	Id      string               `json:"_id"`
+	Request string               `json:"request"`
+	Date    int64                `json:"date"`
+	Time    int64                `json:"time"`
+	Status  int16                `json:"status"`
+	Headers header.Headers       `json:"headers"`
+	Cookies cookie.CookiesServer `json:"cookies"`
+	Body    body.Body            `json:"body"`
+	Size    int                  `json:"size"`
+	Owner   string               `json:"owner"`
 }
 
 func NewResponseDefault() *Response {

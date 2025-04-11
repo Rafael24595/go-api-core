@@ -182,25 +182,18 @@ func processHeader(headers header.Headers, context *Context) *header.Headers {
 	}
 }
 
-func processCookie(cookies cookie.Cookies, context *Context) *cookie.Cookies {
-	cookieCategory := map[string]cookie.Cookie{}
+func processCookie(cookies cookie.CookiesClient, context *Context) *cookie.CookiesClient {
+	cookieCategory := map[string]cookie.CookieClient{}
 	for k, c := range cookies.Cookies {
 		key := context.Apply("cookie", k)
-		cookieCategory[key] = cookie.Cookie{
+		cookieCategory[key] = cookie.CookieClient{
+			Order:      c.Order,
 			Status:     c.Status,
-			Code:       context.Apply("cookie", c.Code),
 			Value:      context.Apply("cookie", c.Value),
-			Domain:     c.Domain,
-			Path:       c.Path,
-			Expiration: c.Expiration,
-			MaxAge:     c.MaxAge,
-			Secure:     c.Secure,
-			HttpOnly:   c.HttpOnly,
-			SameSite:   c.SameSite,
 		}
 	}
 
-	return &cookie.Cookies{
+	return &cookie.CookiesClient{
 		Cookies: cookieCategory,
 	}
 }

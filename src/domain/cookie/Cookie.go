@@ -8,7 +8,21 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/exception"
 )
 
-type Cookie struct {
+type CookieClient struct {
+	Order  int64  `json:"order"`
+	Status bool   `json:"status"`
+	Value  string `json:"value"`
+}
+
+func NewCookieClient(order int64, status bool, value string) CookieClient {
+	return CookieClient{
+		Order:  order,
+		Status: status,
+		Value:  value,
+	}
+}
+
+type CookieServer struct {
 	Status     bool     `json:"status"`
 	Code       string   `json:"code"`
 	Value      string   `json:"value"`
@@ -21,7 +35,7 @@ type Cookie struct {
 	SameSite   SameSite `json:"samesite"`
 }
 
-func CookieFromString(cookieString string) (*Cookie, error) {
+func CookieServerFromString(cookieString string) (*CookieServer, error) {
 	parts := strings.Split(cookieString, ";")
 
 	codeValue := strings.SplitN(strings.TrimSpace(parts[0]), "=", 2)
@@ -32,7 +46,7 @@ func CookieFromString(cookieString string) (*Cookie, error) {
 	code := strings.TrimSpace(codeValue[0])
 	value := strings.TrimSpace(codeValue[1])
 
-	cookie := &Cookie{
+	cookie := &CookieServer{
 		Status:   true,
 		Code:     code,
 		Value:    value,
@@ -84,7 +98,7 @@ func CookieFromString(cookieString string) (*Cookie, error) {
 	return cookie, nil
 }
 
-func (c *Cookie) String() string {
+func (c *CookieServer) String() string {
 	cookieString := c.Value
 
 	if c.Domain != "" {

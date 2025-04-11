@@ -13,19 +13,19 @@ import (
 const ANONYMOUS_OWNER = "anonymous"
 
 type Request struct {
-	Id        string         `json:"_id"`
-	Timestamp int64          `json:"timestamp"`
-	Name      string         `json:"name"`
-	Method    HttpMethod     `json:"method"`
-	Uri       string         `json:"uri"`
-	Query     query.Queries  `json:"query"`
-	Header    header.Headers `json:"header"`
-	Cookie    cookie.Cookies `json:"cookie"`
-	Body      body.Body      `json:"body"`
-	Auth      auth.Auths     `json:"auth"`
-	Owner     string         `json:"owner"`
-	Modified  int64          `json:"modified"`
-	Status    Status         `json:"status"`
+	Id        string               `json:"_id"`
+	Timestamp int64                `json:"timestamp"`
+	Name      string               `json:"name"`
+	Method    HttpMethod           `json:"method"`
+	Uri       string               `json:"uri"`
+	Query     query.Queries        `json:"query"`
+	Header    header.Headers       `json:"header"`
+	Cookie    cookie.CookiesClient `json:"cookie"`
+	Body      body.Body            `json:"body"`
+	Auth      auth.Auths           `json:"auth"`
+	Owner     string               `json:"owner"`
+	Modified  int64                `json:"modified"`
+	Status    Status               `json:"status"`
 }
 
 func NewRequestDefault() *Request {
@@ -49,8 +49,8 @@ func NewRequest(name string, method HttpMethod, uri string) *Request {
 		Header: header.Headers{
 			Headers: make(map[string][]header.Header),
 		},
-		Cookie: cookie.Cookies{
-			Cookies: make(map[string]cookie.Cookie),
+		Cookie: cookie.CookiesClient{
+			Cookies: make(map[string]cookie.CookieClient),
 		},
 		Body: body.Body{
 			ContentType: body.None,

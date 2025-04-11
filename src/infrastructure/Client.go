@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Rafael24595/go-api-core/src/commons/exception"
@@ -58,7 +59,7 @@ func (c *HttpClient) Fetch(request domain.Request) (*domain.Response, exception.
 
 func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, exception.ApiError) {
 	method := operation.Method.String()
-	url := operation.Uri
+	url := strings.TrimSpace(operation.Uri)
 
 	var body io.Reader
 	if !operation.Body.Empty() && operation.Body.Status && method != "GET" && method != "HEAD" {
@@ -72,6 +73,7 @@ func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, excep
 
 	req = c.applyQuery(operation, req)
 	req = c.applyHeader(operation, req)
+	req = c.applyCookies(operation, req)
 	req = c.applyAuth(operation, req)
 
 	return req, nil
@@ -106,6 +108,22 @@ func (c *HttpClient) applyHeader(operation domain.Request, req *http.Request) *h
 	}
 
 	req.Header = headers
+
+	return req
+}
+
+func (c *HttpClient) applyCookies(operation domain.Request, req *http.Request) *http.Request {
+	cookies := []string{}
+	for k, c := range operation.Cookie.Cookies {
+		if !c.Status {
+			continue
+		}
+		cookies = append(cookies, fmt.Sprintf("%s=%s", k, c.Value))
+	}
+
+	req.Header["Cookie"] = []string{
+		strings.Join(cookies, "; "),
+	}
 
 	return req
 }
@@ -183,24 +201,24 @@ func (c *HttpClient) makeHeaders(resp http.Response) *header.Headers {
 	}
 }
 
-func (c *HttpClient) makeCookies(headers *header.Headers) (*cookie.Cookies, error) {
+func (c *HttpClient) makeCookies(headers *header.Headers) (*cookie.CookiesServer, error) {
 	setCookie, ok := headers.Headers["Set-Cookie"]
 	if !ok && len(setCookie) > 0 {
-		return &cookie.Cookies{
-			Cookies: make(map[string]cookie.Cookie),
+		return &cookie.CookiesServer{
+			Cookies: make(map[string]cookie.CookieServer),
 		}, nil
 	}
 
-	cookies := map[string]cookie.Cookie{}
+	cookies := map[string]cookie.CookieServer{}
 	for _, c := range setCookie {
-		parsed, err := cookie.CookieFromString(c.Value)
+		parsed, err := cookie.CookieServerFromString(c.Value)
 		if err != nil {
 			return nil, err
 		}
 		cookies[parsed.Code] = *parsed
 	}
 
-	return &cookie.Cookies{
+	return &cookie.CookiesServer{
 		Cookies: cookies,
 	}, nil
 }
