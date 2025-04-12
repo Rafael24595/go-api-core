@@ -121,11 +121,11 @@ func (b *FactoryCollection) MakeFromParameters(path string, parameters []Paramet
 			replacement := fmt.Sprintf("${%s}", v.Name)
 			path = strings.ReplaceAll(path, placeholder, replacement)
 		case "query":
-			order := int64(queries.SizeOf(v.Name))
-			queries.Add(v.Name, query.NewQuery(order, true, v.Description))
+			order := len(queries.Queries)
+			queries.Add(v.Name, query.NewQuery(int64(order), true, v.Description))
 		case "header":
-			order := int64(headers.SizeOf(v.Name))
-			headers.Add(v.Name, header.NewHeader(order, true, v.Description))
+			order := len(headers.Headers)
+			headers.Add(v.Name, header.NewHeader(int64(order), true, v.Description))
 		}
 	}
 
