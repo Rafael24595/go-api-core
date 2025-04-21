@@ -1,10 +1,7 @@
 package configuration
 
 import (
-	"fmt"
-	"os"
-
-	"github.com/joho/godotenv"
+	"github.com/Rafael24595/go-api-core/src/commons/utils"
 )
 
 var instance *Configuration
@@ -12,20 +9,20 @@ var instance *Configuration
 type Configuration struct {
 	admin  string
 	secret []byte
-	kargs  map[string]string
+	kargs  map[string]utils.Any
 }
 
-func Initialize(kargs map[string]string) Configuration {
+func Initialize(kargs map[string]utils.Any) Configuration {
 	if instance != nil {
 		panic("")
 	}
 
-	admin, ok := kargs["ADMIN_USER"]
+	admin, ok := kargs["GO_API_ADMIN_USER"].String()
 	if !ok {
 		panic("Admin is not defined")
 	}
 
-	secret, ok := kargs["ADMIN_SECRET"]
+	secret, ok := kargs["GO_API_ADMIN_SECRET"].String()
 	if !ok {
 		panic("Secret is not defined")
 	}
@@ -52,31 +49,4 @@ func (c Configuration) Admin() string {
 
 func (c Configuration) Secret() []byte {
 	return c.secret
-}
-
-func ReadEnv(file string) map[string]string {
-	if len(file) > 0 {
-		if err := godotenv.Load(".env"); err != nil {
-			panic(fmt.Sprintf("Error loading %s file", file))
-		}
-	}
-
-	envs := make(map[string]string)
-	for _, env := range os.Environ() {
-		pair := splitEnv(env)
-		envs[pair[0]] = pair[1]
-	}
-
-	return envs
-}
-
-func splitEnv(env string) []string {
-	var pair []string
-	for i, char := range env {
-		if char == '=' {
-			pair = append(pair, env[:i], env[i+1:])
-			break
-		}
-	}
-	return pair
 }
