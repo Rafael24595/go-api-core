@@ -22,19 +22,25 @@ func Client() *HttpClient {
 	return &HttpClient{}
 }
 
-func WarmUp() (*domain.Response, exception.ApiError) {
+func WarmUp() (*domain.Response, error) {
 	println("Warming up HTTP client...")
+	
 	start := time.Now().UnixMilli()
 	response, result := Client().Fetch(domain.Request{
 		Method: domain.GET,
 		Uri:    "https://www.google.es",
 	})
+
+	if result != nil {
+		return nil, result
+	}
+
 	end := time.Now().UnixMilli()
 	println(fmt.Sprintf("Client initialized successfully in: %d ms", end-start))
-	return response, result
+	return response, nil
 }
 
-func (c *HttpClient) Fetch(request domain.Request) (*domain.Response, exception.ApiError) {
+func (c *HttpClient) Fetch(request domain.Request) (*domain.Response, *exception.ApiError) {
 	req, err := c.makeRequest(request)
 	if err != nil {
 		return nil, err
@@ -43,10 +49,10 @@ func (c *HttpClient) Fetch(request domain.Request) (*domain.Response, exception.
 	client := &http.Client{}
 
 	start := time.Now().UnixMilli()
-	resp, err := client.Do(req)
+	resp, respErr := client.Do(req)
 	end := time.Now().UnixMilli()
-	if err != nil {
-		return nil, exception.ApiErrorFromCause(500, "Cannot execute HTTP request", err)
+	if respErr != nil {
+		return nil, exception.NewCauseApiError(500, "Cannot execute HTTP request", respErr)
 	}
 
 	response, err := c.makeResponse(start, end, request, *resp)
@@ -57,7 +63,7 @@ func (c *HttpClient) Fetch(request domain.Request) (*domain.Response, exception.
 	return response, nil
 }
 
-func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, exception.ApiError) {
+func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, *exception.ApiError) {
 	method := operation.Method.String()
 	url := strings.TrimSpace(operation.Uri)
 
@@ -68,7 +74,7 @@ func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, excep
 
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		return nil, exception.ApiErrorFromCause(500, "Cannot build HTTP request", err)
+		return nil, exception.NewCauseApiError(http.StatusInternalServerError, "Cannot build the HTTP request", err)
 	}
 
 	req = c.applyQuery(operation, req)
@@ -142,19 +148,19 @@ func (c *HttpClient) applyAuth(operation domain.Request, req *http.Request) *htt
 	return req
 }
 
-func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, resp http.Response) (*domain.Response, exception.ApiError) {
+func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, resp http.Response) (*domain.Response, *exception.ApiError) {
 	defer resp.Body.Close()
 
 	bodyResponse, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, exception.ApiErrorFromCause(500, "Failed to read response", err)
+		return nil, exception.NewCauseApiError(http.StatusInternalServerError, "Failed to read the payload", err)
 	}
 
 	headers := c.makeHeaders(resp)
 
 	cookies, err := c.makeCookies(headers)
 	if err != nil {
-		return nil, exception.ApiErrorFromCause(500, "Failed to read response", err)
+		return nil, exception.NewCauseApiError(http.StatusInternalServerError, "Failed to read the cookies", err)
 	}
 
 	contentType := body.Text

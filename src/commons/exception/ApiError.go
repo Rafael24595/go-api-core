@@ -2,29 +2,25 @@ package exception
 
 import "fmt"
 
-type ApiError interface {
-	error
-}
-
-type apiErrorImpl struct {
-	Status  int16
+type ApiError struct {
+	Status  int
 	Message string
 	Cause   error
 }
 
-func ApiErrorFrom(status int16, message string) ApiError {
-	return ApiErrorFromCause(status, message, nil)
+func NewApiError(status int, message string) *ApiError {
+	return NewCauseApiError(status, message, nil)
 }
 
-func ApiErrorFromCause(status int16, message string, cause error) ApiError {
-	return &apiErrorImpl{
-		Status: status,
+func NewCauseApiError(status int, message string, cause error) *ApiError {
+	return &ApiError{
+		Status:  status,
 		Message: message,
-		Cause: cause,
+		Cause:   cause,
 	}
 }
 
-func (e *apiErrorImpl) Error() string {
+func (e *ApiError) Error() string {
 	message := e.Message
 	if e.Cause != nil {
 		message = fmt.Sprintf("%s -> %s", message, e.Cause)

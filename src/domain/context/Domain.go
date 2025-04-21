@@ -1,10 +1,9 @@
 package context
 
 import (
+	"errors"
 	"fmt"
 	"strings"
-
-	"github.com/Rafael24595/go-api-core/src/commons/exception"
 )
 
 type Domain string
@@ -18,7 +17,7 @@ func (s Domain) String() string {
 	return string(s)
 }
 
-func DomainFromString(value string) (*Domain, exception.ApiError) {
+func DomainFromString(value string) (*Domain, error) {
 	switch strings.ToLower(value) {
 	case string(USER):
 		status := USER
@@ -27,6 +26,6 @@ func DomainFromString(value string) (*Domain, exception.ApiError) {
 		status := COLLECTION
 		return &status, nil
 	default:
-		return nil, exception.ApiErrorFrom(422, fmt.Sprintf("Unknown context domain value: '%s'", value))
+		return nil, errors.New(fmt.Sprintf("unknown context domain value: '%s'", value))
 	}
 }
