@@ -84,11 +84,11 @@ func (s *ManagerSession) Find(user string) (*session.Session, bool) {
 func (s *ManagerSession) Authorize(user, password string) (*session.Session, error) {
 	session, exists := s.sessions.Get(user)
 	if !exists {
-		return nil, nil
+		return nil, errors.New("session not found")
 	}
 
 	if !ValideSecret([]byte(password), session.Secret) {
-		return nil, nil
+		return nil, errors.New("session not found")
 	}
 
 	return session, nil
