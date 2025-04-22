@@ -42,38 +42,10 @@ func (r *RepositoryMemory) Find(key string) (*domain.Historic, bool) {
 	return r.collection.Get(key)
 }
 
-func (r *RepositoryMemory) FindOptions(options repository.FilterOptions[domain.Historic]) []domain.Historic {
-	return r.findOptions(options).Collect()
-}
-
-func (r *RepositoryMemory) findOptions(options repository.FilterOptions[domain.Historic]) *collection.Vector[domain.Historic] {
-	r.muMemory.RLock()
-	defer r.muMemory.RUnlock()
-	values := r.collection.ValuesVector()
-
-	if options.Predicate != nil {
-		values.Filter(options.Predicate)
-	}
-	if options.Sort != nil {
-		values.Sort(options.Sort)
-	}
-
-	from := 0
-	if options.From != 0 {
-		from = options.From
-	}
-
-	to := values.Size()
-	if options.To != 0 {
-		to = options.To
-	}
-
-	return values.Slice(from, to)
-}
-
 func (r *RepositoryMemory) FindByOwner(owner string) []domain.Historic {
-	//TODO: Implement grouping by owner.
-	return r.FindAll()
+	return r.collection.Filter(func(s string, h domain.Historic) bool {
+		return h.Owner == owner
+	}).ValuesVector().Collect()
 }
 
 func (r *RepositoryMemory) FindAll() []domain.Historic {

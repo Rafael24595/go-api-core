@@ -7,7 +7,6 @@ import (
 type IRepositoryHistoric interface {
 	Exists(key string) bool
 	Find(key string) (*domain.Historic, bool)
-	FindOptions(options FilterOptions[domain.Historic]) []domain.Historic
 	FindByOwner(owner string) []domain.Historic
 	FindAll() []domain.Historic
 	Insert(request domain.Historic) *domain.Historic
