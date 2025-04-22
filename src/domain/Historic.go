@@ -17,6 +17,7 @@ func NewHistoricDefault() *Historic {
 func NewHistoric(id, owner string) *Historic {
 	return &Historic{
 		Id:        id,
+		Owner:     owner,
 		Timestamp: time.Now().UnixMilli(),
 	}
 }
