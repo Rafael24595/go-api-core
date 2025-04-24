@@ -9,3 +9,11 @@ type Session struct {
 	IsAdmin     bool   `json:"is_admin"`
 	Count       int    `json:"count"`
 }
+
+func (s Session) IsVerified() bool {
+	 return s.Count >= 0
+}
+
+func (s Session) IsNotVerified() bool {
+	return s.Count < 0
+}
