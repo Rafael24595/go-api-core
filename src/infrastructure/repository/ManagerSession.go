@@ -43,20 +43,25 @@ func InitializeManagerSession(file IFileManager[dto.DtoSession], contextManager 
 		sessions:       sessions,
 	}
 
-	conf := configuration.Instance()
-	err = instance.defineDefaultUser(conf.Admin(), string(conf.Secret()))
-	if err != nil {
-		panic(err)
-	}
-
-	err = instance.defineDefaultUser("anonymous", "")
-	if err != nil {
-		panic(err)
-	}
-
-	manager = instance
+	manager = defineDefaultSessions(instance)
 
 	return manager, nil
+}
+
+func defineDefaultSessions(instance *ManagerSession) *ManagerSession {
+	conf := configuration.Instance()
+
+	err := instance.defineDefaultUser(conf.Admin(), string(conf.Secret()), true, true, 0)
+	if err != nil {
+		panic(err)
+	}
+
+	err = instance.defineDefaultUser("anonymous", "", true, false, 0)
+	if err != nil {
+		panic(err)
+	}
+
+	return instance
 }
 
 func InstanceManagerSession() *ManagerSession {
@@ -66,10 +71,10 @@ func InstanceManagerSession() *ManagerSession {
 	return manager
 }
 
-func (s *ManagerSession) defineDefaultUser(username, secret string) error {
+func (s *ManagerSession) defineDefaultUser(username, secret string, isProtected, isAdmin bool, count int) error {
 	if _, exists := s.sessions.Get(username); !exists {
 		ctx := s.contextManager.Insert(username, context.NewContext(username))
-		_, err := s.Insert(username, string(secret), ctx)
+		_, err := s.insert(username, string(secret), ctx, isProtected, isAdmin, count)
 		if err != nil {
 			return err
 		}
@@ -79,6 +84,54 @@ func (s *ManagerSession) defineDefaultUser(username, secret string) error {
 
 func (s *ManagerSession) Find(user string) (*session.Session, bool) {
 	return s.sessions.Get(user)
+}
+
+func (s *ManagerSession) Verify(username, oldPassword, newPassword1, newPassword2 string) (*session.Session, error) {
+	err := s.valideData(username, newPassword1, &newPassword2)
+	if err != nil {
+		return nil, err
+	}
+
+	session, err := s.Authorize(username, oldPassword)
+	if err != nil {
+		return nil, errors.New("incorrect password")
+	}
+
+	if session == nil {
+		return nil, errors.New("session not found")
+	}
+
+	session.Secret = []byte(newPassword2)
+	session.Count += 1
+	s.update(session)
+
+	return session, nil
+}
+
+func (s *ManagerSession) Delete(session *session.Session) (*session.Session, error) {
+	if session.IsProtected {
+		return nil, errors.New("this user is protected, cannot be removed")
+	}
+
+	session, _ = s.sessions.Remove(session.Username)
+	return session, nil
+}
+
+func (s *ManagerSession) Visited(session *session.Session) *session.Session {
+	session.Count += 1
+	s.update(session)
+	return session
+}
+
+func (s *ManagerSession) update(session *session.Session) (*session.Session, bool) {
+	s.mut.Lock()
+	defer s.mut.Unlock()
+
+	if _, ok := s.sessions.Get(session.Username); !ok {
+		return nil, false
+	}
+
+	return s.sessions.Put(session.Username, *session)
 }
 
 func (s *ManagerSession) Authorize(user, password string) (*session.Session, error) {
@@ -94,7 +147,25 @@ func (s *ManagerSession) Authorize(user, password string) (*session.Session, err
 	return session, nil
 }
 
-func (s *ManagerSession) Insert(user, password string, ctx *context.Context) (*session.Session, error) {
+func (s *ManagerSession) Insert(session *session.Session, user, password string, isAdmin bool) (*session.Session, error) {
+	if !session.IsAdmin {
+		return nil, errors.New("user has not have admin privilegies")
+	}
+
+	if _, exists := s.Find(user); exists {
+		return nil, errors.New("user exists")
+	}
+
+	err := s.valideData(user, password, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := s.contextManager.Insert(user, context.NewContext(user))
+	return s.insert(user, password, ctx, false, isAdmin, -1)
+}
+
+func (s *ManagerSession) insert(user, password string, ctx *context.Context, isProtected, isAdmin bool, count int) (*session.Session, error) {
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
@@ -109,10 +180,13 @@ func (s *ManagerSession) Insert(user, password string, ctx *context.Context) (*s
 	}
 
 	session := session.Session{
-		Username:  user,
-		Secret:    secret,
-		Timestamp: time.Now().UnixMilli(),
-		Context:   ctx.Id,
+		Username:    user,
+		Secret:      secret,
+		Timestamp:   time.Now().UnixMilli(),
+		Context:     ctx.Id,
+		IsProtected: isProtected,
+		IsAdmin:     isAdmin,
+		Count:       count,
 	}
 
 	s.sessions.Put(user, session)
@@ -120,6 +194,26 @@ func (s *ManagerSession) Insert(user, password string, ctx *context.Context) (*s
 	go s.write(s.sessions)
 
 	return &session, nil
+}
+
+func (s *ManagerSession) valideData(username, password1 string, password2 *string) error {
+	if username == "" {
+		return errors.New("invalid username")
+	}
+
+	if password1 == "" {
+		return errors.New("invalid password")
+	}
+
+	if password2 == nil {
+		return nil
+	}
+
+	if password1 != *password2 {
+		return errors.New("new passwords doesn't matches")
+	}
+
+	return nil
 }
 
 func (s *ManagerSession) write(snapshot collection.IDictionary[string, session.Session]) {
