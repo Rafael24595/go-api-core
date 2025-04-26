@@ -137,6 +137,14 @@ func (b *FactoryCollection) MakeFromRequestBody(requestBody *RequestBody) *body.
 		return body.NewBody(false, body.None, make([]byte, 0))
 	}
 
+	if requestBody.Ref != "" {
+		reference, err := b.findRequestBodyReference(requestBody.Ref)
+		if reference == nil || err != nil {
+			return body.NewBody(false, body.None, make([]byte, 0))
+		}
+		return b.MakeFromRequestBody(reference)
+	}
+
 	for _, v := range requestBody.Content {
 		schema, err := b.findSchema(&v.Schema)
 		if schema == nil {
@@ -188,7 +196,7 @@ func (b *FactoryCollection) makeFromExample(schema *Schema) string {
 }
 
 func (b *FactoryCollection) makeFromReference(schema *Schema, visited map[string]int) (string, map[string]int) {
-	ref, err := b.findReference(schema)
+	ref, err := b.findSchemaReference(schema.Ref)
 	if err != nil {
 		fmt.Printf("%s", err.Error())
 	}
@@ -234,7 +242,7 @@ func (b *FactoryCollection) makeFromProperties(schema *Schema, visited map[strin
 			value = fmt.Sprintf("\"%s\"", value)
 		}
 
-		line := fmt.Sprintf("\"%s\": %s", key, value)
+		line := fmt.Sprintf("\"%s\": %v", key, value)
 		lines = append(lines, line)
 	}
 
@@ -293,12 +301,31 @@ func (b *FactoryCollection) findSchema(schema *Schema) (*Schema, error) {
 		return schema, nil
 	}
 
-	return b.findReference(schema)
+	return b.findSchemaReference(schema.Ref)
 }
 
-func (b *FactoryCollection) findReference(schema *Schema) (*Schema, error) {
-	if strings.HasPrefix(schema.Ref, "#/components/schemas/") {
-		schemaName := strings.TrimPrefix(schema.Ref, "#/components/schemas/")
+func (b *FactoryCollection) findRequestBodyReference(ref string) (*RequestBody, error) {
+	if strings.HasPrefix(ref, "#/components/requestBodies/") {
+		requestBodyName := strings.TrimPrefix(ref, "#/components/requestBodies/")
+		requestBody, exists := b.openapi.Components.RequestBodies[requestBodyName]
+		if !exists {
+			return nil, fmt.Errorf("schema not found: %s", requestBodyName)
+		}
+		return &requestBody, nil
+	}
+
+	fixRef := strings.TrimPrefix(ref, "#")
+	fixRef = strings.ReplaceAll(fixRef, "/", ".")
+
+	var requestBody *RequestBody
+	err := utils.FindJson(fixRef, b.raw, requestBody)
+
+	return requestBody, err
+}
+
+func (b *FactoryCollection) findSchemaReference(ref string) (*Schema, error) {
+	if strings.HasPrefix(ref, "#/components/schemas/") {
+		schemaName := strings.TrimPrefix(ref, "#/components/schemas/")
 		schema, exists := b.openapi.Components.Schemas[schemaName]
 		if !exists {
 			return nil, fmt.Errorf("schema not found: %s", schemaName)
@@ -306,9 +333,10 @@ func (b *FactoryCollection) findReference(schema *Schema) (*Schema, error) {
 		return &schema, nil
 	}
 
-	fixRef := strings.TrimPrefix(schema.Ref, "#")
+	fixRef := strings.TrimPrefix(ref, "#")
 	fixRef = strings.ReplaceAll(fixRef, "/", ".")
 
+	var schema *Schema
 	err := utils.FindJson(fixRef, b.raw, schema)
 
 	return schema, err

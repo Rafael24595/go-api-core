@@ -55,6 +55,7 @@ type Parameter struct {
 type RequestBody struct {
 	Required bool                 `json:"required"`
 	Content  map[string]MediaType `json:"content"`
+	Ref      string               `json:"$ref,omitempty"`
 }
 
 type MediaType struct {
@@ -69,6 +70,7 @@ type Response struct {
 type Components struct {
 	Schemas         map[string]Schema         `json:"schemas"`
 	SecuritySchemes map[string]SecurityScheme `json:"securitySchemes"`
+	RequestBodies   map[string]RequestBody    `json:"requestBodies"`
 }
 
 type SecurityRequirement map[string][]string
