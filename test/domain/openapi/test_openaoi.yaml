@@ -90,6 +90,24 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Collection'
+  /circular:
+    post:
+      tags:
+        - circular
+      summary: Insert a circular structure
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Circular'
+      responses:
+        '200':
+          description: Structure inserted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Circular'
 
 components:
   securitySchemes:
@@ -174,6 +192,16 @@ components:
           type: string
           enum: ["enabled", "disabled"]
           example: "pending"
+
+    Circular:
+      type: object
+      properties:
+        string:
+          type: string
+        children:
+          type: array
+          items:
+            '$ref': '#/components/schemas/Circular'
 
 security:
   - BearerAuth: []

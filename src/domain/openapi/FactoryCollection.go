@@ -146,37 +146,37 @@ func (b *FactoryCollection) MakeFromRequestBody(requestBody *RequestBody) *body.
 			break
 		}
 
-		payload := b.MakeFromSchema(schema)
-		return body.NewBody(false, body.None, []byte(payload))
+		payload, _ := b.MakeFromSchema(schema, make(map[string]int))
+		return body.NewBody(true, body.None, []byte(payload))
 	}
 
 	return body.NewBody(false, body.None, make([]byte, 0))
 }
 
-func (b *FactoryCollection) MakeFromSchema(schema *Schema) string {
+func (b *FactoryCollection) MakeFromSchema(schema *Schema, visited map[string]int) (string, map[string]int) {
 	if schema.Example != nil && schema.Example != "" {
-		return b.makeFromExample(schema)
+		return b.makeFromExample(schema), visited
 	}
 
 	payload := ""
 
 	if schema.Ref != "" {
-		payload = b.makeFromReference(schema)
+		payload, visited = b.makeFromReference(schema, visited)
 	}
 
 	if schema.Items != nil {
-		payload = b.makeFromReference(schema.Items)
+		payload, visited = b.makeFromReference(schema.Items, visited)
 	}
 
 	if len(schema.Properties) > 0 {
-		payload = b.makeFromProperties(schema)
+		payload, visited = b.makeFromProperties(schema, visited)
 	}
 
 	if schema.Type == "array" {
 		payload = fmt.Sprintf("[ %s ]", payload)
 	}
 
-	return payload
+	return payload, visited
 }
 
 func (b *FactoryCollection) makeFromExample(schema *Schema) string {
@@ -187,19 +187,28 @@ func (b *FactoryCollection) makeFromExample(schema *Schema) string {
 	return string(example)
 }
 
-func (b *FactoryCollection) makeFromReference(schema *Schema) string {
+func (b *FactoryCollection) makeFromReference(schema *Schema, visited map[string]int) (string, map[string]int) {
 	ref, err := b.findReference(schema)
 	if err != nil {
 		fmt.Printf("%s", err.Error())
 	}
-	if ref != nil {
-		return b.MakeFromSchema(ref)
+
+	_, hasVisited := visited[schema.Ref]
+	if hasVisited {
+		return fmt.Sprintf("\"Circular schema '%s'.\"", schema.Ref), visited
 	}
 
-	return ""
+	if ref != nil {
+		if schema.Ref != "" {
+			visited[schema.Ref] = 0
+		}
+		return b.MakeFromSchema(ref, visited)
+	}
+
+	return "", visited
 }
 
-func (b *FactoryCollection) makeFromProperties(schema *Schema) string {
+func (b *FactoryCollection) makeFromProperties(schema *Schema, visited map[string]int) (string, map[string]int) {
 	lines := []string{}
 
 	for key, v := range schema.Properties {
@@ -218,7 +227,7 @@ func (b *FactoryCollection) makeFromProperties(schema *Schema) string {
 		}
 
 		if v.Ref != "" || v.Items != nil {
-			value = b.MakeFromSchema(&v)
+			value, visited = b.MakeFromSchema(&v, visited)
 		}
 
 		if v.Type == "string" {
@@ -232,7 +241,7 @@ func (b *FactoryCollection) makeFromProperties(schema *Schema) string {
 	body := strings.Join(lines, ", ")
 	body = fmt.Sprintf("{ %s }", body)
 
-	return body
+	return body, visited
 }
 
 func (b *FactoryCollection) MakeFromSecurity(security []SecurityRequirement, queries *header.Headers) *auth.Auths {

@@ -72,8 +72,8 @@ func valideContext(t *testing.T, ctx *context.Context) {
 }
 
 func valideRequests(t *testing.T, requests []domain.Request) {
-	if len(requests) != 3 {
-		t.Fatalf("Expected 3 request object, got %d", len(requests))
+	if len(requests) != 4 {
+		t.Fatalf("Expected 4 request object, got %d", len(requests))
 	}
 
 	name := "Get collection data"
@@ -229,7 +229,7 @@ func TestMakeFromSchema(t *testing.T) {
 	builder := openapi.NewFactoryCollection(TEST_OWNER, oapi).SetRaw(*raw)
 
 	schema := oapi.Paths["/collection/{userId}"].Get.Responses["200"].Content["application/json"].Schema
-	example := builder.MakeFromSchema(&schema)
+	example, _ := builder.MakeFromSchema(&schema, make(map[string]int))
 
 	var collections []map[string]any
 	if err := json.Unmarshal([]byte(example), &collections); err != nil {
