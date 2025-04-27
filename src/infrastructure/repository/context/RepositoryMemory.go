@@ -90,7 +90,7 @@ func (r *RepositoryMemory) insert(owner string, ctx *context.Context) *context.C
 }
 
 func (r *RepositoryMemory) Update(owner string, ctx *context.Context) (*context.Context, bool) {
-	if _, exists := r.Find(ctx.Id); exists {
+	if _, exists := r.Find(ctx.Id); !exists {
 		return ctx, false
 	}
 	return r.resolve(owner, ctx), true
