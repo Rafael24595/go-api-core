@@ -68,20 +68,6 @@ func (r *RepositoryMemory) findOptions(options repository.FilterOptions[domain.R
 	return values.Slice(from, to)
 }
 
-func (r *RepositoryMemory) FindSteps(steps []domain.Historic) []domain.Response {
-	r.muMemory.RLock()
-	defer r.muMemory.RUnlock()
-
-	responses := []domain.Response{}
-	for _, v := range steps {
-		if response, ok := r.collection.Get(v.Id); ok {
-			responses = append(responses, *response)
-		}
-	}
-
-	return responses
-}
-
 func (r *RepositoryMemory) FindAll() []domain.Response {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()

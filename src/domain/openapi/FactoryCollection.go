@@ -77,6 +77,7 @@ func (b *FactoryCollection) Make() (*domain.Collection, *context.Context, []doma
 		Nodes:     make([]domain.NodeReference, 0),
 		Owner:     b.owner,
 		Modified:  now,
+		Status:    domain.FREE,
 	}, ctx, nodes, nil
 }
 

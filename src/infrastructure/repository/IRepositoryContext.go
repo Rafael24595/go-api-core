@@ -6,10 +6,7 @@ import (
 
 type IRepositoryContext interface {
 	Find(id string) (*context.Context, bool)
-	FindByOwner(owner string) (*context.Context, bool)
-	FindByCollection(owner, collection string) (*context.Context, bool)
-	Insert(owner string, context *context.Context) *context.Context
-	InsertFromOwner(owner string, context *context.Context) *context.Context
-	InsertFromCollection(owner, collection string, context *context.Context) *context.Context
+	Insert(owner string, collection string, context *context.Context) *context.Context
+	Update(owner string, context *context.Context) (*context.Context, bool)
 	Delete(context *context.Context) *context.Context
 }

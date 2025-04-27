@@ -21,7 +21,7 @@ func Initialize(kargs map[string]utils.Any) (*configuration.Configuration, *depe
 
 func initializeManagerSession(container *dependency.DependencyContainer) *repository.ManagerSession {
 	file := repository.NewManagerCsvtFile(dto.NewDtoSessionDefault, repository.CSVT_FILE_PATH_SESSION)
-	manager, err := repository.InitializeManagerSession(file, container.ManagerContext)
+	manager, err := repository.InitializeManagerSession(file, container.ManagerCollection)
 	if err != nil {
 		panic(err)
 	}

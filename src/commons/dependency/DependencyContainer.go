@@ -8,7 +8,6 @@ import (
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	repository_collection "github.com/Rafael24595/go-api-core/src/infrastructure/repository/collection"
 	repository_context "github.com/Rafael24595/go-api-core/src/infrastructure/repository/context"
-	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/historic"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/request"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/response"
 	"github.com/Rafael24595/go-collections/collection"
@@ -22,11 +21,11 @@ const (
 var instance *DependencyContainer
 
 type DependencyContainer struct {
-	RepositoryContext  repository.IRepositoryContext
-	RepositoryHistoric repository.IRepositoryHistoric
-	ManagerActions     *repository.ManagerRequest
-	ManagerContext     *repository.ManagerContext
-	ManagerCollection  *repository.ManagerCollection
+	RepositoryContext repository.IRepositoryContext
+	ManagerRequest    *repository.ManagerRequest
+	ManagerContext    *repository.ManagerContext
+	ManagerCollection *repository.ManagerCollection
+	ManagerHistoric   *repository.ManagerHistoric
 }
 
 func Initialize() *DependencyContainer {
@@ -42,20 +41,20 @@ func Initialize() *DependencyContainer {
 	repositoryRequest := loadRepositoryRequest()
 	repositoryResponse := loadRepositoryResponse()
 
-	repositoryHistoric := loadRepositoryHisotric()
 	repositoryContext := loadRepositoryContext()
 	repositoryCollection := loadRepositoryCollection()
 
 	managerRequest := loadManagerRequest(repositoryRequest, repositoryResponse)
 	managerContext := loadManagerContext(repositoryContext)
-	managerCollection := loadManagerCollection(repositoryCollection, repositoryContext, repositoryRequest, repositoryResponse)
+	managerCollection := loadManagerCollection(repositoryCollection, managerContext, managerRequest)
+	managerHistoric := loadManagerHistoric(managerRequest, managerCollection)
 
 	container := &DependencyContainer{
-		RepositoryContext:  repositoryContext,
-		RepositoryHistoric: repositoryHistoric,
-		ManagerActions:     managerRequest,
-		ManagerContext:     managerContext,
-		ManagerCollection:  managerCollection,
+		RepositoryContext: repositoryContext,
+		ManagerRequest:    managerRequest,
+		ManagerContext:    managerContext,
+		ManagerCollection: managerCollection,
+		ManagerHistoric:   managerHistoric,
 	}
 
 	instance = container
@@ -78,17 +77,6 @@ func loadRepositoryResponse() repository.IRepositoryResponse {
 	file := repository.NewManagerCsvtFile(domain.NewResponseDefault, repository.CSVT_FILE_PATH_RESPONSE)
 	impl := collection.DictionarySyncEmpty[string, domain.Response]()
 	repository, err := response.InitializeRepositoryMemory(impl, file)
-	if err != nil {
-		panic(err)
-	}
-
-	return repository
-}
-
-func loadRepositoryHisotric() repository.IRepositoryHistoric {
-	file := repository.NewManagerCsvtFile(domain.NewHistoricDefault, repository.CSVT_FILE_PATH_HISTORIC)
-	impl := collection.DictionarySyncEmpty[string, domain.Historic]()
-	repository, err := historic.InitializeRepositoryMemory(impl, file)
 	if err != nil {
 		panic(err)
 	}
@@ -119,19 +107,17 @@ func loadRepositoryCollection() repository.IRepositoryCollection {
 }
 
 func loadManagerRequest(request repository.IRepositoryRequest, response repository.IRepositoryResponse) *repository.ManagerRequest {
-	return repository.NewManagerRequest(request, response).
-		SetInsertPolicy(fixHistoricSize)
+	return repository.NewManagerRequest(request, response)
 }
 
 func loadManagerContext(context repository.IRepositoryContext) *repository.ManagerContext {
 	return repository.NewManagerContext(context)
 }
 
-func loadManagerCollection(collection repository.IRepositoryCollection, context repository.IRepositoryContext, request repository.IRepositoryRequest, response repository.IRepositoryResponse) *repository.ManagerCollection {
-	return repository.NewManagerCollection(collection, context, request, response)
+func loadManagerCollection(collection repository.IRepositoryCollection, managerContext *repository.ManagerContext, managerRequest *repository.ManagerRequest) *repository.ManagerCollection {
+	return repository.NewManagerCollection(collection, managerContext, managerRequest)
 }
 
-func fixHistoricSize(request *domain.Request, repositoryRequest repository.IRepositoryRequest, repositoryResponse repository.IRepositoryResponse) error {
-	//TODO: Implement
-	return nil
+func loadManagerHistoric(managerRequest *repository.ManagerRequest, managerCollection *repository.ManagerCollection) *repository.ManagerHistoric {
+	return repository.NewManagerHistoric(managerRequest, managerCollection)
 }

@@ -45,43 +45,23 @@ func (r *RepositoryMemory) Find(id string) (*domain.Collection, bool) {
 	return r.collection.Get(id)
 }
 
-func (r *RepositoryMemory) FindByOwner(owner string) []domain.Collection {
+func (r *RepositoryMemory) FindOneBystatus(owner string, status domain.StatusCollection) (*domain.Collection, bool) {
+	r.muMemory.RLock()
+	defer r.muMemory.RUnlock()
+	return r.collection.ValuesVector().
+		FindOne(func(c domain.Collection) bool {
+			return c.Owner == owner && c.Status == status
+		})
+}
+
+func (r *RepositoryMemory) FindAllBystatus(owner string, status domain.StatusCollection) []domain.Collection {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 	return r.collection.ValuesVector().
 		Filter(func(c domain.Collection) bool {
-			return c.Owner == owner
+			return c.Owner == owner && c.Status == status
 		}).
 		Collect()
-}
-
-func (r *RepositoryMemory) FindOptions(options repository.FilterOptions[domain.Collection]) []domain.Collection {
-	return r.findOptions(options).Collect()
-}
-
-func (r *RepositoryMemory) findOptions(options repository.FilterOptions[domain.Collection]) *collection.Vector[domain.Collection] {
-	r.muMemory.RLock()
-	defer r.muMemory.RUnlock()
-	values := r.collection.ValuesVector()
-
-	if options.Predicate != nil {
-		values.Filter(options.Predicate)
-	}
-	if options.Sort != nil {
-		values.Sort(options.Sort)
-	}
-
-	from := 0
-	if options.From != 0 {
-		from = options.From
-	}
-
-	to := values.Size()
-	if options.To != 0 {
-		to = options.To
-	}
-
-	return values.Slice(from, to)
 }
 
 func (r *RepositoryMemory) Exists(key string) bool {
@@ -125,12 +105,16 @@ func (r *RepositoryMemory) insert(owner string, collection *domain.Collection) *
 		collection.Name = fmt.Sprintf("%s-%d", collection.Owner, collection.Timestamp)
 	}
 
+	if collection.Status == "" {
+		collection.Status = domain.FREE
+	}
+
 	r.collection.Put(collection.Id, *collection)
 	go r.write(r.collection)
 	return collection
 }
 
-func (r *RepositoryMemory) PushToCollection(owner string, collection *domain.Collection, request *domain.Request) *domain.Collection {
+func (r *RepositoryMemory) PushToCollection(owner string, collection *domain.Collection, request *domain.Request) (*domain.Collection, *domain.Request) {
 	r.muMemory.Lock()
 
 	if !collection.ExistsRequest(request.Id) {
@@ -140,7 +124,7 @@ func (r *RepositoryMemory) PushToCollection(owner string, collection *domain.Col
 		})
 	}
 
-	return r.resolve(owner, collection)
+	return r.resolve(owner, collection), request
 }
 
 func (r *RepositoryMemory) Delete(collection *domain.Collection) *domain.Collection {

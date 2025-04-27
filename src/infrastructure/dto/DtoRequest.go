@@ -23,7 +23,7 @@ type DtoRequest struct {
 	Auth      auth.Auths           `json:"auth"`
 	Owner     string               `json:"owner"`
 	Modified  int64                `json:"modified"`
-	Status    domain.Status        `json:"status"`
+	Status    domain.StatusRequest `json:"status"`
 }
 
 func ToRequest(dto *DtoRequest) *domain.Request {

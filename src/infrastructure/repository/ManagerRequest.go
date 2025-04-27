@@ -8,17 +8,10 @@ import (
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 )
 
-type policy func(*domain.Request, IRepositoryRequest, IRepositoryResponse) error
-
-const (
-	POLICY_INSERT = "insert"
-)
-
 type ManagerRequest struct {
 	mu       sync.Mutex
 	request  IRepositoryRequest
 	response IRepositoryResponse
-	policies map[string][]policy
 }
 
 func NewManagerRequest(request IRepositoryRequest, response IRepositoryResponse) *ManagerRequest {
@@ -29,20 +22,7 @@ func NewManagerRequestLimited(request IRepositoryRequest, response IRepositoryRe
 	return &ManagerRequest{
 		request:  request,
 		response: response,
-		policies: make(map[string][]policy),
 	}
-}
-
-func (m *ManagerRequest) SetInsertPolicy(function policy) *ManagerRequest {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if _, ok := m.policies[POLICY_INSERT]; !ok {
-		m.policies[POLICY_INSERT] = []policy{}
-	}
-
-	m.policies[POLICY_INSERT] = append(m.policies[POLICY_INSERT], function)
-	return m
 }
 
 func (m *ManagerRequest) Exists(key string) (bool, bool) {
@@ -65,12 +45,24 @@ func (m *ManagerRequest) Find(owner string, key string) (*domain.Request, *domai
 	return request, response, exits
 }
 
-func (m *ManagerRequest) FindOwner(owner string, status *domain.Status) []domain.Request {
-	return m.request.FindOwner(owner, status)
+func (m *ManagerRequest) FindRequest(owner string, key string) (*domain.Request, bool) {
+	request, exits := m.request.Find(key)
+	if !exits || request.Owner != owner  {
+		return nil, exits
+	}
+	return request, exits
 }
 
-func (m *ManagerRequest) FindSteps(steps []domain.Historic) []domain.Request {
-	return m.request.FindSteps(steps)
+func (m *ManagerRequest) FindResponse(owner string, key string) (*domain.Response, bool) {
+	response, exits := m.response.Find(key)
+	if !exits || response.Owner != owner  {
+		return nil, exits
+	}
+	return response, exits
+}
+
+func (m *ManagerRequest) FindOwner(owner string, status *domain.StatusRequest) []domain.Request {
+	return m.request.FindOwner(owner, status)
 }
 
 func (m *ManagerRequest) FindNodes(nodes []domain.NodeReference) []dto.DtoNode {
@@ -84,8 +76,32 @@ func (m *ManagerRequest) Release(owner string, request *domain.Request, response
 		request.Timestamp = time.Now().UnixMilli()
 		request.Modified = request.Timestamp
 	}
-
 	return m.Insert(owner, request, response)
+}
+
+func (m *ManagerRequest) Insert(owner string, request *domain.Request, response *domain.Response) (*domain.Request, *domain.Response) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	requestResult := m.request.Insert(owner, request)
+
+	response.Id = requestResult.Id
+	response.Request = requestResult.Id
+	resultResponse := m.response.Insert(owner, response)
+
+	return requestResult, resultResponse
+}
+
+func (m *ManagerRequest) InsertRequest(owner string, request *domain.Request) *domain.Request {
+	return  m.request.Insert(owner, request)
+}
+
+func (m *ManagerRequest) InsertResponse(owner string, response *domain.Response) *domain.Response {
+	return  m.response.Insert(owner, response)
+}
+
+func (m *ManagerRequest) InsertManyRequest(owner string, requests []domain.Request) []domain.Request {
+	return m.request.InsertMany(owner, requests)
 }
 
 func (m *ManagerRequest) ImportDtoRequests(owner string, dtos []dto.DtoRequest) []domain.Request {
@@ -104,36 +120,6 @@ func (m *ManagerRequest) ImportDtoRequests(owner string, dtos []dto.DtoRequest) 
 	return requests
 }
 
-func (m *ManagerRequest) Insert(owner string, request *domain.Request, response *domain.Response) (*domain.Request, *domain.Response) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if _, err := domain.StatusFromString(string(request.Status)); err != nil {
-		request.Status = domain.DRAFT
-	}
-
-	requestResult := m.request.Insert(owner, request)
-
-	response.Id = requestResult.Id
-	response.Request = requestResult.Id
-	resultResponse := m.response.Insert(owner, response)
-
-	policies, ok := m.policies[POLICY_INSERT]
-	if !ok {
-		return requestResult, resultResponse
-	}
-
-	for _, p := range policies {
-		p(requestResult, m.request, m.response)
-	}
-
-	return requestResult, resultResponse
-}
-
-func (m *ManagerRequest) InsertResponse(owner string, response *domain.Response) *domain.Response {
-	return  m.response.Insert(owner, response)
-}
-
 func (m *ManagerRequest) Update(owner string, request *domain.Request) *domain.Request {
 	oldRequest, exists := m.request.Find(request.Id)
 	if !exists || oldRequest.Owner != owner {
@@ -147,7 +133,7 @@ func (m *ManagerRequest) Update(owner string, request *domain.Request) *domain.R
 	return m.request.Insert(owner, request)
 }
 
-func (m *ManagerRequest) Delete(owner string, request domain.Request) (*domain.Request, *domain.Response) {
+func (m *ManagerRequest) Delete(owner string, request *domain.Request) (*domain.Request, *domain.Response) {
 	return m.DeleteById(owner, request.Id)
 }
 
@@ -160,4 +146,18 @@ func (m *ManagerRequest) DeleteById(owner, id string) (*domain.Request, *domain.
 	request = m.request.DeleteById(id)
 	response := m.response.DeleteById(id)
 	return request, response
+}
+
+func (m *ManagerRequest) DeleteMany(owner string, ids ...string) ([]domain.Request, []domain.Response) {
+	requests := m.request.DeleteMany(ids...)
+	responses := m.response.DeleteMany(ids...)
+	return requests, responses
+}
+
+func (m *ManagerRequest) DeleteManyRequests(owner string, ids ...string) []domain.Request {
+	return m.request.DeleteMany(ids...)
+}
+
+func (m *ManagerRequest) DeleteManyResponses(owner string, ids ...string) []domain.Response {
+	return m.response.DeleteMany(ids...)
 }

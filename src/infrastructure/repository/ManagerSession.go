@@ -2,12 +2,13 @@ package repository
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/session"
-	"github.com/Rafael24595/go-api-core/src/domain/context"
+	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-collections/collection"
 	"golang.org/x/crypto/bcrypt"
@@ -16,14 +17,14 @@ import (
 var manager *ManagerSession
 
 type ManagerSession struct {
-	mut            sync.RWMutex
-	mutFile        sync.RWMutex
-	file           IFileManager[dto.DtoSession]
-	contextManager *ManagerContext
-	sessions       collection.IDictionary[string, session.Session]
+	mut               sync.RWMutex
+	mutFile           sync.RWMutex
+	file              IFileManager[dto.DtoSession]
+	collectionManager *ManagerCollection
+	sessions          collection.IDictionary[string, session.Session]
 }
 
-func InitializeManagerSession(file IFileManager[dto.DtoSession], contextManager *ManagerContext) (*ManagerSession, error) {
+func InitializeManagerSession(file IFileManager[dto.DtoSession], collectionManager *ManagerCollection) (*ManagerSession, error) {
 	if manager != nil {
 		return nil, errors.New("already instanced")
 	}
@@ -33,14 +34,14 @@ func InitializeManagerSession(file IFileManager[dto.DtoSession], contextManager 
 		return nil, err
 	}
 
-	sessions := collection.DictionaryMap(collection.DictionaryFromMap(steps), func(k string, d dto.DtoSession) session.Session {
+	sessions := collection.DictionarySyncMap(collection.DictionarySyncFromMap(steps), func(k string, d dto.DtoSession) session.Session {
 		return *dto.ToSession(d)
 	})
 
 	instance := &ManagerSession{
-		file:           file,
-		contextManager: contextManager,
-		sessions:       sessions,
+		file:              file,
+		collectionManager: collectionManager,
+		sessions:          sessions,
 	}
 
 	manager = defineDefaultSessions(instance)
@@ -73,8 +74,8 @@ func InstanceManagerSession() *ManagerSession {
 
 func (s *ManagerSession) defineDefaultUser(username, secret string, isProtected, isAdmin bool, count int) error {
 	if _, exists := s.sessions.Get(username); !exists {
-		ctx := s.contextManager.Insert(username, context.NewContext(username))
-		_, err := s.insert(username, string(secret), ctx, isProtected, isAdmin, count)
+		collection, history := s.makeDependencies(username)
+		_, err := s.insert(username, string(secret), collection, history, isProtected, isAdmin, count)
 		if err != nil {
 			return err
 		}
@@ -84,6 +85,64 @@ func (s *ManagerSession) defineDefaultUser(username, secret string, isProtected,
 
 func (s *ManagerSession) Find(user string) (*session.Session, bool) {
 	return s.sessions.Get(user)
+}
+
+func (s *ManagerSession) FindUserCollection(user string) (*domain.Collection, error) {
+	s.mut.Lock()
+	defer s.mut.Unlock()
+
+	session, ok := s.sessions.Get(user)
+	if !ok {
+		return nil, errors.New("session not found")
+	}
+
+	collection, _ := s.collectionManager.Find(user, session.Collection)
+	if collection != nil && collection.Status == domain.USER {
+		return collection, nil
+	}
+
+	if collection != nil {
+		collection.Status = domain.USER
+	} else {
+		collection = domain.NewUserCollection(user)
+	}
+
+	collection = s.collectionManager.Insert(user, collection)
+
+	session.Collection = collection.Id
+
+	s.update(session)
+
+	return collection, nil
+}
+
+func (s *ManagerSession) FindUserHistoric(user string) (*domain.Collection, error) {
+	s.mut.Lock()
+	defer s.mut.Unlock()
+
+	session, ok := s.sessions.Get(user)
+	if !ok {
+		return nil, errors.New("session not found")
+	}
+
+	collection, _ := s.collectionManager.Find(user, session.History)
+	if collection != nil && collection.Status == domain.TALE {
+		return collection, nil
+	}
+
+	if collection != nil {
+		collection.Status = domain.TALE
+	} else {
+		collection = domain.NewUserCollection(user)
+	}
+
+	collection = s.collectionManager.Insert(user, collection)
+
+	session.History = collection.Id
+
+	s.update(session)
+
+	return collection, nil
 }
 
 func (s *ManagerSession) Verify(username, oldPassword, newPassword1, newPassword2 string) (*session.Session, error) {
@@ -124,13 +183,9 @@ func (s *ManagerSession) Visited(session *session.Session) *session.Session {
 }
 
 func (s *ManagerSession) update(session *session.Session) (*session.Session, bool) {
-	s.mut.Lock()
-	defer s.mut.Unlock()
-
 	if _, ok := s.sessions.Get(session.Username); !ok {
 		return nil, false
 	}
-
 	return s.sessions.Put(session.Username, *session)
 }
 
@@ -161,11 +216,11 @@ func (s *ManagerSession) Insert(session *session.Session, user, password string,
 		return nil, err
 	}
 
-	ctx := s.contextManager.Insert(user, context.NewContext(user))
-	return s.insert(user, password, ctx, false, isAdmin, -1)
+	collection, history := s.makeDependencies(user)
+	return s.insert(user, password, collection, history, false, isAdmin, -1)
 }
 
-func (s *ManagerSession) insert(user, password string, ctx *context.Context, isProtected, isAdmin bool, count int) (*session.Session, error) {
+func (s *ManagerSession) insert(user, password string, collection *domain.Collection, history *domain.Collection, isProtected, isAdmin bool, count int) (*session.Session, error) {
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
@@ -183,7 +238,8 @@ func (s *ManagerSession) insert(user, password string, ctx *context.Context, isP
 		Username:    user,
 		Secret:      secret,
 		Timestamp:   time.Now().UnixMilli(),
-		Context:     ctx.Id,
+		Collection:  collection.Id,
+		History:     history.Id,
 		IsProtected: isProtected,
 		IsAdmin:     isAdmin,
 		Count:       count,
@@ -194,6 +250,19 @@ func (s *ManagerSession) insert(user, password string, ctx *context.Context, isP
 	go s.write(s.sessions)
 
 	return &session, nil
+}
+
+func (s *ManagerSession) makeDependencies(username string) (*domain.Collection, *domain.Collection) {
+	collection := domain.NewUserCollection(username)
+	collection.Name = fmt.Sprintf("%s's global collection", username)
+	collection = s.collectionManager.Insert(username, collection)
+
+	history := domain.NewTaleCollection(username)
+	history.Name = fmt.Sprintf("%s's history collection", username)
+	history.Context = collection.Context
+	history = s.collectionManager.Insert(username, history)
+
+	return collection, history
 }
 
 func (s *ManagerSession) valideData(username, password1 string, password2 *string) error {

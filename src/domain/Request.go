@@ -25,7 +25,7 @@ type Request struct {
 	Auth      auth.Auths           `json:"auth"`
 	Owner     string               `json:"owner"`
 	Modified  int64                `json:"modified"`
-	Status    Status               `json:"status"`
+	Status    StatusRequest        `json:"status"`
 }
 
 func NewRequestDefault() *Request {

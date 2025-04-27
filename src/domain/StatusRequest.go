@@ -6,19 +6,19 @@ import (
 	"strings"
 )
 
-type Status string
+type StatusRequest string
 
 const (
-	DRAFT Status = "draft"
-	FINAL Status = "final"
-	GROUP Status = "group"
+	DRAFT StatusRequest = "draft"
+	FINAL StatusRequest = "final"
+	GROUP StatusRequest = "group"
 )
 
-func (s Status) String() string {
+func (s StatusRequest) String() string {
 	return string(s)
 }
 
-func StatusFromString(value string) (*Status, error) {
+func StatusRequestFromString(value string) (*StatusRequest, error) {
 	switch strings.ToLower(value) {
 	case string(FINAL):
 		status := FINAL

@@ -7,7 +7,7 @@ import (
 )
 
 func TestSortRequests(t *testing.T) {
-	collection := domain.NewCollection("anonymous")
+	collection := domain.NewFreeCollection("anonymous")
 	collection.Nodes = []domain.NodeReference{
 		{
 			Order: 3,
@@ -38,7 +38,7 @@ func TestSortRequests(t *testing.T) {
 }
 
 func TestExistsRequest(t *testing.T) {
-	collection := domain.NewCollection("anonymous")
+	collection := domain.NewFreeCollection("anonymous")
 	collection.Nodes = []domain.NodeReference{
 		{
 			Order: 3,
@@ -70,7 +70,7 @@ func TestExistsRequest(t *testing.T) {
 }
 
 func TestTakeRequest(t *testing.T) {
-	collection := domain.NewCollection("anonymous")
+	collection := domain.NewFreeCollection("anonymous")
 	collection.Nodes = []domain.NodeReference{
 		{
 			Order: 3,

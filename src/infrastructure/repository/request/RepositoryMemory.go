@@ -42,7 +42,7 @@ func (r *RepositoryMemory) Find(key string) (*domain.Request, bool) {
 	return r.collection.Get(key)
 }
 
-func (r *RepositoryMemory) FindOwner(owner string, status *domain.Status) []domain.Request {
+func (r *RepositoryMemory) FindOwner(owner string, status *domain.StatusRequest) []domain.Request {
 	return r.findOptions(repository.FilterOptions[domain.Request]{
 		Predicate: func(r domain.Request) bool {
 			if status == nil {
@@ -78,31 +78,17 @@ func (r *RepositoryMemory) findOptions(options repository.FilterOptions[domain.R
 	return values.Slice(from, to)
 }
 
-func (r *RepositoryMemory) FindSteps(steps []domain.Historic) []domain.Request {
-	r.muMemory.RLock()
-	defer r.muMemory.RUnlock()
-
-	requests := []domain.Request{}
-	for _, v := range steps {
-		if request, ok := r.collection.Get(v.Id); ok {
-			requests = append(requests, *request)
-		}
-	}
-
-	return requests
-}
-
 func (r *RepositoryMemory) FindNodes(references []domain.NodeReference) []dto.DtoNode {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 
-	requests := make([]dto.DtoNode, len(references))
-	for i, v := range references {
+	requests := make([]dto.DtoNode, 0)
+	for _, v := range references {
 		if request, ok := r.collection.Get(v.Request); ok {
-			requests[i] = dto.DtoNode{
+			requests = append(requests, dto.DtoNode{
 				Order: v.Order,
 				Request: *dto.FromRequest(request),
-			} 
+			})
 		}
 	}
 
@@ -173,7 +159,9 @@ func (r *RepositoryMemory) DeleteById(id string) *domain.Request {
 	defer r.muMemory.Unlock()
 
 	cursor, _ := r.collection.Remove(id)
-	go r.write(r.collection)
+	if cursor != nil {
+		go r.write(r.collection)
+	}
 
 	return cursor
 }

@@ -7,8 +7,9 @@ import (
 type IRepositoryCollection interface {
 	Exists(key string) bool
 	Find(id string) (*domain.Collection, bool)
-	FindByOwner(owner string) []domain.Collection
+	FindOneBystatus(owner string, Status domain.StatusCollection) (*domain.Collection, bool)
+	FindAllBystatus(owner string, Status domain.StatusCollection) []domain.Collection
 	Insert(owner string, collection *domain.Collection) *domain.Collection
-	PushToCollection(owner string, collection *domain.Collection, request *domain.Request) *domain.Collection
+	PushToCollection(owner string, collection *domain.Collection, request *domain.Request) (*domain.Collection, *domain.Request)
 	Delete(collection *domain.Collection) *domain.Collection
 }

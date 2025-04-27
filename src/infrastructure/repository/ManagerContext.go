@@ -23,24 +23,12 @@ func (m *ManagerContext) Find(owner string, id string) (*context.Context, bool) 
 	return m.context.Find(id)
 }
 
-func (m *ManagerContext) FindByOwner(owner string) (*context.Context, bool) {
-	return m.context.FindByOwner(owner)
+func (m *ManagerContext) Insert(owner string, collection string, context *context.Context) *context.Context {
+	return m.context.Insert(owner, collection, context)
 }
 
-func (m *ManagerContext) FindByCollection(owner, collection string) (*context.Context, bool) {
-	return m.context.FindByCollection(owner, collection)
-}
-
-func (m *ManagerContext) Insert(owner string, context *context.Context) *context.Context {
-	return m.context.Insert(owner, context)
-}
-
-func (m *ManagerContext) InsertFromOwner(owner string, context *context.Context) *context.Context {
-	return m.context.InsertFromOwner(owner, context)
-}
-
-func (m *ManagerContext) InsertFromCollection(owner, collection string, context *context.Context) *context.Context {
-	return m.context.InsertFromCollection(owner, collection, context)
+func (m *ManagerContext) Update(owner string, context *context.Context) (*context.Context, bool) {
+	return m.context.Update(owner, context)
 }
 
 func (m *ManagerContext) Delete(context *context.Context) *context.Context {
@@ -63,6 +51,7 @@ func (m *ManagerContext) ImportMerge(owner string, target, source *dto.DtoContex
 	}
 
 	ctx := dto.ToContext(target)
+	ctx, _ = m.context.Update(target.Owner, ctx)
 
-	return m.context.Insert(target.Owner, ctx)
+	return ctx
 }

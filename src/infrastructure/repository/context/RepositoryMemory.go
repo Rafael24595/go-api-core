@@ -51,29 +51,7 @@ func (r *RepositoryMemory) Find(id string) (*context.Context, bool) {
 	return r.collection.Get(id)
 }
 
-func (r *RepositoryMemory) FindByOwner(owner string) (*context.Context, bool) {
-	r.muMemory.RLock()
-	defer r.muMemory.RUnlock()
-	return r.collection.FindOne(func(s string, ctx context.Context) bool {
-		return ctx.Owner == owner
-	})
-}
-
-func (r *RepositoryMemory) FindByCollection(owner, collection string) (*context.Context, bool) {
-	return r.FindByOwner(fmt.Sprintf("%s-%s", owner, collection))
-}
-
-func (r *RepositoryMemory) Insert(owner string, ctx *context.Context) *context.Context {
-	return r.resolve(owner, ctx)
-}
-
-func (r *RepositoryMemory) InsertFromOwner(owner string, ctx *context.Context) *context.Context {
-	ctx.Domain = context.USER
-	return r.resolve(owner, ctx)
-}
-
-func (r *RepositoryMemory) InsertFromCollection(owner, collection string, ctx *context.Context) *context.Context {
-	ctx.Domain = context.COLLECTION
+func (r *RepositoryMemory) Insert(owner, collection string, ctx *context.Context) *context.Context {
 	return r.resolve(fmt.Sprintf("%s-%s", owner, collection), ctx)
 }
 
@@ -109,6 +87,13 @@ func (r *RepositoryMemory) insert(owner string, ctx *context.Context) *context.C
 	go r.write(r.collection)
 
 	return ctx
+}
+
+func (r *RepositoryMemory) Update(owner string, ctx *context.Context) (*context.Context, bool) {
+	if _, exists := r.Find(ctx.Id); exists {
+		return ctx, false
+	}
+	return r.resolve(owner, ctx), true
 }
 
 func (r *RepositoryMemory) Delete(context *context.Context) *context.Context {
