@@ -42,53 +42,37 @@ func (r *RepositoryMemory) Find(key string) (*domain.Request, bool) {
 	return r.collection.Get(key)
 }
 
-func (r *RepositoryMemory) FindOwner(owner string, status *domain.StatusRequest) []domain.Request {
-	return r.findOptions(repository.FilterOptions[domain.Request]{
-		Predicate: func(r domain.Request) bool {
-			if status == nil {
-				return r.Owner == owner
-			}
-			return r.Owner == owner && r.Status == *status
-		},
-	}).Collect()
-}
-
-func (r *RepositoryMemory) findOptions(options repository.FilterOptions[domain.Request]) *collection.Vector[domain.Request] {
+func (r *RepositoryMemory) Exists(key string) bool {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	values := r.collection.ValuesVector()
-
-	if options.Predicate != nil {
-		values.FilterSelf(options.Predicate)
-	}
-	if options.Sort != nil {
-		values.Sort(options.Sort)
-	}
-
-	from := 0
-	if options.From != 0 {
-		from = options.From
-	}
-
-	to := values.Size()
-	if options.To != 0 {
-		to = options.To
-	}
-
-	return values.Slice(from, to)
+	return r.collection.Exists(key)
 }
 
-func (r *RepositoryMemory) FindNodes(references []domain.NodeReference) []dto.DtoNode {
+func (r *RepositoryMemory) FindNodes(references []domain.NodeReference) []dto.DtoNodeRequest {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 
-	requests := make([]dto.DtoNode, 0)
+	requests := make([]dto.DtoNodeRequest, 0)
 	for _, v := range references {
-		if request, ok := r.collection.Get(v.Request); ok {
-			requests = append(requests, dto.DtoNode{
-				Order: v.Order,
+		if request, ok := r.collection.Get(v.Item); ok {
+			requests = append(requests, dto.DtoNodeRequest{
+				Order:   v.Order,
 				Request: *dto.FromRequest(request),
 			})
+		}
+	}
+
+	return requests
+}
+
+func (r *RepositoryMemory) FindRequests(references []domain.NodeReference) []domain.Request {
+	r.muMemory.RLock()
+	defer r.muMemory.RUnlock()
+
+	requests := make([]domain.Request, 0)
+	for _, v := range references {
+		if request, ok := r.collection.Get(v.Item); ok {
+			requests = append(requests, *request)
 		}
 	}
 
@@ -99,12 +83,6 @@ func (r *RepositoryMemory) FindAll() []domain.Request {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 	return r.collection.Values()
-}
-
-func (r *RepositoryMemory) Exists(key string) bool {
-	r.muMemory.RLock()
-	defer r.muMemory.RUnlock()
-	return r.collection.Exists(key)
 }
 
 func (r *RepositoryMemory) Insert(owner string, request *domain.Request) *domain.Request {

@@ -7,10 +7,22 @@ type DtoCollection struct {
 	Name      string                  `json:"name"`
 	Timestamp int64                   `json:"timestamp"`
 	Context   DtoContext              `json:"context"`
-	Nodes     []DtoNode               `json:"nodes"`
+	Nodes     []DtoNodeRequest        `json:"nodes"`
 	Owner     string                  `json:"owner"`
 	Modified  int64                   `json:"modified"`
 	Status    domain.StatusCollection `json:"status"`
+}
+
+func FromCollection(collection *domain.Collection, ctx *DtoContext, nodes []DtoNodeRequest) *DtoCollection{
+	return &DtoCollection{
+		Id:        collection.Id,
+		Name:      collection.Name,
+		Timestamp: collection.Timestamp,
+		Context:   *ctx,
+		Nodes:     nodes,
+		Owner:     collection.Owner,
+		Modified:  collection.Modified,
+	}
 }
 
 func ToCollection(dto *DtoCollection) *domain.Collection {
@@ -19,22 +31,9 @@ func ToCollection(dto *DtoCollection) *domain.Collection {
 		Name:      dto.Name,
 		Timestamp: dto.Timestamp,
 		Context:   dto.Context.Id,
-		Nodes:     ToNodes(dto.Nodes),
+		Nodes:     ToRequestNodes(dto.Nodes),
 		Owner:     dto.Owner,
 		Modified:  dto.Modified,
 		Status:    dto.Status,
 	}
-}
-
-func ToNodes(dto []DtoNode) []domain.NodeReference {
-	nodes := make([]domain.NodeReference, len(dto))
-
-	for i := range dto {
-		nodes[i] = domain.NodeReference{
-			Order:   dto[i].Order,
-			Request: dto[i].Request.Id,
-		}
-	}
-
-	return nodes
 }

@@ -8,6 +8,7 @@ type DtoSession struct {
 	Timestamp   int64  `json:"timestamp"`
 	History     string `json:"history"`
 	Collection  string `json:"collection"`
+	Group       string `json:"group"`
 	IsProtected bool   `json:"is_protected"`
 	IsAdmin     bool   `json:"is_admin"`
 	Count       int    `json:"count"`
@@ -28,6 +29,7 @@ func ToSession(dto DtoSession) *session.Session {
 		Timestamp:   dto.Timestamp,
 		History:     dto.History,
 		Collection:  dto.Collection,
+		Group:       dto.Group,
 		IsProtected: dto.IsProtected,
 		IsAdmin:     dto.IsAdmin,
 		Count:       dto.Count,
@@ -41,6 +43,7 @@ func FromSession(session session.Session) *DtoSession {
 		Timestamp:   session.Timestamp,
 		History:     session.History,
 		Collection:  session.Collection,
+		Group:       session.Group,
 		IsProtected: session.IsProtected,
 		IsAdmin:     session.IsAdmin,
 		Count:       session.Count,

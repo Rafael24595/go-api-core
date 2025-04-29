@@ -47,7 +47,7 @@ func newCollection(owner string, status StatusCollection) *Collection {
 
 func (c Collection) ExistsRequest(id string) bool {
 	for _, v := range c.Nodes {
-		if v.Request == id {
+		if v.Item == id {
 			return true
 		}
 	}
@@ -56,7 +56,7 @@ func (c Collection) ExistsRequest(id string) bool {
 
 func (c *Collection) TakeRequest(id string) (*NodeReference, bool) {
 	for i, v := range c.Nodes {
-		if v.Request == id {
+		if v.Item == id {
 			c.Nodes = slices.Delete(c.Nodes, i, i+1)
 			return &v, true
 		}
@@ -66,7 +66,7 @@ func (c *Collection) TakeRequest(id string) (*NodeReference, bool) {
 
 func (c *Collection) ResolveRequest(node *NodeReference) (*NodeReference, bool) {
 	for i, v := range c.Nodes {
-		if v.Request == node.Request {
+		if v.Item == node.Item {
 			c.Nodes[i] = *node
 			return &v, true
 		}
@@ -83,7 +83,7 @@ func (c *Collection) SortRequests() *Collection {
 }
 
 func (c *Collection) FixRequestsOrder() *Collection {
-	for i, _ := range c.Nodes {
+	for i := range c.Nodes {
 		c.Nodes[i].Order = i
 	}
 	return c

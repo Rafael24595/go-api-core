@@ -37,7 +37,7 @@ func (m *ManagerCollection) FindFreeByOwner(owner string) []domain.Collection {
 	return m.collection.FindAllBystatus(owner, domain.FREE)
 }
 
-func (m *ManagerCollection) FindNodes(owner string, collection *domain.Collection) []dto.DtoNode {
+func (m *ManagerCollection) FindRequestNodes(owner string, collection *domain.Collection) []dto.DtoNodeRequest {
 	dtos := m.managerRequest.FindNodes(collection.Nodes)
 
 	if len(dtos) == len(collection.Nodes) {
@@ -47,8 +47,8 @@ func (m *ManagerCollection) FindNodes(owner string, collection *domain.Collectio
 	nodes := make([]domain.NodeReference, len(dtos))
 	for _, v := range dtos {
 		nodes = append(nodes, domain.NodeReference{
-			Order:   v.Order,
-			Request: v.Request.Id,
+			Order: v.Order,
+			Item:  v.Request.Id,
 		})
 	}
 
@@ -56,6 +56,24 @@ func (m *ManagerCollection) FindNodes(owner string, collection *domain.Collectio
 
 	m.Insert(owner, collection)
 
+	return dtos
+}
+
+func (m *ManagerCollection) FindCollectionNodes(owner string, nodes []domain.NodeReference) []dto.DtoNodeCollection {
+	collections := m.collection.FindCollections(nodes)
+	
+	dtos := make([]dto.DtoNodeCollection, 0)
+	for _, v := range collections {
+		collection := v.Collection
+		requests := m.managerRequest.FindNodes(collection.Nodes)
+		context, _ := m.managerContext.Find(owner, collection.Context)
+		dtoContext := dto.FromContext(context)
+		dtos = append(dtos, dto.DtoNodeCollection{
+			Order:   v.Order,
+			Collection: *dto.FromCollection(&collection, dtoContext, requests),
+		})
+	}
+	
 	return dtos
 }
 
@@ -77,7 +95,7 @@ func (m *ManagerCollection) Insert(owner string, collection *domain.Collection) 
 	return m.collection.Insert(owner, collection)
 }
 
-func (m *ManagerCollection) ImportDtoCollections(owner string, dtos []dto.DtoCollection) ([]domain.Collection, error) {
+func (m *ManagerCollection) ImportDtoCollections(owner string, dtos ...dto.DtoCollection) ([]domain.Collection, error) {
 	collections := make([]domain.Collection, len(dtos))
 
 	for i, v := range dtos {
@@ -87,7 +105,7 @@ func (m *ManagerCollection) ImportDtoCollections(owner string, dtos []dto.DtoCol
 		ctx := dto.ToContext(&v.Context)
 
 		v.Id = ""
-		v.Nodes = make([]dto.DtoNode, 0)
+		v.Nodes = make([]dto.DtoNodeRequest, 0)
 		collection := dto.ToCollection(&v)
 
 		collection, err := m.insertResources(owner, collection, ctx, requests)
@@ -101,30 +119,7 @@ func (m *ManagerCollection) ImportDtoCollections(owner string, dtos []dto.DtoCol
 	return collections, nil
 }
 
-func (m *ManagerCollection) ResolveRequests(owner string, collection *domain.Collection, requests ...domain.Request) *domain.Collection {
-	if len(requests) == 0 {
-		return collection
-	}
-
-	m.mu.Lock()
-
-	len := len(collection.Nodes)
-
-	for i, v := range requests {
-		node := domain.NodeReference{
-			Order:   len + i,
-			Request: v.Id,
-		}
-
-		collection.ResolveRequest(&node)
-	}
-
-	m.mu.Unlock()
-
-	return m.Insert(owner, collection)
-}
-
-func (m *ManagerCollection) ImportDtoRequestsById(owner string, id string, dtos []dto.DtoRequest) *domain.Collection {
+func (m *ManagerCollection) ImportDtoRequestsById(owner string, id string, dtos ...dto.DtoRequest) *domain.Collection {
 	collection, exists := m.collection.Find(id)
 	if !exists || collection.Owner != owner {
 		return nil
@@ -140,19 +135,21 @@ func (m *ManagerCollection) ImportDtoRequests(owner string, collection *domain.C
 		return collection
 	}
 
-	len := len(collection.Nodes)
-
 	requestStatus := domain.StatusCollectionToStatusRequest(&collection.Status)
+	requests := make([]domain.Request, len(dtos))
 	for i, v := range dtos {
 		v.Id = ""
 		v.Status = *requestStatus
-		request := dto.ToRequest(&v)
+		requests[i] = *dto.ToRequest(&v)
+	}
+	
+	requests = m.managerRequest.InsertManyRequest(owner, requests)
 
-		request = m.managerRequest.InsertRequest(owner, request)
-
+	len := len(collection.Nodes)
+	for i, v := range requests {
 		collection.Nodes = append(collection.Nodes, domain.NodeReference{
-			Order:   len + i,
-			Request: request.Id,
+			Order: len + i,
+			Item:  v.Id,
 		})
 	}
 
@@ -197,8 +194,8 @@ func (m *ManagerCollection) insertResources(owner string, collection *domain.Col
 	requests = m.managerRequest.InsertManyRequest(owner, requests)
 	for i, v := range requests {
 		node := domain.NodeReference{
-			Order:   i,
-			Request: v.Id,
+			Order: i,
+			Item:  v.Id,
 		}
 		collection.Nodes = append(collection.Nodes, node)
 	}
@@ -206,6 +203,29 @@ func (m *ManagerCollection) insertResources(owner string, collection *domain.Col
 	m.mu.Unlock()
 
 	return m.Insert(owner, collection), nil
+}
+
+func (m *ManagerCollection) ResolveRequestReferences(owner string, collection *domain.Collection, requests ...domain.Request) *domain.Collection {
+	if len(requests) == 0 {
+		return collection
+	}
+
+	m.mu.Lock()
+
+	len := len(collection.Nodes)
+
+	for i, v := range requests {
+		node := domain.NodeReference{
+			Order: len + i,
+			Item:  v.Id,
+		}
+
+		collection.ResolveRequest(&node)
+	}
+
+	m.mu.Unlock()
+
+	return m.Insert(owner, collection)
 }
 
 func (m *ManagerCollection) MoveRequestBetweenCollectionsById(owner, sourceId, targetId, requestId string, movement Movement) (*domain.Collection, *domain.Collection, *domain.Request) {
@@ -275,10 +295,18 @@ func (m *ManagerCollection) CollectRequest(owner string, payload PayloadCollectR
 	return m.collection.PushToCollection(owner, target, request)
 }
 
-func (m *ManagerCollection) SortCollectionRequest(owner string, collection *domain.Collection, payload PayloadSortCollection) *domain.Collection {
+func (m *ManagerCollection) SortCollectionRequestById(owner string, id string, payload PayloadSortNodes) *domain.Collection {
+	collection, exists := m.collection.Find(id)
+	if !exists || collection.Owner != owner {
+		return nil
+	}
+	return m.SortCollectionRequest(owner, collection, payload)
+}
+
+func (m *ManagerCollection) SortCollectionRequest(owner string, collection *domain.Collection, payload PayloadSortNodes) *domain.Collection {
 	nodes := make([]domain.NodeReference, 0)
-	for i, v := range payload.SortRequests().Nodes {
-		node, exists := collection.TakeRequest(v.Request)
+	for i, v := range payload.SortNodes().Nodes {
+		node, exists := collection.TakeRequest(v.Item)
 		if exists {
 			node.Order = i
 			nodes = append(nodes, *node)
@@ -304,7 +332,7 @@ func (m *ManagerCollection) RemoveRequestFromCollection(owner string, collection
 	if exists {
 		collection = m.Insert(owner, collection)
 	}
-	
+
 	request, exists := m.managerRequest.FindRequest(owner, requestId)
 	if !exists {
 		return collection, nil, nil
@@ -333,20 +361,20 @@ func (m *ManagerCollection) CloneCollection(owner, id, name string) *domain.Coll
 
 	requestStatus := *domain.StatusCollectionToStatusRequest(&collection.Status)
 
-	nodes := make([]domain.NodeReference, 0)
-	for i, v := range collection.Nodes {
-		request, exists := m.managerRequest.FindRequest(owner, v.Request)
-		if !exists {
-			continue
-		}
+	nodeRequests := m.managerRequest.FindRequests(collection.Nodes)
+	requests := make([]domain.Request, len(nodeRequests))
+	for i, v := range nodeRequests {
+		v.Id = ""
+		v.Status = requestStatus
+		requests[i] = v
+	}
 
-		request.Id = ""
-		request.Status = requestStatus
-		request = m.managerRequest.InsertRequest(owner, request)
-		
+	requests = m.managerRequest.InsertManyRequest(owner, requests)
+	nodes := make([]domain.NodeReference, len(requests))
+	for i, v := range requests {
 		nodes = append(nodes, domain.NodeReference{
-			Order:   i,
-			Request: request.Id,
+			Order: i,
+			Item:  v.Id,
 		})
 	}
 
@@ -383,7 +411,7 @@ func (m *ManagerCollection) Delete(owner, id string) *domain.Collection {
 
 	requests := make([]string, len(collection.Nodes))
 	for i, v := range collection.Nodes {
-		requests[i] = v.Request
+		requests[i] = v.Item
 	}
 
 	m.managerRequest.DeleteMany(owner, requests...)
@@ -391,7 +419,7 @@ func (m *ManagerCollection) Delete(owner, id string) *domain.Collection {
 	return m.collection.Delete(collection)
 }
 
-func (m *ManagerCollection) cleanRequests(dtos []dto.DtoNode) []domain.Request {
+func (m *ManagerCollection) cleanRequests(dtos []dto.DtoNodeRequest) []domain.Request {
 	requests := make([]domain.Request, len(dtos))
 
 	for i, v := range dtos {

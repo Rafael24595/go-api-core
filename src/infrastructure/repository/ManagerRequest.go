@@ -61,13 +61,14 @@ func (m *ManagerRequest) FindResponse(owner string, key string) (*domain.Respons
 	return response, exits
 }
 
-func (m *ManagerRequest) FindOwner(owner string, status *domain.StatusRequest) []domain.Request {
-	return m.request.FindOwner(owner, status)
-}
-
-func (m *ManagerRequest) FindNodes(nodes []domain.NodeReference) []dto.DtoNode {
+func (m *ManagerRequest) FindNodes(nodes []domain.NodeReference) []dto.DtoNodeRequest {
 	return m.request.FindNodes(nodes)
 }
+
+func (m *ManagerRequest) FindRequests(nodes []domain.NodeReference) []domain.Request {
+	return m.request.FindRequests(nodes)
+}
+
 
 func (m *ManagerRequest) Release(owner string, request *domain.Request, response *domain.Response) (*domain.Request, *domain.Response) {
 	if request.Status == domain.DRAFT {

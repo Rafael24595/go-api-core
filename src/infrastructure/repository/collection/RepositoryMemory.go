@@ -12,18 +12,18 @@ import (
 )
 
 type RepositoryMemory struct {
-	muMemory          sync.RWMutex
-	muFile            sync.RWMutex
-	collection        collection.IDictionary[string, domain.Collection]
-	file              repository.IFileManager[domain.Collection]
+	muMemory   sync.RWMutex
+	muFile     sync.RWMutex
+	collection collection.IDictionary[string, domain.Collection]
+	file       repository.IFileManager[domain.Collection]
 }
 
 func NewRepositoryMemory(
 	impl collection.IDictionary[string, domain.Collection],
 	file repository.IFileManager[domain.Collection]) *RepositoryMemory {
 	return &RepositoryMemory{
-		collection:        impl,
-		file:              file,
+		collection: impl,
+		file:       file,
 	}
 }
 
@@ -62,6 +62,23 @@ func (r *RepositoryMemory) FindAllBystatus(owner string, status domain.StatusCol
 			return c.Owner == owner && c.Status == status
 		}).
 		Collect()
+}
+
+func (r *RepositoryMemory) FindCollections(references []domain.NodeReference) []domain.NodeCollection {
+	r.muMemory.RLock()
+	defer r.muMemory.RUnlock()
+
+	collections := make([]domain.NodeCollection, 0)
+	for _, v := range references {
+		if collection, ok := r.collection.Get(v.Item); ok {
+			collections = append(collections, domain.NodeCollection{
+				Order:      v.Order,
+				Collection: *collection,
+			})
+		}
+	}
+
+	return collections
 }
 
 func (r *RepositoryMemory) Exists(key string) bool {
@@ -120,7 +137,7 @@ func (r *RepositoryMemory) PushToCollection(owner string, collection *domain.Col
 	if !collection.ExistsRequest(request.Id) {
 		collection.Nodes = append(collection.Nodes, domain.NodeReference{
 			Order: len(collection.Nodes),
-			Request: request.Id,
+			Item:  request.Id,
 		})
 	}
 

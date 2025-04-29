@@ -11,19 +11,19 @@ func TestSortRequests(t *testing.T) {
 	collection.Nodes = []domain.NodeReference{
 		{
 			Order: 3,
-			Request: "3",
+			Item: "3",
 		},
 		{
 			Order: 1,
-			Request: "1",
+			Item: "1",
 		},
 		{
 			Order: 4,
-			Request: "4",
+			Item: "4",
 		},
 		{
 			Order: 2,
-			Request: "2",
+			Item: "2",
 		},
 	}
 
@@ -42,19 +42,19 @@ func TestExistsRequest(t *testing.T) {
 	collection.Nodes = []domain.NodeReference{
 		{
 			Order: 3,
-			Request: "3",
+			Item: "3",
 		},
 		{
 			Order: 1,
-			Request: "1",
+			Item: "1",
 		},
 		{
 			Order: 4,
-			Request: "4",
+			Item: "4",
 		},
 		{
 			Order: 2,
-			Request: "2",
+			Item: "2",
 		},
 	}
 
@@ -74,19 +74,19 @@ func TestTakeRequest(t *testing.T) {
 	collection.Nodes = []domain.NodeReference{
 		{
 			Order: 3,
-			Request: "3",
+			Item: "3",
 		},
 		{
 			Order: 1,
-			Request: "1",
+			Item: "1",
 		},
 		{
 			Order: 4,
-			Request: "4",
+			Item: "4",
 		},
 		{
 			Order: 2,
-			Request: "2",
+			Item: "2",
 		},
 	}
 

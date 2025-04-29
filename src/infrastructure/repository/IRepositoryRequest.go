@@ -8,8 +8,8 @@ import (
 type IRepositoryRequest interface {
 	Exists(key string) bool
 	Find(key string) (*domain.Request, bool)
-	FindOwner(owner string, status *domain.StatusRequest) []domain.Request
-	FindNodes(steps []domain.NodeReference) []dto.DtoNode
+	FindNodes(steps []domain.NodeReference) []dto.DtoNodeRequest
+	FindRequests(steps []domain.NodeReference) []domain.Request
 	FindAll() []domain.Request
 	Insert(owner string, request *domain.Request) *domain.Request
 	InsertMany(owner string, requests []domain.Request) []domain.Request

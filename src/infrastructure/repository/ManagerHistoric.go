@@ -20,8 +20,8 @@ func NewManagerHistoric(managerRequest *ManagerRequest, managerCollection *Manag
 	}
 }
 
-func (m *ManagerHistoric) Find(owner string, collection *domain.Collection) []dto.DtoNode {
-	return m.managerCollection.FindNodes(owner, collection)
+func (m *ManagerHistoric) Find(owner string, collection *domain.Collection) []dto.DtoNodeRequest {
+	return m.managerCollection.FindRequestNodes(owner, collection)
 }
 
 func (m *ManagerHistoric) Insert(owner string, collection *domain.Collection, request *domain.Request, response *domain.Response) (*domain.Collection, *domain.Request, *domain.Response) {
@@ -29,14 +29,14 @@ func (m *ManagerHistoric) Insert(owner string, collection *domain.Collection, re
 	defer m.mu.Unlock()
 
 	request, response = m.managerRequest.Insert(owner, request, response)
-	collection = m.managerCollection.ResolveRequests(owner, collection, *request)
+	collection = m.managerCollection.ResolveRequestReferences(owner, collection, *request)
 
 	if len(collection.Nodes) <= 10 {
 		return collection, request, response
 	}
 
 	collection = collection.SortRequests()
-	
+
 	requests := make([]string, 0)
 	nodes := make([]domain.NodeReference, 0)
 
@@ -44,7 +44,7 @@ func (m *ManagerHistoric) Insert(owner string, collection *domain.Collection, re
 	for i := len(collection.Nodes) - 1; i >= 0; i-- {
 		v := collection.Nodes[i]
 		if count > 9 {
-			requests = append(requests, v.Request)
+			requests = append(requests, v.Item)
 			continue
 		}
 

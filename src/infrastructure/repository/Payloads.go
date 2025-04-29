@@ -26,11 +26,11 @@ type PayloadCollectRequest struct {
 	Movement    Movement       `json:"move"`
 }
 
-type PayloadSortCollection struct {
+type PayloadSortNodes struct {
 	Nodes []PayloadCollectionNode `json:"nodes"`
 }
 
-func (p *PayloadSortCollection) SortRequests() *PayloadSortCollection {
+func (p *PayloadSortNodes) SortNodes() *PayloadSortNodes {
 	sort.Slice(p.Nodes, func(i, j int) bool {
 		return p.Nodes[i].Order < p.Nodes[j].Order
 	})
@@ -38,6 +38,6 @@ func (p *PayloadSortCollection) SortRequests() *PayloadSortCollection {
 }
 
 type PayloadCollectionNode struct {
-	Order   int    `json:"order"`
-	Request string `json:"request"`
+	Order int    `json:"order"`
+	Item  string `json:"item"`
 }

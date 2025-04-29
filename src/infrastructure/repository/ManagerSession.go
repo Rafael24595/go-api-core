@@ -20,11 +20,12 @@ type ManagerSession struct {
 	mut               sync.RWMutex
 	mutFile           sync.RWMutex
 	file              IFileManager[dto.DtoSession]
-	collectionManager *ManagerCollection
+	managerCollection *ManagerCollection
+	managerGroup      *ManagerGroup
 	sessions          collection.IDictionary[string, session.Session]
 }
 
-func InitializeManagerSession(file IFileManager[dto.DtoSession], collectionManager *ManagerCollection) (*ManagerSession, error) {
+func InitializeManagerSession(file IFileManager[dto.DtoSession], managerCollection *ManagerCollection, managerGroup *ManagerGroup) (*ManagerSession, error) {
 	if manager != nil {
 		return nil, errors.New("already instanced")
 	}
@@ -40,7 +41,8 @@ func InitializeManagerSession(file IFileManager[dto.DtoSession], collectionManag
 
 	instance := &ManagerSession{
 		file:              file,
-		collectionManager: collectionManager,
+		managerCollection: managerCollection,
+		managerGroup:      managerGroup,
 		sessions:          sessions,
 	}
 
@@ -74,8 +76,8 @@ func InstanceManagerSession() *ManagerSession {
 
 func (s *ManagerSession) defineDefaultUser(username, secret string, isProtected, isAdmin bool, count int) error {
 	if _, exists := s.sessions.Get(username); !exists {
-		collection, history := s.makeDependencies(username)
-		_, err := s.insert(username, string(secret), collection, history, isProtected, isAdmin, count)
+		collection, history, group := s.makeDependencies(username)
+		_, err := s.insert(username, string(secret), collection, history, group, isProtected, isAdmin, count)
 		if err != nil {
 			return err
 		}
@@ -96,7 +98,7 @@ func (s *ManagerSession) FindUserCollection(user string) (*domain.Collection, er
 		return nil, errors.New("session not found")
 	}
 
-	collection, _ := s.collectionManager.Find(user, session.Collection)
+	collection, _ := s.managerCollection.Find(user, session.Collection)
 	if collection != nil && collection.Status == domain.USER {
 		return collection, nil
 	}
@@ -107,7 +109,7 @@ func (s *ManagerSession) FindUserCollection(user string) (*domain.Collection, er
 		collection = domain.NewUserCollection(user)
 	}
 
-	collection = s.collectionManager.Insert(user, collection)
+	collection = s.managerCollection.Insert(user, collection)
 
 	session.Collection = collection.Id
 
@@ -125,7 +127,7 @@ func (s *ManagerSession) FindUserHistoric(user string) (*domain.Collection, erro
 		return nil, errors.New("session not found")
 	}
 
-	collection, _ := s.collectionManager.Find(user, session.History)
+	collection, _ := s.managerCollection.Find(user, session.History)
 	if collection != nil && collection.Status == domain.TALE {
 		return collection, nil
 	}
@@ -136,13 +138,37 @@ func (s *ManagerSession) FindUserHistoric(user string) (*domain.Collection, erro
 		collection = domain.NewUserCollection(user)
 	}
 
-	collection = s.collectionManager.Insert(user, collection)
+	collection = s.managerCollection.Insert(user, collection)
 
 	session.History = collection.Id
 
 	s.update(session)
 
 	return collection, nil
+}
+
+func (s *ManagerSession) FindUserGroup(user string) (*domain.Group, error) {
+	s.mut.Lock()
+	defer s.mut.Unlock()
+
+	session, ok := s.sessions.Get(user)
+	if !ok {
+		return nil, errors.New("session not found")
+	}
+
+	group, _ := s.managerGroup.Find(user, session.Group)
+	if group != nil {
+		return group, nil
+	}
+	
+	group = domain.NewGroup(user)
+	group = s.managerGroup.Insert(user, group)
+
+	session.Group = group.Id
+
+	s.update(session)
+
+	return group, nil
 }
 
 func (s *ManagerSession) Verify(username, oldPassword, newPassword1, newPassword2 string) (*session.Session, error) {
@@ -216,11 +242,11 @@ func (s *ManagerSession) Insert(session *session.Session, user, password string,
 		return nil, err
 	}
 
-	collection, history := s.makeDependencies(user)
-	return s.insert(user, password, collection, history, false, isAdmin, -1)
+	collection, history, group := s.makeDependencies(user)
+	return s.insert(user, password, collection, history, group, false, isAdmin, -1)
 }
 
-func (s *ManagerSession) insert(user, password string, collection *domain.Collection, history *domain.Collection, isProtected, isAdmin bool, count int) (*session.Session, error) {
+func (s *ManagerSession) insert(user, password string, collection *domain.Collection, history *domain.Collection, group *domain.Group, isProtected, isAdmin bool, count int) (*session.Session, error) {
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
@@ -240,6 +266,7 @@ func (s *ManagerSession) insert(user, password string, collection *domain.Collec
 		Timestamp:   time.Now().UnixMilli(),
 		Collection:  collection.Id,
 		History:     history.Id,
+		Group:       group.Id,
 		IsProtected: isProtected,
 		IsAdmin:     isAdmin,
 		Count:       count,
@@ -252,17 +279,20 @@ func (s *ManagerSession) insert(user, password string, collection *domain.Collec
 	return &session, nil
 }
 
-func (s *ManagerSession) makeDependencies(username string) (*domain.Collection, *domain.Collection) {
+func (s *ManagerSession) makeDependencies(username string) (*domain.Collection, *domain.Collection, *domain.Group) {
 	collection := domain.NewUserCollection(username)
 	collection.Name = fmt.Sprintf("%s's global collection", username)
-	collection = s.collectionManager.Insert(username, collection)
+	collection = s.managerCollection.Insert(username, collection)
 
 	history := domain.NewTaleCollection(username)
 	history.Name = fmt.Sprintf("%s's history collection", username)
 	history.Context = collection.Context
-	history = s.collectionManager.Insert(username, history)
+	history = s.managerCollection.Insert(username, history)
 
-	return collection, history
+	group := domain.NewGroup(username)
+	group = s.managerGroup.Insert(username, group)
+
+	return collection, history, group
 }
 
 func (s *ManagerSession) valideData(username, password1 string, password2 *string) error {
