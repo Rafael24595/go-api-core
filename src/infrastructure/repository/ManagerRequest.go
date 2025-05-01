@@ -6,6 +6,7 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
+	"github.com/Rafael24595/go-collections/collection"
 )
 
 type ManagerRequest struct {
@@ -23,16 +24,6 @@ func NewManagerRequestLimited(request IRepositoryRequest, response IRepositoryRe
 		request:  request,
 		response: response,
 	}
-}
-
-func (m *ManagerRequest) Exists(key string) (bool, bool) {
-	_, okReq := m.request.Find(key)
-	_, okRes := m.response.Find(key)
-	return okReq, okRes
-}
-
-func (m *ManagerRequest) FindAll() []domain.Request {
-	return m.request.FindAll()
 }
 
 func (m *ManagerRequest) Find(owner string, key string) (*domain.Request, *domain.Response, bool) {
@@ -61,16 +52,29 @@ func (m *ManagerRequest) FindResponse(owner string, key string) (*domain.Respons
 	return response, exits
 }
 
-func (m *ManagerRequest) FindNodes(nodes []domain.NodeReference) []dto.DtoNodeRequest {
-	return m.request.FindNodes(nodes)
+func (m *ManagerRequest) FindNodes(owner string, nodes []domain.NodeReference) []dto.DtoNodeRequest {
+	requests := m.request.FindNodes(nodes)
+	return collection.VectorFromList(requests).
+		Filter(func(n dto.DtoNodeRequest) bool {
+			return n.Request.Owner == owner
+		}).
+		Collect()
 }
 
-func (m *ManagerRequest) FindRequests(nodes []domain.NodeReference) []domain.Request {
-	return m.request.FindRequests(nodes)
+func (m *ManagerRequest) FindRequests(owner string, nodes []domain.NodeReference) []domain.Request {
+	requests := m.request.FindRequests(nodes)
+	return collection.
+		VectorFromList(requests).Filter(func(n domain.Request) bool {
+			return n.Owner == owner
+		}).
+		Collect()
 }
-
 
 func (m *ManagerRequest) Release(owner string, request *domain.Request, response *domain.Response) (*domain.Request, *domain.Response) {
+	if m.isNotOwner(owner, request, response) {
+		return nil, nil
+	}
+
 	if request.Status == domain.DRAFT {
 		request.Status = domain.FINAL
 		request.Id = ""
@@ -81,6 +85,10 @@ func (m *ManagerRequest) Release(owner string, request *domain.Request, response
 }
 
 func (m *ManagerRequest) Insert(owner string, request *domain.Request, response *domain.Response) (*domain.Request, *domain.Response) {
+	if m.isNotOwner(owner, request, response) {
+		return nil, nil
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -94,14 +102,25 @@ func (m *ManagerRequest) Insert(owner string, request *domain.Request, response 
 }
 
 func (m *ManagerRequest) InsertRequest(owner string, request *domain.Request) *domain.Request {
+	if m.isNotOwner(owner, request, nil) {
+		return nil
+	}
 	return  m.request.Insert(owner, request)
 }
 
 func (m *ManagerRequest) InsertResponse(owner string, response *domain.Response) *domain.Response {
+	if m.isNotOwner(owner, nil, response) {
+		return nil
+	}
 	return  m.response.Insert(owner, response)
 }
 
 func (m *ManagerRequest) InsertManyRequest(owner string, requests []domain.Request) []domain.Request {
+	requests = collection.VectorFromList(requests).
+		Filter(func(r domain.Request) bool {
+			return m.isOwner(owner, &r, nil)
+		}).
+		Collect()
 	return m.request.InsertMany(owner, requests)
 }
 
@@ -134,31 +153,69 @@ func (m *ManagerRequest) Update(owner string, request *domain.Request) *domain.R
 	return m.request.Insert(owner, request)
 }
 
-func (m *ManagerRequest) Delete(owner string, request *domain.Request) (*domain.Request, *domain.Response) {
-	return m.DeleteById(owner, request.Id)
-}
-
 func (m *ManagerRequest) DeleteById(owner, id string) (*domain.Request, *domain.Response) {
 	request, exists := m.request.Find(id)
-	if exists && request.Owner != owner {
-		panic("//TODO: Manage error")	
+	if exists && request.Owner == owner {
+		request = m.request.Delete(request)
 	}
 
-	request = m.request.DeleteById(id)
-	response := m.response.DeleteById(id)
+	response, exists := m.response.Find(id)
+	if exists && response.Owner != owner {
+		response = m.response.Delete(response)
+	}
+
 	return request, response
 }
 
+func (m *ManagerRequest) Delete(owner string, request *domain.Request) (*domain.Request, *domain.Response) {
+	if request.Owner != owner {
+		return nil, nil
+	}
+	return m.DeleteById(owner, request.Id)
+}
+
 func (m *ManagerRequest) DeleteMany(owner string, ids ...string) ([]domain.Request, []domain.Response) {
-	requests := m.request.DeleteMany(ids...)
-	responses := m.response.DeleteMany(ids...)
+	requests := m.DeleteManyRequests(owner, ids...)
+	responses := m.DeleteManyResponses(owner, ids...)
 	return requests, responses
 }
 
 func (m *ManagerRequest) DeleteManyRequests(owner string, ids ...string) []domain.Request {
-	return m.request.DeleteMany(ids...)
+	requests := m.request.FindMany(ids)
+	requests = collection.VectorFromList(requests).
+		Filter(func(r domain.Request) bool {
+			return r.Owner == owner
+		}).
+		Collect()
+	return m.request.DeleteMany(requests...)
 }
 
 func (m *ManagerRequest) DeleteManyResponses(owner string, ids ...string) []domain.Response {
-	return m.response.DeleteMany(ids...)
+	responses := m.response.FindMany(ids)
+	responses = collection.VectorFromList(responses).
+		Filter(func(r domain.Response) bool {
+			return r.Owner == owner
+		}).
+		Collect()
+	return m.response.DeleteMany(responses...)
+}
+
+func (m *ManagerRequest) isNotOwner(owner string, request *domain.Request, response * domain.Response) bool {
+	return !m.isOwner(owner, request, response)
+}
+
+func (m *ManagerRequest) isOwner(owner string, request *domain.Request, response * domain.Response) bool {
+	if (request == nil && response == nil) {
+		return false
+	}
+
+	if (request != nil && request.Id != "" && request.Owner != owner) {
+		return false
+	}
+
+	if (response != nil && response.Id != "" && response.Owner != owner) {
+		return false
+	}
+	
+	return true
 }

@@ -39,6 +39,7 @@ type Context struct {
 	Timestamp  int64              `json:"timestamp"`
 	Dictionary DictionaryCategory `json:"dictionary"`
 	Owner      string             `json:"owner"`
+	Collection string             `json:"collection"`
 	Modified   int64              `json:"modified"`
 }
 
@@ -49,6 +50,7 @@ func NewContext(owner string) *Context {
 		Timestamp:  time.Now().UnixMilli(),
 		Dictionary: *collection.DictionaryEmpty[string, DictionaryVariables](),
 		Owner:      owner,
+		Collection: "",
 		Modified:   time.Now().UnixMilli(),
 	}
 }
@@ -186,9 +188,9 @@ func processCookie(cookies cookie.CookiesClient, context *Context) *cookie.Cooki
 	for k, c := range cookies.Cookies {
 		key := context.Apply("cookie", k)
 		cookieCategory[key] = cookie.CookieClient{
-			Order:      c.Order,
-			Status:     c.Status,
-			Value:      context.Apply("cookie", c.Value),
+			Order:  c.Order,
+			Status: c.Status,
+			Value:  context.Apply("cookie", c.Value),
 		}
 	}
 

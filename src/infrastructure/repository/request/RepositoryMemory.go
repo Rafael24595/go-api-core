@@ -42,10 +42,18 @@ func (r *RepositoryMemory) Find(key string) (*domain.Request, bool) {
 	return r.collection.Get(key)
 }
 
-func (r *RepositoryMemory) Exists(key string) bool {
+func (r *RepositoryMemory) FindMany(ids []string) []domain.Request {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Exists(key)
+
+	requests := make([]domain.Request, 0)
+	for _, v := range ids {
+		if request, ok := r.collection.Get(v); ok {
+			requests = append(requests, *request)
+		}
+	}
+
+	return requests
 }
 
 func (r *RepositoryMemory) FindNodes(references []domain.NodeReference) []dto.DtoNodeRequest {
@@ -77,12 +85,6 @@ func (r *RepositoryMemory) FindRequests(references []domain.NodeReference) []dom
 	}
 
 	return requests
-}
-
-func (r *RepositoryMemory) FindAll() []domain.Request {
-	r.muMemory.RLock()
-	defer r.muMemory.RUnlock()
-	return r.collection.Values()
 }
 
 func (r *RepositoryMemory) Insert(owner string, request *domain.Request) *domain.Request {
@@ -129,14 +131,10 @@ func (r *RepositoryMemory) InsertMany(owner string, requests []domain.Request) [
 }
 
 func (r *RepositoryMemory) Delete(request *domain.Request) *domain.Request {
-	return r.DeleteById(request.Id)
-}
-
-func (r *RepositoryMemory) DeleteById(id string) *domain.Request {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
-	cursor, _ := r.collection.Remove(id)
+	cursor, _ := r.collection.Remove(request.Id)
 	if cursor != nil {
 		go r.write(r.collection)
 	}
@@ -144,61 +142,19 @@ func (r *RepositoryMemory) DeleteById(id string) *domain.Request {
 	return cursor
 }
 
-func (r *RepositoryMemory) DeleteMany(ids ...string) []domain.Request {
+func (r *RepositoryMemory) DeleteMany(requests ...domain.Request) []domain.Request {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
 	deleted := make([]domain.Request, 0)
-	for _, id := range ids {
-		cursor, _ := r.collection.Remove(id)
+	for _, v := range requests {
+		cursor, _ := r.collection.Remove(v.Id)
 		deleted = append(deleted, *cursor)
 	}
 
 	go r.write(r.collection)
 
 	return deleted
-}
-
-func (r *RepositoryMemory) DeleteOptions(options repository.FilterOptions[domain.Request]) []string {
-	r.muMemory.Lock()
-	defer r.muMemory.Unlock()
-
-	values := r.collection.ValuesVector()
-
-	if options.Predicate != nil {
-		values.Filter(func(r domain.Request) bool {
-			return !options.Predicate(r)
-		})
-	}
-	if options.Sort != nil {
-		values.Sort(options.Sort)
-	}
-
-	from := 0
-	if options.From != 0 {
-		from = options.From
-	}
-
-	to := values.Size()
-	if options.To != 0 {
-		to = options.To
-	}
-
-	if to < from {
-		to = from
-	}
-
-	result := collection.VectorEmpty[domain.Request]().
-		Merge(*values.Slice(0, from)).
-		Merge(*values.Slice(to, values.Size()))
-
-	r.collection = collection.DictionaryFromVector(*result, func(r domain.Request) string {
-		return r.Id
-	})
-
-	go r.write(r.collection)
-
-	return r.collection.Keys()
 }
 
 func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, domain.Request]) {

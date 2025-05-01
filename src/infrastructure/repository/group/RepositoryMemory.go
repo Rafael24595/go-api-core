@@ -38,12 +38,6 @@ func InitializeRepositoryMemory(
 		file), nil
 }
 
-func (r *RepositoryMemory) Exists(key string) bool {
-	r.muMemory.RLock()
-	defer r.muMemory.RUnlock()
-	return r.collection.Exists(key)
-}
-
 func (r *RepositoryMemory) Find(id string) (*domain.Group, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()

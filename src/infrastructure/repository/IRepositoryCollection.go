@@ -5,7 +5,6 @@ import (
 )
 
 type IRepositoryCollection interface {
-	Exists(key string) bool
 	Find(id string) (*domain.Collection, bool)
 	FindOneBystatus(owner string, Status domain.StatusCollection) (*domain.Collection, bool)
 	FindAllBystatus(owner string, Status domain.StatusCollection) []domain.Collection

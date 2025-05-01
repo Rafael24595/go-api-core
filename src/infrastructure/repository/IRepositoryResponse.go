@@ -5,13 +5,9 @@ import (
 )
 
 type IRepositoryResponse interface {
-	Exists(key string) bool
 	Find(key string) (*domain.Response, bool)
-	FindOptions(options FilterOptions[domain.Response]) []domain.Response
-	FindAll() []domain.Response
+	FindMany(ids []string) []domain.Response
 	Insert(owner string, response *domain.Response) *domain.Response
-	Delete(response *domain.Response) *domain.Response
-	DeleteById(id string) *domain.Response 
-	DeleteMany(ids ...string) []domain.Response
-	DeleteOptions(options FilterOptions[domain.Response]) []string
+	Delete(response *domain.Response) *domain.Response 
+	DeleteMany(responses ...domain.Response) []domain.Response
 }

@@ -46,14 +46,20 @@ func (c *Group) TakeNode(id string) (*NodeReference, bool) {
 	return nil, false
 }
 
-func (c *Group) ResolveNode(node *NodeReference) (*NodeReference, bool) {
+func (c *Group) ResolveNode(item string) (*NodeReference, bool) {
 	for i, v := range c.Nodes {
-		if v.Item == node.Item {
-			c.Nodes[i] = *node
+		if v.Item == item {
+			c.Nodes[i] = NodeReference{
+				Order: v.Order,
+				Item:  item,
+			}
 			return &v, true
 		}
 	}
-	c.Nodes = append(c.Nodes, *node)
+	c.Nodes = append(c.Nodes, NodeReference{
+		Order: len(c.Nodes),
+		Item:  item,
+	})
 	return nil, false
 }
 

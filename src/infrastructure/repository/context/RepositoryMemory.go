@@ -1,7 +1,6 @@
 package historic
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -52,29 +51,30 @@ func (r *RepositoryMemory) Find(id string) (*context.Context, bool) {
 }
 
 func (r *RepositoryMemory) Insert(owner, collection string, ctx *context.Context) *context.Context {
-	return r.resolve(fmt.Sprintf("%s-%s", owner, collection), ctx)
+	return r.resolve(owner, collection, ctx)
 }
 
-func (r *RepositoryMemory) resolve(owner string, ctx *context.Context) *context.Context {
+func (r *RepositoryMemory) resolve(owner, collection string, ctx *context.Context) *context.Context {
 	if ctx.Id != "" {
-		return r.insert(owner, ctx)
+		return r.insert(owner, collection, ctx)
 	}
 
 	key := uuid.New().String()
 	if r.collection.Exists(key) {
-		return r.resolve(owner, ctx)
+		return r.resolve(owner, collection, ctx)
 	}
 
 	ctx.Id = key
 
-	return r.insert(owner, ctx)
+	return r.insert(owner, collection, ctx)
 }
 
-func (r *RepositoryMemory) insert(owner string, ctx *context.Context) *context.Context {
+func (r *RepositoryMemory) insert(owner, collection string, ctx *context.Context) *context.Context {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
 	ctx.Owner = owner
+	ctx.Collection = collection
 
 	if ctx.Timestamp == 0 {
 		ctx.Timestamp = time.Now().UnixMilli()
@@ -93,7 +93,7 @@ func (r *RepositoryMemory) Update(owner string, ctx *context.Context) (*context.
 	if _, exists := r.Find(ctx.Id); !exists {
 		return ctx, false
 	}
-	return r.resolve(owner, ctx), true
+	return r.resolve(owner, ctx.Collection, ctx), true
 }
 
 func (r *RepositoryMemory) Delete(context *context.Context) *context.Context {

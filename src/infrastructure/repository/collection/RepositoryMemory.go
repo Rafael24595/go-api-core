@@ -81,12 +81,6 @@ func (r *RepositoryMemory) FindCollections(references []domain.NodeReference) []
 	return collections
 }
 
-func (r *RepositoryMemory) Exists(key string) bool {
-	r.muMemory.RLock()
-	defer r.muMemory.RUnlock()
-	return r.collection.Exists(key)
-}
-
 func (r *RepositoryMemory) Insert(owner string, collection *domain.Collection) *domain.Collection {
 	r.muMemory.Lock()
 	return r.resolve(owner, collection)

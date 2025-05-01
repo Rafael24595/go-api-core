@@ -39,45 +39,18 @@ func (r *RepositoryMemory) Find(key string) (*domain.Response, bool) {
 	return r.collection.Get(key)
 }
 
-func (r *RepositoryMemory) FindOptions(options repository.FilterOptions[domain.Response]) []domain.Response {
-	return r.findOptions(options).Collect()
-}
-
-func (r *RepositoryMemory) findOptions(options repository.FilterOptions[domain.Response]) *collection.Vector[domain.Response] {
+func (r *RepositoryMemory) FindMany(ids []string) []domain.Response {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	values := r.collection.ValuesVector()
 
-	if options.Predicate != nil {
-		values.Filter(options.Predicate)
-	}
-	if options.Sort != nil {
-		values.Sort(options.Sort)
-	}
-
-	from := 0
-	if options.From != 0 {
-		from = options.From
+	responses := make([]domain.Response, 0)
+	for _, v := range ids {
+		if response, ok := r.collection.Get(v); ok {
+			responses = append(responses, *response)
+		}
 	}
 
-	to := values.Size()
-	if options.To != 0 {
-		to = options.To
-	}
-
-	return values.Slice(from, to)
-}
-
-func (r *RepositoryMemory) FindAll() []domain.Response {
-	r.muMemory.RLock()
-	defer r.muMemory.RUnlock()
-	return r.collection.Values()
-}
-
-func (r *RepositoryMemory) Exists(key string) bool {
-	r.muMemory.RLock()
-	defer r.muMemory.RUnlock()
-	return r.collection.Exists(key)
+	return responses
 }
 
 func (r *RepositoryMemory) Insert(owner string, response *domain.Response) *domain.Response {
@@ -106,74 +79,28 @@ func (r *RepositoryMemory) Insert(owner string, response *domain.Response) *doma
 }
 
 func (r *RepositoryMemory) Delete(response *domain.Response) *domain.Response {
-	return r.DeleteById(response.Id)
-}
-
-func (r *RepositoryMemory) DeleteById(id string) *domain.Response {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
-
-	cursor, _ := r.collection.Remove(id)
+	
+	cursor, _ := r.collection.Remove(response.Id)
 	go r.write(r.collection)
-
+	
 	return cursor
 }
 
-func (r *RepositoryMemory) DeleteMany(ids ...string) []domain.Response {
+func (r *RepositoryMemory) DeleteMany(responses ...domain.Response) []domain.Response {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
 	deleted := make([]domain.Response, 0)
-	for _, id := range ids {
-		cursor, _ := r.collection.Remove(id)
+	for _, v := range responses {
+		cursor, _ := r.collection.Remove(v.Id)
 		deleted = append(deleted, *cursor)
 	}
 
 	go r.write(r.collection)
 
 	return deleted
-}
-
-func (r *RepositoryMemory) DeleteOptions(options repository.FilterOptions[domain.Response]) []string {
-	r.muMemory.Lock()
-	defer r.muMemory.Unlock()
-
-	values := r.collection.ValuesVector()
-
-	if options.Predicate != nil {
-		values.Filter(func(r domain.Response) bool {
-			return !options.Predicate(r)
-		})
-	}
-	if options.Sort != nil {
-		values.Sort(options.Sort)
-	}
-
-	from := 0
-	if options.From != 0 {
-		from = options.From
-	}
-
-	to := values.Size()
-	if options.To != 0 {
-		to = options.To
-	}
-
-	if to < from {
-		to = from
-	}
-
-	result := collection.VectorEmpty[domain.Response]().
-		Merge(*values.Slice(0, from)).
-		Merge(*values.Slice(to, values.Size()))
-
-	r.collection = collection.DictionaryFromVector(*result, func(r domain.Response) string {
-		return r.Id
-	})
-
-	go r.write(r.collection)
-
-	return r.collection.Keys()
 }
 
 func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, domain.Response]) {

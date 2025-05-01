@@ -63,5 +63,5 @@ func (m *ManagerHistoric) Insert(owner string, collection *domain.Collection, re
 }
 
 func (m *ManagerHistoric) Delete(owner string, collection *domain.Collection, requestId string) (*domain.Collection, *domain.Request, *domain.Response) {
-	return m.managerCollection.RemoveRequestFromCollection(owner, collection, requestId)
+	return m.managerCollection.DeleteRequestFromCollection(owner, collection, requestId)
 }

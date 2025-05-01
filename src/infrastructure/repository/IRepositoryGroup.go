@@ -5,7 +5,6 @@ import (
 )
 
 type IRepositoryGroup interface {
-	Exists(key string) bool
 	Find(id string) (*domain.Group, bool)
 	Insert(owner string, group *domain.Group) *domain.Group
 	Delete(group *domain.Group) *domain.Group

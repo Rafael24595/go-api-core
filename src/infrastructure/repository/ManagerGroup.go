@@ -20,15 +20,15 @@ func NewManagerGroup(group IRepositoryGroup, managerCollection *ManagerCollectio
 	}
 }
 
-func (m *ManagerGroup) Exists(owner, key string) bool {
-	return m.group.Exists(key)
-}
-
 func (m *ManagerGroup) Find(owner, id string) (*domain.Group, bool) {
 	return m.group.Find(id)
 }
 
 func (m *ManagerGroup) FindNodes(owner string, group *domain.Group) []dto.DtoNodeCollection {
+	if group.Owner != owner {
+		return make([]dto.DtoNodeCollection, 0)
+	}
+
 	dtos := m.managerCollection.FindCollectionNodes(owner, group.Nodes)
 
 	if len(dtos) == len(group.Nodes) {
@@ -51,6 +51,10 @@ func (m *ManagerGroup) FindNodes(owner string, group *domain.Group) []dto.DtoNod
 }
 
 func (m *ManagerGroup) Insert(owner string, group *domain.Group) *domain.Group {
+	if group.Owner != owner {
+		return nil
+	}
+
 	group = group.SortNodes().FixNodesOrder()
 	return m.group.Insert(owner, group)
 }
@@ -120,23 +124,30 @@ func (m *ManagerGroup) CollectRequest(owner string, group *domain.Group, payload
 }
 
 func (m *ManagerGroup) ResolveCollectionReferences(owner string, group *domain.Group, collections ...domain.Collection) *domain.Group {
+	if group.Owner != owner {
+		return nil
+	}
+
 	if len(collections) == 0 {
 		return group
 	}
-
-	len := len(group.Nodes)
-	for i, v := range collections {
-		node := domain.NodeReference{
-			Order: len + i,
-			Item:  v.Id,
+	
+	for _, v := range collections {
+		if v.Owner != owner {
+			continue
 		}
-		group.ResolveNode(&node)
+
+		group.ResolveNode(v.Id)
 	}
 
 	return m.Insert(owner, group)
 }
 
 func (m *ManagerGroup) CloneCollection(owner string, group *domain.Group, id, name string) (*domain.Group, *domain.Collection) {
+	if group.Owner != owner {
+		return nil, nil
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -149,6 +160,10 @@ func (m *ManagerGroup) CloneCollection(owner string, group *domain.Group, id, na
 }
 
 func (m *ManagerGroup) SortCollections(owner string, group *domain.Group, payload PayloadSortNodes) *domain.Group {
+	if group.Owner != owner {
+		return nil
+	}
+
 	nodes := make([]domain.NodeReference, 0)
 	for i, v := range payload.SortNodes().Nodes {
 		node, exists := group.TakeNode(v.Item)
@@ -173,17 +188,25 @@ func (m *ManagerGroup) SortCollections(owner string, group *domain.Group, payloa
 }
 
 func (m *ManagerGroup) Delete(owner string, group *domain.Group) *domain.Group {
+	if group.Owner != owner {
+		return nil
+	}
+
 	return m.group.Delete(group)
 }
 
 func (m *ManagerGroup) DeleteCollection(owner string, group *domain.Group, id string) (*domain.Group, *domain.Collection) {
+	if group.Owner != owner {
+		return nil, nil
+	}
+
 	_, exists := group.TakeNode(id)
 	if exists {
 		group = m.Insert(owner, group)
 	}
 
 	collection, exists := m.managerCollection.Find(owner, id)
-	if !exists {
+	if !exists || collection.Owner != owner {
 		return group, nil
 	}
 
