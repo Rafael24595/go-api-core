@@ -24,7 +24,7 @@ func Client() *HttpClient {
 
 func WarmUp() (*domain.Response, error) {
 	println("Warming up HTTP client...")
-	
+
 	start := time.Now().UnixMilli()
 	response, result := Client().Fetch(domain.Request{
 		Method: domain.GET,
@@ -55,7 +55,7 @@ func (c *HttpClient) Fetch(request domain.Request) (*domain.Response, *exception
 		return nil, exception.NewCauseApiError(500, "Cannot execute HTTP request", respErr)
 	}
 
-	response, err := c.makeResponse(start, end, request, *resp)
+	response, err := c.makeResponse(request.Owner, start, end, request, *resp)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +148,7 @@ func (c *HttpClient) applyAuth(operation domain.Request, req *http.Request) *htt
 	return req
 }
 
-func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, resp http.Response) (*domain.Response, *exception.ApiError) {
+func (c *HttpClient) makeResponse(owner string, start int64, end int64, req domain.Request, resp http.Response) (*domain.Response, *exception.ApiError) {
 	defer resp.Body.Close()
 
 	bodyResponse, err := io.ReadAll(resp.Body)
@@ -185,6 +185,7 @@ func (c *HttpClient) makeResponse(start int64, end int64, req domain.Request, re
 		Cookies: *cookies,
 		Body:    bodyData,
 		Size:    len(bodyResponse),
+		Owner:   owner,
 	}, nil
 }
 
