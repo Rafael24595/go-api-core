@@ -54,7 +54,7 @@ func NewRequest(name string, method HttpMethod, uri string) *Request {
 		},
 		Body: body.Body{
 			ContentType: body.None,
-			Payload:     make([]byte, 0),
+			Parameters: make(map[string]body.BodyParameter),
 		},
 		Auth: auth.Auths{
 			Auths: make(map[string]auth.Auth),

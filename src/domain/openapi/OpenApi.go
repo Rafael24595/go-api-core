@@ -86,6 +86,7 @@ type SecurityScheme struct {
 type Schema struct {
 	Ref        string            `json:"$ref,omitempty"`
 	Type       string            `json:"type"`
+	Format     string            `json:"format"`
 	Properties map[string]Schema `json:"properties,omitempty"`
 	Items      *Schema           `json:"items,omitempty"`
 	Example    any               `json:"example,omitempty"`

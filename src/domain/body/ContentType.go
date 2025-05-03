@@ -1,6 +1,9 @@
 package body
 
-import "strings"
+import (
+	"bytes"
+	"strings"
+)
 
 type ContentType string
 
@@ -17,10 +20,6 @@ func (s ContentType) String() string {
 	return string(s)
 }
 
-func (s ContentType) lower() string {
-	return strings.ToLower(s.String())
-}
-
 func RequestContentTypes() []ContentType {
 	return []ContentType{
 		Text,
@@ -30,23 +29,13 @@ func RequestContentTypes() []ContentType {
 	}
 }
 
-func ContentTypeFromString(contentType string) (ContentType, bool) {
-	contentType = strings.ToLower(contentType)
-
-	switch strings.ToLower(contentType) {
-	case Text.lower():
-		return Text, true
-	case Form.lower():
-		return Form, true
-	case Json.lower():
-		return Json, true
-	case Xml.lower():
-		return Xml, true
-	case Html.lower():
-		return Html, true
+func (c ContentType) LoadStrategy() func(a *Body) *bytes.Buffer {
+	switch c {
+	case Form:
+		return applyFormData
+	default:
+		return applyDefault
 	}
-
-	return None, false
 }
 
 func ContentTypeFromHeader(contentType string) (ContentType, bool) {

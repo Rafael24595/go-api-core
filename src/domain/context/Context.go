@@ -200,11 +200,20 @@ func processCookie(cookies cookie.CookiesClient, context *Context) *cookie.Cooki
 }
 
 func processBody(payload body.Body, context *Context) *body.Body {
-	bodyFixed := context.Apply("payload", string(payload.Payload))
+	for k, v := range payload.Parameters {
+		if !v.Status || v.IsFile {
+			continue
+		}
+		v.Value = context.Apply("payload", v.Value)
+		payload.Parameters[k] = v
+	}
+
+	payload.ContentType = body.ContentType(context.Apply("payload", string(payload.ContentType)))
+
 	return &body.Body{
 		Status:      payload.Status,
 		ContentType: payload.ContentType,
-		Payload:     []byte(bodyFixed),
+		Parameters:  payload.Parameters,
 	}
 }
 

@@ -31,8 +31,16 @@
     },
     "body": {
       "status": true,
-      "contentType": "${header.type}",
-      "payload": "{\"status\":\"${status}\"}"
+      "content_type": "${header.type}",
+      "parameters": {
+        "document": {
+          "order": 0,
+          "status": true,
+          "is_file": false,
+          "file_name": "",
+          "value": "{\"status\":\"${status}\"}"
+        }
+      }
     },
     "auth": {
       "status": true,

@@ -5,16 +5,16 @@ import (
 )
 
 type DtoBody struct {
-	Status      bool             `json:"status"`
-	ContentType body.ContentType `json:"content_type"`
-	Payload     string           `json:"payload"`
+	Status      bool                          `json:"status"`
+	ContentType body.ContentType              `json:"content_type"`
+	Parameters  map[string]body.BodyParameter `json:"parameters"`
 }
 
 func ToBody(dto *DtoBody) *body.Body {
 	return &body.Body{
 		Status:      dto.Status,
 		ContentType: dto.ContentType,
-		Payload:     []byte(dto.Payload),
+		Parameters:  dto.Parameters,
 	}
 }
 
@@ -22,6 +22,6 @@ func FromBody(body *body.Body) *DtoBody {
 	return &DtoBody{
 		Status:      body.Status,
 		ContentType: body.ContentType,
-		Payload:     string(body.Payload),
+		Parameters:  body.Parameters,
 	}
 }

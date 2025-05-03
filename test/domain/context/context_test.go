@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Rafael24595/go-api-core/src/domain/body"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-collections/collection"
@@ -128,8 +129,8 @@ func TestProcessRequest(t *testing.T) {
 		t.Errorf("Found source %s but %s expected", foundType, expectedType)
 	}
 
-	found = string(request.Body.Payload)
-	expected = string(requestExpected.Body.Payload)
+	found = string(request.Body.Parameters[body.DOCUMENT_PARAM].Value)
+	expected = string(requestExpected.Body.Parameters[body.DOCUMENT_PARAM].Value)
 	if found != expected {
 		t.Errorf("Found source %s but %s expected", found, expected)
 	}
