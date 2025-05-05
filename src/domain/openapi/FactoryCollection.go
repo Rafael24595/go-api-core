@@ -52,7 +52,7 @@ func (b *FactoryCollection) Make() (*domain.Collection, *context.Context, []doma
 	server := ""
 	for i, v := range b.openapi.Servers {
 		key := fmt.Sprintf("server-%d", i)
-		ctx.Put(context.URI, fmt.Sprintf("server-%d", i), v.URL)
+		ctx.Put(context.URI, fmt.Sprintf("server-%d", i), v.URL, false)
 		server = fmt.Sprintf("${%s}", key)
 	}
 
@@ -125,7 +125,7 @@ func (b *FactoryCollection) MakeFromParameters(path string, parameters []Paramet
 	for _, v := range parameters {
 		switch v.In {
 		case "path":
-			ctx.Put(context.URI, v.Name, v.Description)
+			ctx.Put(context.URI, v.Name, v.Description, false)
 			placeholder := fmt.Sprintf("{%s}", v.Name)
 			replacement := fmt.Sprintf("${%s}", v.Name)
 			path = strings.ReplaceAll(path, placeholder, replacement)

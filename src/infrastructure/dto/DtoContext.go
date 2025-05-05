@@ -28,9 +28,10 @@ func ToContext(dto *DtoContext) *context.Context {
 		category := collection.DictionaryEmpty[string, context.ItemContext]()
 		for k, v := range vs {
 			category.Put(k, context.ItemContext{
-				Order:  v.Order,
-				Status: v.Status,
-				Value:  v.Value,
+				Order:   v.Order,
+				Private: v.Private,
+				Status:  v.Status,
+				Value:   v.Value,
 			})
 		}
 		categories.Put(c, *category)
@@ -53,9 +54,10 @@ func FromContext(ctx *context.Context) *DtoContext {
 		values := p.Value()
 		for _, v := range values.Pairs() {
 			category[v.Key()] = DtoItemContext{
-				Order:  v.Value().Order,
-				Status: v.Value().Status,
-				Value:  v.Value().Value,
+				Order:   v.Value().Order,
+				Private: v.Value().Private,
+				Status:  v.Value().Status,
+				Value:   v.Value().Value,
 			}
 		}
 		categories[p.Key()] = category

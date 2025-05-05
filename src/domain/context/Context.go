@@ -55,16 +55,17 @@ func NewContext(owner string) *Context {
 	}
 }
 
-func (c *Context) Put(category ContextCategoy, key, value string) *Context {
+func (c *Context) Put(category ContextCategoy, key, value string, private bool) *Context {
 	variables, ok := c.Dictionary.Get(category.String())
 	if !ok {
 		c.Dictionary.Put(category.String(), *collection.DictionaryEmpty[string, ItemContext]())
 		variables, _ = c.Dictionary.Get(category.String())
 	}
 	variables.Put(key, ItemContext{
-		Order:  int64(variables.Size()),
-		Status: true,
-		Value:  value,
+		Order:   int64(variables.Size()),
+		Private: private,
+		Status:  true,
+		Value:   value,
 	})
 	return c
 }
