@@ -8,6 +8,7 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/auth"
+	"github.com/Rafael24595/go-api-core/src/domain/body"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/domain/header"
 	"github.com/Rafael24595/go-api-core/src/domain/openapi"
@@ -205,8 +206,13 @@ func TestMakeFromRequestBody(t *testing.T) {
 	payload := oapi.Paths["/request"].Post.RequestBody
 	result := builder.MakeFromRequestBody(payload)
 
+	bodyParameter, ok := result.Parameters[body.DOCUMENT_PARAM][body.PAYLOAD_PARAM]
+	if !ok || bodyParameter[0].IsFile {
+		t.Fatal("Body should be JSON")
+	}
+
 	var request map[string]any
-	if err := json.Unmarshal(result.Payload, &request); err != nil {
+	if err := json.Unmarshal([]byte(bodyParameter[0].Value), &request); err != nil {
 		t.Fatalf("Failed to parse JSON: %v", err)
 	}
 
@@ -229,62 +235,53 @@ func TestMakeFromSchema(t *testing.T) {
 	builder := openapi.NewFactoryCollection(TEST_OWNER, oapi).SetRaw(*raw)
 
 	schema := oapi.Paths["/collection/{userId}"].Get.Responses["200"].Content["application/json"].Schema
-	example, _ := builder.MakeFromSchema(&schema, make(map[string]int))
+	example, _ := builder.MakeFromSchema("application/json", &schema, make(map[string]int))
 
-	var collections []map[string]any
-	if err := json.Unmarshal([]byte(example), &collections); err != nil {
-		t.Fatalf("Failed to parse JSON: %v", err)
-	}
-
-	valideSchemaCollections(t, collections)
+	valideSchemaCollections(t, example)
 }
 
-func valideSchemaCollections(t *testing.T, collections []map[string]any) {
-	if len(collections) != 1 {
-		t.Fatalf("Expected 1 request object, got %v", collections)
-	}
-
-	collection := collections[0]
-
-	value := collection["id"]
-	expected := "000A1"
+func valideSchemaCollections(t *testing.T, example map[string]openapi.BuildParameter) {
+	value := example["id"].Value
+	expected := "\"000A1\""
 	if value != expected {
 		t.Errorf("Found variable %s but %s expected", value, expected)
 	}
 
-	valideSchemaCollectionContext(t, collection)
-	valideSchemaCollectionRequests(t, collection)
+	valideSchemaCollectionContext(t, example)
+	valideSchemaCollectionRequests(t, example)
 }
 
-func valideSchemaCollectionContext(t *testing.T, collection map[string]any) {
-	context, ok := collection["context"].(map[string]any)
-	if !ok {
+func valideSchemaCollectionContext(t *testing.T, example map[string]openapi.BuildParameter) {
+	context, ok := example["context"]
+	if !ok || context.Children == nil {
 		t.Errorf("Context not found or incorrect format.")
 	}
 
-	value := context["status"]
-	expected := "pending"
+	children := *context.Children
+
+	value := children["status"].Value
+	expected := "\"pending\""
 	if value != expected {
 		t.Errorf("Found variable %v but %v expected", value, expected)
 	}
 }
 
-func valideSchemaCollectionRequests(t *testing.T, collection map[string]any) {
-	requests, ok := collection["requests"].([]any)
-	if !ok || len(requests) != 1 {
+func valideSchemaCollectionRequests(t *testing.T, example map[string]openapi.BuildParameter) {
+	requests, ok := example["requests"]
+	if !ok || requests.Children == nil || !requests.Vector {
 		t.Fatalf("Expected 1 request object, got %v", requests)
 	}
 
-	request := requests[0].(map[string]any)
+	children := *requests.Children
 
-	value := request["method"]
-	expected := "Request method"
+	value := children["method"].Value
+	expected := "\"Request method\""
 	if value != expected {
 		t.Errorf("Found variable %v but %v expected", value, expected)
 	}
 
-	fValue := request["timestamp"].(float64)
-	fExpected := float64(1743433941068)
+	fValue := children["timestamp"].Value
+	fExpected := "1743433941068"
 	if fValue != fExpected {
 		t.Errorf("Found variable %v but %v expected", fValue, fExpected)
 	}

@@ -21,7 +21,7 @@ type Request struct {
 	Query     query.Queries        `json:"query"`
 	Header    header.Headers       `json:"header"`
 	Cookie    cookie.CookiesClient `json:"cookie"`
-	Body      body.Body            `json:"body"`
+	Body      body.BodyRequest     `json:"body"`
 	Auth      auth.Auths           `json:"auth"`
 	Owner     string               `json:"owner"`
 	Modified  int64                `json:"modified"`
@@ -52,9 +52,9 @@ func NewRequest(name string, method HttpMethod, uri string) *Request {
 		Cookie: cookie.CookiesClient{
 			Cookies: make(map[string]cookie.CookieClient),
 		},
-		Body: body.Body{
+		Body: body.BodyRequest{
 			ContentType: body.None,
-			Payload:     make([]byte, 0),
+			Parameters:  make(map[string]map[string][]body.BodyParameter),
 		},
 		Auth: auth.Auths{
 			Auths: make(map[string]auth.Auth),

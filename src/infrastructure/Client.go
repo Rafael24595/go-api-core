@@ -67,9 +67,10 @@ func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, *exce
 	method := operation.Method.String()
 	url := strings.TrimSpace(operation.Uri)
 
-	var body io.Reader
+	body := new(bytes.Buffer)
 	if !operation.Body.Empty() && operation.Body.Status && method != "GET" && method != "HEAD" {
-		body = bytes.NewBuffer(operation.Body.Payload)
+		strategy := operation.Body.ContentType.LoadStrategy()
+		body = strategy(&operation.Body)
 	}
 
 	req, err := http.NewRequest(method, url, body)
@@ -149,13 +150,6 @@ func (c *HttpClient) applyAuth(operation domain.Request, req *http.Request) *htt
 }
 
 func (c *HttpClient) makeResponse(owner string, start int64, end int64, req domain.Request, resp http.Response) (*domain.Response, *exception.ApiError) {
-	defer resp.Body.Close()
-
-	bodyResponse, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, exception.NewCauseApiError(http.StatusInternalServerError, "Failed to read the payload", err)
-	}
-
 	headers := c.makeHeaders(resp)
 
 	cookies, err := c.makeCookies(headers)
@@ -163,16 +157,9 @@ func (c *HttpClient) makeResponse(owner string, start int64, end int64, req doma
 		return nil, exception.NewCauseApiError(http.StatusInternalServerError, "Failed to read the cookies", err)
 	}
 
-	contentType := body.Text
-	sContentType := resp.Header.Get("content-type")
-	if oContentType, ok := body.ContentTypeFromHeader(sContentType); ok {
-		contentType = oContentType
-	}
-
-	bodyData := body.Body{
-		Status:      true,
-		ContentType: contentType,
-		Payload:     bodyResponse,
+	bodyData, size, err := c.makeBody(resp)
+	if err != nil {
+		return nil, exception.NewCauseApiError(http.StatusInternalServerError, "Failed to read the cookies", err)
 	}
 
 	return &domain.Response{
@@ -183,8 +170,8 @@ func (c *HttpClient) makeResponse(owner string, start int64, end int64, req doma
 		Status:  int16(resp.StatusCode),
 		Headers: *headers,
 		Cookies: *cookies,
-		Body:    bodyData,
-		Size:    len(bodyResponse),
+		Body:    *bodyData,
+		Size:    size,
 		Owner:   owner,
 	}, nil
 }
@@ -228,4 +215,25 @@ func (c *HttpClient) makeCookies(headers *header.Headers) (*cookie.CookiesServer
 	return &cookie.CookiesServer{
 		Cookies: cookies,
 	}, nil
+}
+
+func (c *HttpClient) makeBody(resp http.Response) (*body.BodyResponse, int, error) {
+	defer resp.Body.Close()
+
+	bodyResponse, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, 0, exception.NewCauseApiError(http.StatusInternalServerError, "Failed to read the payload", err)
+	}
+
+	contentType := body.Text
+	sContentType := resp.Header.Get("content-type")
+	if oContentType, ok := body.ContentTypeFromHeader(sContentType); ok {
+		contentType = oContentType
+	}
+
+	return &body.BodyResponse{
+		Status:      true,
+		ContentType: contentType,
+		Payload:     string(bodyResponse),
+	}, len(bodyResponse), nil
 }

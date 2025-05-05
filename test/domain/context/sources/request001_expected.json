@@ -31,8 +31,20 @@
     },
     "body": {
       "status": true,
-      "contentType": "application/json",
-      "payload": "{\"status\":\"true\"}"
+      "content_type": "application/json",
+      "parameters": {
+        "document": {
+          "payload": [
+            {
+              "order": 0,
+              "status": true,
+              "is_file": false,
+              "file_name": "",
+              "value": "{\"status\":\"true\"}"
+            }
+          ]
+        }
+      }
     },
     "auth": {
       "status": true,

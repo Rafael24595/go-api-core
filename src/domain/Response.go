@@ -14,7 +14,7 @@ type Response struct {
 	Status  int16                `json:"status"`
 	Headers header.Headers       `json:"headers"`
 	Cookies cookie.CookiesServer `json:"cookies"`
-	Body    body.Body            `json:"body"`
+	Body    body.BodyResponse    `json:"body"`
 	Size    int                  `json:"size"`
 	Owner   string               `json:"owner"`
 }

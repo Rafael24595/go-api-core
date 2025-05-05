@@ -3,6 +3,7 @@ package openapi
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"strings"
 	"time"
 
@@ -20,6 +21,13 @@ type FactoryCollection struct {
 	owner   string
 	openapi OpenAPI
 	raw     map[string]any
+}
+
+type BuildParameter struct {
+	Value    string
+	Children *map[string]BuildParameter
+	Vector   bool
+	Binary   bool
 }
 
 func NewFactoryCollection(owner string, openapi *OpenAPI) *FactoryCollection {
@@ -133,20 +141,20 @@ func (b *FactoryCollection) MakeFromParameters(path string, parameters []Paramet
 	return path, ctx, queries, headers
 }
 
-func (b *FactoryCollection) MakeFromRequestBody(requestBody *RequestBody) *body.Body {
+func (b *FactoryCollection) MakeFromRequestBody(requestBody *RequestBody) *body.BodyRequest {
 	if requestBody == nil {
-		return body.NewBody(false, body.None, make([]byte, 0))
+		return body.NewBody(false, body.None, make(map[string]map[string][]body.BodyParameter))
 	}
 
 	if requestBody.Ref != "" {
 		reference, err := b.findRequestBodyReference(requestBody.Ref)
 		if reference == nil || err != nil {
-			return body.NewBody(false, body.None, make([]byte, 0))
+			return body.NewBody(false, body.None, make(map[string]map[string][]body.BodyParameter))
 		}
 		return b.MakeFromRequestBody(reference)
 	}
 
-	for _, v := range requestBody.Content {
+	for k, v := range requestBody.Content {
 		schema, err := b.findSchema(&v.Schema)
 		if schema == nil {
 			continue
@@ -155,48 +163,154 @@ func (b *FactoryCollection) MakeFromRequestBody(requestBody *RequestBody) *body.
 			break
 		}
 
-		payload, _ := b.MakeFromSchema(schema, make(map[string]int))
-		return body.NewBody(true, body.None, []byte(payload))
+		if schema.Example != nil && schema.Example != "" {
+			return b.fromExample(k, schema)
+		}
+
+		parameters, _ := b.MakeFromSchema(k, schema, make(map[string]int))
+
+		switch k {
+		case "multipart/form-data":
+			return b.toFormData(parameters)
+		default:
+			return b.toDocument(k, schema, parameters)
+		}
 	}
 
-	return body.NewBody(false, body.None, make([]byte, 0))
+	return body.NewBody(false, body.None, make(map[string]map[string][]body.BodyParameter))
 }
 
-func (b *FactoryCollection) MakeFromSchema(schema *Schema, visited map[string]int) (string, map[string]int) {
-	if schema.Example != nil && schema.Example != "" {
-		return b.makeFromExample(schema), visited
-	}
-
-	payload := ""
-
-	if schema.Ref != "" {
-		payload, visited = b.makeFromReference(schema, visited)
-	}
-
-	if schema.Items != nil {
-		payload, visited = b.makeFromReference(schema.Items, visited)
-	}
-
-	if len(schema.Properties) > 0 {
-		payload, visited = b.makeFromProperties(schema, visited)
-	}
-
-	if schema.Type == "array" {
-		payload = fmt.Sprintf("[ %s ]", payload)
-	}
-
-	return payload, visited
-}
-
-func (b *FactoryCollection) makeFromExample(schema *Schema) string {
+func (b *FactoryCollection) fromExample(content string, schema *Schema) *body.BodyRequest {
 	example, err := json.Marshal(schema.Example)
 	if err != nil {
 		fmt.Printf("%s", err.Error())
 	}
-	return string(example)
+
+	data := make(map[string]map[string][]body.BodyParameter)
+
+	bodyType := body.None
+	switch content {
+	case "multipart/form-data":
+		bodyType = body.Form
+	case "application/json":
+		bodyType = body.Json
+	case "application/xml":
+		bodyType = body.Xml
+	default:
+		bodyType = body.Text
+	}
+
+	if bodyType != body.Form {
+		data[body.DOCUMENT_PARAM] = make(map[string][]body.BodyParameter)
+		data[body.DOCUMENT_PARAM][body.PAYLOAD_PARAM] = []body.BodyParameter{
+			body.NewBodyDocument(0, true, string(example)),
+		}
+	}
+
+	return body.NewBody(false, bodyType, data)
 }
 
-func (b *FactoryCollection) makeFromReference(schema *Schema, visited map[string]int) (string, map[string]int) {
+func (b *FactoryCollection) toFormData(parameters map[string]BuildParameter) *body.BodyRequest {
+	data := make(map[string]map[string][]body.BodyParameter)
+
+	count := int64(0)
+	for k, v := range parameters {
+		data[body.FORM_DATA_PARAM] = make(map[string][]body.BodyParameter)
+		data[body.FORM_DATA_PARAM][k] = []body.BodyParameter{
+			{
+				Order:    count,
+				Status:   true,
+				IsFile:   v.Binary,
+				FileType: "",
+				FileName: fmt.Sprintf("%s file", k),
+				Value:    v.Value,
+			},
+		}
+		count++
+	}
+
+	return body.NewBody(false, body.Form, data)
+}
+
+func (b *FactoryCollection) toDocument(content string, schema *Schema, parameters map[string]BuildParameter) *body.BodyRequest {
+	payload, contenType := b.formatDocument(content, schema, parameters)
+	data := make(map[string]map[string][]body.BodyParameter)
+	data[body.DOCUMENT_PARAM] = make(map[string][]body.BodyParameter)
+	data[body.DOCUMENT_PARAM][body.PAYLOAD_PARAM] = []body.BodyParameter{
+		body.NewBodyDocument(0, true, payload),
+	}
+	return body.NewBody(false, contenType, data)
+}
+
+func (b *FactoryCollection) formatDocument(content string, schema *Schema, parameters map[string]BuildParameter) (string, body.ContentType) {
+	vector := schema.Type == "array"
+
+	switch content {
+	case "application/json":
+		return b.formatJson(parameters, vector), body.Json
+	case "application/xml":
+		return b.formatXml(parameters), body.Xml
+	default:
+		return b.formatJson(parameters, vector), body.Text
+	}
+}
+
+func (b *FactoryCollection) formatXml(parameters map[string]BuildParameter) string {
+	lines := make([]string, 0)
+
+	for k, v := range parameters {
+		value := v.Value
+		if v.Children != nil {
+			value = b.formatJson(*v.Children, v.Vector)
+		}
+
+		line := fmt.Sprintf("<%s>%v<%s>", k, value, k)
+		lines = append(lines, line)
+	}
+
+	return strings.Join(lines, " ")
+}
+
+func (b *FactoryCollection) formatJson(parameters map[string]BuildParameter, vector bool) string {
+	lines := make([]string, 0)
+
+	for k, v := range parameters {
+		value := v.Value
+		if v.Children != nil {
+			value = b.formatJson(*v.Children, v.Vector)
+		}
+
+		line := fmt.Sprintf("\"%s\": %v", k, value)
+		lines = append(lines, line)
+	}
+
+	payload := strings.Join(lines, ", ")
+	payload = fmt.Sprintf("{ %s }", payload)
+
+	if vector {
+		payload = fmt.Sprintf("[ %s ]", payload)
+	}
+
+	return payload
+}
+
+func (b *FactoryCollection) MakeFromSchema(content string, schema *Schema, visited map[string]int) (map[string]BuildParameter, map[string]int) {
+	if schema.Ref != "" {
+		return b.makeFromReference(content, schema, visited)
+	}
+
+	if schema.Items != nil {
+		return b.makeFromReference(content, schema.Items, visited)
+	}
+
+	if len(schema.Properties) > 0 {
+		return b.makeFromProperties(content, schema, visited)
+	}
+
+	return make(map[string]BuildParameter), visited
+}
+
+func (b *FactoryCollection) makeFromReference(content string, schema *Schema, visited map[string]int) (map[string]BuildParameter, map[string]int) {
 	ref, err := b.findSchemaReference(schema.Ref)
 	if err != nil {
 		fmt.Printf("%s", err.Error())
@@ -204,53 +318,87 @@ func (b *FactoryCollection) makeFromReference(schema *Schema, visited map[string
 
 	_, hasVisited := visited[schema.Ref]
 	if hasVisited {
-		return fmt.Sprintf("\"Circular schema '%s'.\"", schema.Ref), visited
+		data := make(map[string]BuildParameter)
+		data["$Circular"] = BuildParameter{
+			Value:  fmt.Sprintf("\"Circular schema '%s'.\"", schema.Ref),
+			Binary: false,
+		}
+		return data, visited
 	}
 
 	if ref != nil {
 		if schema.Ref != "" {
 			visited[schema.Ref] = 0
 		}
-		return b.MakeFromSchema(ref, visited)
+		return b.MakeFromSchema(content, ref, visited)
 	}
 
-	return "", visited
+	return make(map[string]BuildParameter), visited
 }
 
-func (b *FactoryCollection) makeFromProperties(schema *Schema, visited map[string]int) (string, map[string]int) {
-	lines := []string{}
+func (b *FactoryCollection) makeFromProperties(content string, schema *Schema, visited map[string]int) (map[string]BuildParameter, map[string]int) {
+	parameters := make(map[string]BuildParameter)
 
 	for key, v := range schema.Properties {
-		value := v.Example
-		if value == nil {
-			if v.Type == "integer" {
-				value = "0"
+		parameter, exists := b.makeFromPrimitiveProperty(key, &v)
+		if exists {
+			parameters[key] = *parameter
+		}
+
+		if exists || (v.Ref == "" && v.Items == nil) {
+			continue
+		}
+
+		var children map[string]BuildParameter
+		children, visited = b.MakeFromSchema(content, &v, visited)
+
+		if content == "multipart/form-data" {
+			maps.Copy(parameters, children)
+		} else {
+			parameters[key] = BuildParameter{
+				Value:    "",
+				Children: &children,
+				Vector:   v.Type == "array",
+				Binary:   false,
 			}
-			if v.Type == "boolean" {
-				value = "false"
-			}
 		}
 
-		if value == nil {
-			value = key
-		}
-
-		if v.Ref != "" || v.Items != nil {
-			value, visited = b.MakeFromSchema(&v, visited)
-		}
-
-		if v.Type == "string" {
-			value = fmt.Sprintf("\"%s\"", value)
-		}
-
-		line := fmt.Sprintf("\"%s\": %v", key, value)
-		lines = append(lines, line)
 	}
 
-	body := strings.Join(lines, ", ")
-	body = fmt.Sprintf("{ %s }", body)
+	return parameters, visited
+}
 
-	return body, visited
+func (b *FactoryCollection) makeFromPrimitiveProperty(field string, schema *Schema) (*BuildParameter, bool) {
+	example := schema.Example
+
+	switch schema.Type {
+	case "string":
+		if example == nil {
+			example = field
+		}
+		example = fmt.Sprintf("\"%s\"", example)
+	case "number":
+		if example == nil {
+			example = "0.0"
+		}
+	case "integer":
+		if example == nil {
+			example = "0"
+		}
+	case "boolean":
+		if example == nil {
+			example = "false"
+		}
+	default:
+		return nil, false
+	}
+
+	return &BuildParameter{
+		Value:    fmt.Sprintf("%v", example),
+		Children: nil,
+		Vector:   false,
+		Binary:   schema.Format == "binary",
+	}, true
 }
 
 func (b *FactoryCollection) MakeFromSecurity(security []SecurityRequirement, queries *header.Headers) *auth.Auths {
