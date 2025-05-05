@@ -29,7 +29,7 @@ func RequestContentTypes() []ContentType {
 	}
 }
 
-func (c ContentType) LoadStrategy() func(a *Body) *bytes.Buffer {
+func (c ContentType) LoadStrategy() func(a *BodyRequest) *bytes.Buffer {
 	switch c {
 	case Form:
 		return applyFormData

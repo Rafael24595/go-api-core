@@ -129,8 +129,8 @@ func TestProcessRequest(t *testing.T) {
 		t.Errorf("Found source %s but %s expected", foundType, expectedType)
 	}
 
-	found = string(request.Body.Parameters[body.DOCUMENT_PARAM].Value)
-	expected = string(requestExpected.Body.Parameters[body.DOCUMENT_PARAM].Value)
+	found = string(request.Body.Parameters[body.DOCUMENT_PARAM][body.PAYLOAD_PARAM][0].Value)
+	expected = string(requestExpected.Body.Parameters[body.DOCUMENT_PARAM][body.PAYLOAD_PARAM][0].Value)
 	if found != expected {
 		t.Errorf("Found source %s but %s expected", found, expected)
 	}

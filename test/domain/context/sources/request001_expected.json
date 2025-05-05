@@ -34,11 +34,15 @@
       "content_type": "application/json",
       "parameters": {
         "document": {
-          "order": 0,
-          "status": true,
-          "is_file": false,
-          "file_name": "",
-          "value": "{\"status\":\"true\"}"
+          "payload": [
+            {
+              "order": 0,
+              "status": true,
+              "is_file": false,
+              "file_name": "",
+              "value": "{\"status\":\"true\"}"
+            }
+          ]
         }
       }
     },

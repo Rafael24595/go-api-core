@@ -7,27 +7,28 @@ import (
 	"mime/multipart"
 )
 
-func applyFormData(b *Body) *bytes.Buffer {
+const (
+	FORM_DATA_PARAM = "form-data"
+)
+
+func applyFormData(b *BodyRequest) *bytes.Buffer {
 	var body *bytes.Buffer
 
 	writer := multipart.NewWriter(body)
-	for k, v := range b.Parameters {
-		if k == DOCUMENT_PARAM {
-			continue
-		}
-
-		if !v.IsFile {
-			err := writer.WriteField(k, v.Value)
-			if err != nil {
-				//TODO: Log
-			}
-		} else {
-			err := makeFormDataFile(&v, writer)
-			if err != nil {
-				//TODO: Log
+	for k, v := range b.Parameters[FORM_DATA_PARAM] {
+		for _, v := range v {
+			if !v.IsFile {
+				err := writer.WriteField(k, v.Value)
+				if err != nil {
+					//TODO: Log
+				}
+			} else {
+				err := makeFormDataFile(&v, writer)
+				if err != nil {
+					//TODO: Log
+				}
 			}
 		}
-
 	}
 
 	writer.Close()

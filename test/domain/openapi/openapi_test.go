@@ -206,13 +206,13 @@ func TestMakeFromRequestBody(t *testing.T) {
 	payload := oapi.Paths["/request"].Post.RequestBody
 	result := builder.MakeFromRequestBody(payload)
 
-	bodyParameter, ok := result.Parameters[body.DOCUMENT_PARAM]
-	if !ok || bodyParameter.IsFile {
+	bodyParameter, ok := result.Parameters[body.DOCUMENT_PARAM][body.PAYLOAD_PARAM]
+	if !ok || bodyParameter[0].IsFile {
 		t.Fatal("Body should be JSON")
 	}
 
 	var request map[string]any
-	if err := json.Unmarshal([]byte(bodyParameter.Value), &request); err != nil {
+	if err := json.Unmarshal([]byte(bodyParameter[0].Value), &request); err != nil {
 		t.Fatalf("Failed to parse JSON: %v", err)
 	}
 

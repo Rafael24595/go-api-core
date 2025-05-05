@@ -67,7 +67,7 @@ func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, *exce
 	method := operation.Method.String()
 	url := strings.TrimSpace(operation.Uri)
 
-	var body *bytes.Buffer
+	body := new(bytes.Buffer)
 	if !operation.Body.Empty() && operation.Body.Status && method != "GET" && method != "HEAD" {
 		strategy := operation.Body.ContentType.LoadStrategy()
 		body = strategy(&operation.Body)
@@ -217,7 +217,7 @@ func (c *HttpClient) makeCookies(headers *header.Headers) (*cookie.CookiesServer
 	}, nil
 }
 
-func (c *HttpClient) makeBody(resp http.Response) (*body.Body, int, error) {
+func (c *HttpClient) makeBody(resp http.Response) (*body.BodyResponse, int, error) {
 	defer resp.Body.Close()
 
 	bodyResponse, err := io.ReadAll(resp.Body)
@@ -231,19 +231,9 @@ func (c *HttpClient) makeBody(resp http.Response) (*body.Body, int, error) {
 		contentType = oContentType
 	}
 
-	bodyParameters := make(map[string]body.BodyParameter)
-
-	bodyParameters[body.DOCUMENT_PARAM] = body.BodyParameter{
-		Order:    0,
-		Status:   true,
-		IsFile:   false,
-		FileName: "",
-		Value:    string(bodyResponse),
-	}
-
-	return &body.Body{
+	return &body.BodyResponse{
 		Status:      true,
 		ContentType: contentType,
-		Parameters:  bodyParameters,
+		Payload:     string(bodyResponse),
 	}, len(bodyResponse), nil
 }

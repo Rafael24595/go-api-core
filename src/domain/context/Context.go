@@ -199,18 +199,22 @@ func processCookie(cookies cookie.CookiesClient, context *Context) *cookie.Cooki
 	}
 }
 
-func processBody(payload body.Body, context *Context) *body.Body {
+func processBody(payload body.BodyRequest, context *Context) *body.BodyRequest {
 	for k, v := range payload.Parameters {
-		if !v.Status || v.IsFile {
-			continue
+		for j, v := range v {
+			for i, v := range v {
+				if !v.Status || v.IsFile {
+					continue
+				}
+				v.Value = context.Apply("payload", v.Value)
+				payload.Parameters[k][j][i] = v
+			}
 		}
-		v.Value = context.Apply("payload", v.Value)
-		payload.Parameters[k] = v
 	}
 
 	payload.ContentType = body.ContentType(context.Apply("payload", string(payload.ContentType)))
 
-	return &body.Body{
+	return &body.BodyRequest{
 		Status:      payload.Status,
 		ContentType: payload.ContentType,
 		Parameters:  payload.Parameters,

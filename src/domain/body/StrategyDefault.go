@@ -5,14 +5,26 @@ import (
 )
 
 const (
-	DOCUMENT_PARAM = "$DOCUMENT"
+	DOCUMENT_PARAM = "document"
+	PAYLOAD_PARAM = "payload"
 )
 
-func applyDefault(b *Body) *bytes.Buffer {
-	var body *bytes.Buffer
-	parameter, ok := b.Parameters[DOCUMENT_PARAM]
-	if !ok || parameter.IsFile {
+func applyDefault(b *BodyRequest) *bytes.Buffer {
+	body := new(bytes.Buffer)
+
+	parameters, ok := b.Parameters[DOCUMENT_PARAM]
+	if !ok {
 		return body
 	}
-	return bytes.NewBuffer([]byte(parameter.Value))
+
+	payload, ok := parameters[PAYLOAD_PARAM]
+	if !ok {
+		return body
+	}
+
+	if len(payload) == 0 || payload[0].IsFile {
+		return body
+	}
+	
+	return bytes.NewBuffer([]byte(payload[0].Value))
 }

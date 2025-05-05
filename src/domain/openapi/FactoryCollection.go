@@ -141,15 +141,15 @@ func (b *FactoryCollection) MakeFromParameters(path string, parameters []Paramet
 	return path, ctx, queries, headers
 }
 
-func (b *FactoryCollection) MakeFromRequestBody(requestBody *RequestBody) *body.Body {
+func (b *FactoryCollection) MakeFromRequestBody(requestBody *RequestBody) *body.BodyRequest {
 	if requestBody == nil {
-		return body.NewBody(false, body.None, make(map[string]body.BodyParameter))
+		return body.NewBody(false, body.None, make(map[string]map[string][]body.BodyParameter))
 	}
 
 	if requestBody.Ref != "" {
 		reference, err := b.findRequestBodyReference(requestBody.Ref)
 		if reference == nil || err != nil {
-			return body.NewBody(false, body.None, make(map[string]body.BodyParameter))
+			return body.NewBody(false, body.None, make(map[string]map[string][]body.BodyParameter))
 		}
 		return b.MakeFromRequestBody(reference)
 	}
@@ -177,16 +177,16 @@ func (b *FactoryCollection) MakeFromRequestBody(requestBody *RequestBody) *body.
 		}
 	}
 
-	return body.NewBody(false, body.None, make(map[string]body.BodyParameter))
+	return body.NewBody(false, body.None, make(map[string]map[string][]body.BodyParameter))
 }
 
-func (b *FactoryCollection) fromExample(content string, schema *Schema) *body.Body {
+func (b *FactoryCollection) fromExample(content string, schema *Schema) *body.BodyRequest {
 	example, err := json.Marshal(schema.Example)
 	if err != nil {
 		fmt.Printf("%s", err.Error())
 	}
-	data := make(map[string]body.BodyParameter)
-	data[body.DOCUMENT_PARAM] = body.NewBodyDocument(0, true, string(example))
+
+	data := make(map[string]map[string][]body.BodyParameter)
 
 	bodyType := body.None
 	switch content {
@@ -200,20 +200,31 @@ func (b *FactoryCollection) fromExample(content string, schema *Schema) *body.Bo
 		bodyType = body.Text
 	}
 
+	if bodyType != body.Form {
+		data[body.DOCUMENT_PARAM] = make(map[string][]body.BodyParameter)
+		data[body.DOCUMENT_PARAM][body.PAYLOAD_PARAM] = []body.BodyParameter{
+			body.NewBodyDocument(0, true, string(example)),
+		}
+	}
+
 	return body.NewBody(false, bodyType, data)
 }
 
-func (b *FactoryCollection) toFormData(parameters map[string]BuildParameter) *body.Body {
-	data := make(map[string]body.BodyParameter)
+func (b *FactoryCollection) toFormData(parameters map[string]BuildParameter) *body.BodyRequest {
+	data := make(map[string]map[string][]body.BodyParameter)
 
 	count := int64(0)
 	for k, v := range parameters {
-		data[k] = body.BodyParameter{
-			Order:    count,
-			Status:   true,
-			IsFile:   v.Binary,
-			FileName: fmt.Sprintf("%s file", k),
-			Value:    v.Value,
+		data[body.FORM_DATA_PARAM] = make(map[string][]body.BodyParameter)
+		data[body.FORM_DATA_PARAM][k] = []body.BodyParameter{
+			{
+				Order:    count,
+				Status:   true,
+				IsFile:   v.Binary,
+				FileType: "",
+				FileName: fmt.Sprintf("%s file", k),
+				Value:    v.Value,
+			},
 		}
 		count++
 	}
@@ -221,10 +232,13 @@ func (b *FactoryCollection) toFormData(parameters map[string]BuildParameter) *bo
 	return body.NewBody(false, body.Form, data)
 }
 
-func (b *FactoryCollection) toDocument(content string, schema *Schema, parameters map[string]BuildParameter) *body.Body {
+func (b *FactoryCollection) toDocument(content string, schema *Schema, parameters map[string]BuildParameter) *body.BodyRequest {
 	payload, contenType := b.formatDocument(content, schema, parameters)
-	data := make(map[string]body.BodyParameter)
-	data[body.DOCUMENT_PARAM] = body.NewBodyDocument(0, true, payload)
+	data := make(map[string]map[string][]body.BodyParameter)
+	data[body.DOCUMENT_PARAM] = make(map[string][]body.BodyParameter)
+	data[body.DOCUMENT_PARAM][body.PAYLOAD_PARAM] = []body.BodyParameter{
+		body.NewBodyDocument(0, true, payload),
+	}
 	return body.NewBody(false, contenType, data)
 }
 
