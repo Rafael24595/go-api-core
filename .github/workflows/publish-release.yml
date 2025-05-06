@@ -7,6 +7,9 @@ on:
         description: 'Release version (e.g., v1.2.3)'
         required: true
 
+permissions:
+  contents: write 
+
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
@@ -34,12 +37,12 @@ jobs:
 
       - name: Push Git Tag
         run: |
-          VERSION=${{ steps.get_version.outputs.version }}
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git tag $VERSION
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
-          git push --tags origin $VERSION
+           VERSION=${{ steps.get_version.outputs.version }}
+           git config user.name "github-actions"
+           git config user.email "github-actions@github.com"
+           git tag $VERSION
+           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+           git push origin $VERSION
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN  }}
 
