@@ -38,7 +38,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git tag $VERSION
-          git push origin $VERSION
+          git push --tags origin $VERSION
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PUBLISH_TOKEN }}
 
