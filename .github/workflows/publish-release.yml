@@ -46,7 +46,7 @@ jobs:
           VERSION=${{ needs.validate-version.outputs.version }}
           go mod tidy
           go test ./...
-          tar -czf go-api-core-${VERSION}.tar.gz . # Includes all files for the Go module
+          git archive --format=tar.gz --output=go-api-core-${VERSION}.tar.gz HEAD
 
       - name: Get version input
         id: get_version
