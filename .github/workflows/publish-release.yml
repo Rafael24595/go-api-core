@@ -68,7 +68,7 @@ jobs:
       - name: Create GitHub Release
         run: |
           VERSION=${{ steps.get_version.outputs.version }}
-          gh release create $VERSION go-api-core.tar.gz \
+          gh release create $VERSION go-api-core-${VERSION}.tar.gz \
             --title "Release $VERSION" \
             --notes "Automated release of $VERSION"
         env:
