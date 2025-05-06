@@ -1,0 +1,52 @@
+name: Publish Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.2.3)'
+        required: true
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.0'
+
+      - name: Build the Go project
+        run: |
+          go mod tidy
+          go build -o go-api-core
+          tar -czf go-api-core.tar.gz go-api-core
+
+      - name: Get version input
+        id: get_version
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Push Git Tag
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag $VERSION
+          git push origin $VERSION
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          gh release create $VERSION go-api-core.tar.gz \
+            --title "Release $VERSION" \
+            --notes "Automated release of $VERSION"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
