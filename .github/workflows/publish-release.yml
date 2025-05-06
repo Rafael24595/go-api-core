@@ -41,11 +41,12 @@ jobs:
         with:
           go-version: '1.24.0'
 
-      - name: Build the Go project
+      - name: Prepare Go module for release
         run: |
+          VERSION=${{ needs.validate-version.outputs.version }}
           go mod tidy
-          go build -o go-api-core
-          tar -czf go-api-core.tar.gz go-api-core
+          go test ./...
+          tar -czf go-api-core-${VERSION}.tar.gz . # Includes all files for the Go module
 
       - name: Get version input
         id: get_version
