@@ -1,37 +1,52 @@
 package cookie
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
-
-	"github.com/Rafael24595/go-api-core/src/commons"
 )
 
-type Cookie struct {
-	Code       string
-	Value      string
-	Domain     string
-	Path       string
-	Expiration string
-	MaxAge     int
-	Secure     bool
-	HttpOnly   bool
-	SameSite   SameSite
+type CookieClient struct {
+	Order  int64  `json:"order"`
+	Status bool   `json:"status"`
+	Value  string `json:"value"`
 }
 
-func CookieFromString(cookieString string) (*Cookie, error) {
+func NewCookieClient(order int64, status bool, value string) CookieClient {
+	return CookieClient{
+		Order:  order,
+		Status: status,
+		Value:  value,
+	}
+}
+
+type CookieServer struct {
+	Status     bool     `json:"status"`
+	Code       string   `json:"code"`
+	Value      string   `json:"value"`
+	Domain     string   `json:"domain"`
+	Path       string   `json:"path"`
+	Expiration string   `json:"expiration"`
+	MaxAge     int      `json:"maxage"`
+	Secure     bool     `json:"secure"`
+	HttpOnly   bool     `json:"httponly"`
+	SameSite   SameSite `json:"samesite"`
+}
+
+func CookieServerFromString(cookieString string) (*CookieServer, error) {
 	parts := strings.Split(cookieString, ";")
 
 	codeValue := strings.SplitN(strings.TrimSpace(parts[0]), "=", 2)
 	if len(codeValue) != 2 {
-		return nil, commons.ApiErrorFrom(422, "Invalid cookie format")
+		return nil, errors.New("invalid cookie format")
 	}
 
 	code := strings.TrimSpace(codeValue[0])
 	value := strings.TrimSpace(codeValue[1])
 
-	cookie := &Cookie{
+	cookie := &CookieServer{
+		Status:   true,
 		Code:     code,
 		Value:    value,
 		Secure:   false,
@@ -62,7 +77,7 @@ func CookieFromString(cookieString string) (*Cookie, error) {
 			if value != "" {
 				maxAge, err := strconv.Atoi(value)
 				if err != nil {
-					return nil, commons.ApiErrorFromCause(422, "Invalid Max-Age value", err)
+					return nil, errors.New("invalid Max-Age value")
 				}
 				cookie.MaxAge = maxAge
 			}
@@ -70,19 +85,19 @@ func CookieFromString(cookieString string) (*Cookie, error) {
 			if value != "" {
 				sameSite, err := SameSiteFromString(value)
 				if err != nil {
-					return nil, commons.ApiErrorFromCause(422, fmt.Sprintf("Unknown SameSite value: '%s'", value), err)
+					return nil, errors.New(fmt.Sprintf("unknown SameSite value: '%s'", value))
 				}
 				cookie.SameSite = *sameSite
 			}
 		default:
-			return nil, commons.ApiErrorFrom(422, fmt.Sprintf("Unknown field code: '%s'", key))
+			return nil, errors.New(fmt.Sprintf("unknown field code: '%s'", key))
 		}
 	}
 
 	return cookie, nil
 }
 
-func (c *Cookie) String() string {
+func (c *CookieServer) String() string {
 	cookieString := c.Value
 
 	if c.Domain != "" {

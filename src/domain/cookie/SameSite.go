@@ -1,10 +1,9 @@
 package cookie
 
 import (
+	"errors"
 	"fmt"
 	"strings"
-
-	"github.com/Rafael24595/go-api-core/src/commons"
 )
 
 type SameSite string
@@ -19,7 +18,7 @@ func (s SameSite) String() string {
 	return string(s)
 }
 
-func SameSiteFromString(value string) (*SameSite, commons.ApiError) {
+func SameSiteFromString(value string) (*SameSite, error) {
 	switch strings.ToLower(value) {
 	case "strict":
 		sameSite := Strict
@@ -31,6 +30,6 @@ func SameSiteFromString(value string) (*SameSite, commons.ApiError) {
 		sameSite := None
 		return &sameSite, nil
 	default:
-		return nil, commons.ApiErrorFrom(422, fmt.Sprintf("Unknown same-site value: '%s'", value))
+		return nil, errors.New(fmt.Sprintf("unknown same-site value: '%s'", value))
 	}
 }
