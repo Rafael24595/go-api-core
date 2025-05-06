@@ -41,6 +41,18 @@ jobs:
         with:
           go-version: '1.24.0'
 
+      - name: Check if Git tag exists
+        id: check-tag
+        run: |
+          VERSION=${{ needs.validate-version.outputs.version }}
+          if git rev-parse "refs/tags/$VERSION" >/dev/null 2>&1; then
+            echo "Tag $VERSION already exists. Skipping tag creation."
+            echo "exists=true" >> $GITHUB_ENV
+          else
+            echo "Tag $VERSION does not exist. Proceeding with tag creation."
+            echo "exists=false" >> $GITHUB_ENV
+          fi
+
       - name: Prepare Go module for release
         run: |
           VERSION=${{ needs.validate-version.outputs.version }}
