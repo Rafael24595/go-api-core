@@ -270,9 +270,6 @@ func (p *csvtParser) isPointer(obj string) (string, int, bool, TranslateError) {
 
 func (p *csvtParser) isString(obj string) (string, bool) {
 	len := len(obj)
-	if strings.HasPrefix(obj, "\"{") {
-		println("here")
-	}
 	if obj[0] == '"' && obj[len-1] == '"' {
 		fixed := strings.ReplaceAll(obj[1 : len-1], "\\'", "\"")
 		replacer := strings.NewReplacer(
