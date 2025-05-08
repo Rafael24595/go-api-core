@@ -7,12 +7,14 @@ import (
 var instance *Configuration
 
 type Configuration struct {
-	admin  string
-	secret []byte
-	kargs  map[string]utils.Any
+	Mod     Mod
+	Project Project
+	admin   string
+	secret  []byte
+	kargs   map[string]utils.Any
 }
 
-func Initialize(kargs map[string]utils.Any) Configuration {
+func Initialize(kargs map[string]utils.Any, mod *Mod, project *Project) Configuration {
 	if instance != nil {
 		panic("")
 	}
@@ -28,9 +30,11 @@ func Initialize(kargs map[string]utils.Any) Configuration {
 	}
 
 	instance = &Configuration{
-		admin:  admin,
-		secret: []byte(secret),
-		kargs:  kargs,
+		Mod:     *mod,
+		Project: *project,
+		admin:   admin,
+		secret:  []byte(secret),
+		kargs:   kargs,
 	}
 
 	return *instance

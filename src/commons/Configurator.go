@@ -10,10 +10,13 @@ import (
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/joho/godotenv"
+	"gopkg.in/yaml.v3"
 )
 
 func Initialize(kargs map[string]utils.Any) (*configuration.Configuration, *dependency.DependencyContainer) {
-	config := configuration.Initialize(kargs)
+	mod := ReadGoMod()
+	pkg := ReadPackage()
+	config := configuration.Initialize(kargs, mod, &pkg.Project)
 	container := dependency.Initialize()
 	initializeManagerSession(container)
 	return &config, container
@@ -44,6 +47,32 @@ func ReadEnv(file string) map[string]utils.Any {
 	}
 
 	return envs
+}
+
+func ReadGoMod() *configuration.Mod {
+	file, err := os.Open("go.mod")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	return configuration.DecodeMod(file)
+}
+
+func ReadPackage() *configuration.Package {
+	file, err := os.Open("go.package.yml")
+	if err != nil {
+		panic(fmt.Sprintf("Error opening go.package.yml: %v", err))
+	}
+	defer file.Close()
+
+	var pkg configuration.Package
+	decoder := yaml.NewDecoder(file)
+	if err := decoder.Decode(&pkg); err != nil {
+		panic(fmt.Sprintf("Error decoding YAML: %v", err))
+	}
+
+	return &pkg
 }
 
 func splitEnv(env string) []string {
