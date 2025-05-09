@@ -1,18 +1,23 @@
 package configuration
 
 import (
+	"time"
+
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
+	"github.com/google/uuid"
 )
 
 var instance *Configuration
 
 type Configuration struct {
-	Mod     Mod
-	Project Project
-	admin   string
-	secret  []byte
-	kargs   map[string]utils.Any
+	Mod       Mod
+	Project   Project
+	sessionId string
+	timestamp int64
+	admin     string
+	secret    []byte
+	kargs     map[string]utils.Any
 }
 
 func Initialize(kargs map[string]utils.Any, mod *Mod, project *Project) Configuration {
@@ -31,11 +36,13 @@ func Initialize(kargs map[string]utils.Any, mod *Mod, project *Project) Configur
 	}
 
 	instance = &Configuration{
-		Mod:     *mod,
-		Project: *project,
-		admin:   admin,
-		secret:  []byte(secret),
-		kargs:   kargs,
+		Mod:       *mod,
+		Project:   *project,
+		sessionId: uuid.NewString(),
+		timestamp: time.Now().UnixMilli(),
+		admin:     admin,
+		secret:    []byte(secret),
+		kargs:     kargs,
 	}
 
 	return *instance
@@ -46,6 +53,14 @@ func Instance() Configuration {
 		log.Panics("The configuration is not initialized yet")
 	}
 	return *instance
+}
+
+func (c Configuration) SessionId() string {
+	return c.sessionId
+}
+
+func (c Configuration) Timestamp() int64 {
+	return c.timestamp
 }
 
 func (c Configuration) Admin() string {
