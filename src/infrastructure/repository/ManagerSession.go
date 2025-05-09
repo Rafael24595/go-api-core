@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
+	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/session"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
@@ -56,12 +57,12 @@ func defineDefaultSessions(instance *ManagerSession) *ManagerSession {
 
 	err := instance.defineDefaultUser(conf.Admin(), string(conf.Secret()), true, true, 0)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	err = instance.defineDefaultUser("anonymous", "", true, false, 0)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	return instance
@@ -69,7 +70,7 @@ func defineDefaultSessions(instance *ManagerSession) *ManagerSession {
 
 func InstanceManagerSession() *ManagerSession {
 	if manager == nil {
-		panic("Not initialized")
+		log.Panics("The session manager is not initialized yet")
 	}
 	return manager
 }
@@ -325,7 +326,7 @@ func (s *ManagerSession) write(snapshot collection.IDictionary[string, session.S
 
 	err := s.file.Write(items)
 	if err != nil {
-		println(err.Error())
+		log.Error(err)
 	}
 }
 

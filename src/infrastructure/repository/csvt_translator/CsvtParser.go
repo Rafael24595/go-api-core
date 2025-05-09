@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/Rafael24595/go-api-core/src/commons/log"
 )
 
 type csvtParser struct {
@@ -105,7 +107,8 @@ func (p *csvtParser) parseMap(row string) (map[string]ResourceNode, TranslateErr
 	mapp := map[string]ResourceNode{}
 
 	if rune(row[len(row)-1]) != MAP_CLOSING {
-		panic("Unsupported")
+		//TODO: Expand description
+		log.Panics("Unsupported")
 	}
 
 	row = row[:len(row)-1]
@@ -120,7 +123,8 @@ func (p *csvtParser) parseMap(row string) (map[string]ResourceNode, TranslateErr
 		}
 
 		if index == -1 {
-			panic("Value undefined")
+			//TODO: Expand description
+			log.Panics("Value undefined")
 		}
 
 		key := buffer[:index]
@@ -146,7 +150,8 @@ func (p *csvtParser) parseMap(row string) (map[string]ResourceNode, TranslateErr
 		var content string
 		if index != -1 {
 			if len(buffer) >= index && rune(buffer[index]) != MAP_SEPARATOR {
-				panic("Unsupported")
+				//TODO: Expand description
+				log.Panics("Unsupported")
 			}
 			content = buffer[:index]
 			buffer = buffer[index+1:]
@@ -177,7 +182,8 @@ func (p *csvtParser) parseList(row string, separator, closing rune) ([]ResourceN
 	lst := []ResourceNode{}
 
 	if rune(row[len(row)-1]) != closing {
-		panic("Unsupported")
+		//TODO: Expand description
+		log.Panics("Unsupported")
 	}
 
 	row = row[:len(row)-1]
@@ -197,7 +203,8 @@ func (p *csvtParser) parseList(row string, separator, closing rune) ([]ResourceN
 		var content string
 		if index != -1 {
 			if len(buffer) >= index && rune(buffer[index]) != separator {
-				panic("Unsupported")
+				//TODO: Expand description
+				log.Panics("Unsupported")
 			}
 			content = buffer[:index]
 			buffer = buffer[index+1:]

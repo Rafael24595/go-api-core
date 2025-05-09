@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Rafael24595/go-api-core/src/commons/exception"
+	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/body"
 	"github.com/Rafael24595/go-api-core/src/domain/cookie"
@@ -23,7 +24,7 @@ func Client() *HttpClient {
 }
 
 func WarmUp() (*domain.Response, error) {
-	println("Warming up HTTP client...")
+	log.Message("Warming up the HTTP client...")
 
 	start := time.Now().UnixMilli()
 	response, result := Client().Fetch(domain.Request{
@@ -36,7 +37,7 @@ func WarmUp() (*domain.Response, error) {
 	}
 
 	end := time.Now().UnixMilli()
-	println(fmt.Sprintf("Client initialized successfully in: %d ms", end-start))
+	log.Messagef("The client has been initialized successfully in: %d ms", end-start)
 	return response, nil
 }
 

@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"io"
 	"mime/multipart"
+
+	"github.com/Rafael24595/go-api-core/src/commons/log"
 )
 
 const (
@@ -20,12 +22,12 @@ func applyFormData(b *BodyRequest) *bytes.Buffer {
 			if !v.IsFile {
 				err := writer.WriteField(k, v.Value)
 				if err != nil {
-					//TODO: Log
+					log.Error(err)
 				}
 			} else {
 				err := makeFormDataFile(&v, writer)
 				if err != nil {
-					//TODO: Log
+					log.Error(err)
 				}
 			}
 		}

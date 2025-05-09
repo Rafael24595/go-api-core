@@ -1,14 +1,15 @@
 package dependency
 
 import (
+	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/infrastructure"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
-	repository_group "github.com/Rafael24595/go-api-core/src/infrastructure/repository/group"
 	repository_collection "github.com/Rafael24595/go-api-core/src/infrastructure/repository/collection"
 	repository_context "github.com/Rafael24595/go-api-core/src/infrastructure/repository/context"
+	repository_group "github.com/Rafael24595/go-api-core/src/infrastructure/repository/group"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/request"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/response"
 	"github.com/Rafael24595/go-collections/collection"
@@ -32,12 +33,12 @@ type DependencyContainer struct {
 
 func Initialize() *DependencyContainer {
 	if instance != nil {
-		panic("//TODO: Already instanced")
+		log.Panics("The dependency container is alredy initialized")
 	}
 
 	_, err := infrastructure.WarmUp()
 	if err != nil {
-		println(err.Error())
+		log.Error(err)
 	}
 
 	repositoryRequest := loadRepositoryRequest()
@@ -72,7 +73,7 @@ func loadRepositoryRequest() repository.IRepositoryRequest {
 	impl := collection.DictionarySyncEmpty[string, domain.Request]()
 	repository, err := request.InitializeRepositoryMemory(impl, file)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	return repository
@@ -83,7 +84,7 @@ func loadRepositoryResponse() repository.IRepositoryResponse {
 	impl := collection.DictionarySyncEmpty[string, domain.Response]()
 	repository, err := response.InitializeRepositoryMemory(impl, file)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	return repository
@@ -94,7 +95,7 @@ func loadRepositoryContext() repository.IRepositoryContext {
 	impl := collection.DictionarySyncEmpty[string, context.Context]()
 	repository, err := repository_context.InitializeRepositoryMemory(impl, file)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	return repository
@@ -105,7 +106,7 @@ func loadRepositoryCollection() repository.IRepositoryCollection {
 	impl := collection.DictionarySyncEmpty[string, domain.Collection]()
 	repository, err := repository_collection.InitializeRepositoryMemory(impl, file)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	return repository
@@ -116,7 +117,7 @@ func loadRepositoryGroup() repository.IRepositoryGroup {
 	impl := collection.DictionarySyncEmpty[string, domain.Group]()
 	repository, err := repository_group.InitializeRepositoryMemory(impl, file)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	return repository

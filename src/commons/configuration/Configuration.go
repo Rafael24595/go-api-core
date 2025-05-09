@@ -1,6 +1,7 @@
 package configuration
 
 import (
+	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 )
 
@@ -16,17 +17,17 @@ type Configuration struct {
 
 func Initialize(kargs map[string]utils.Any, mod *Mod, project *Project) Configuration {
 	if instance != nil {
-		panic("")
+		log.Panics("The configuration is alredy initialized")
 	}
 
 	admin, ok := kargs["GO_API_ADMIN_USER"].String()
 	if !ok {
-		panic("Admin is not defined")
+		log.Panics("Admin is not defined")
 	}
 
 	secret, ok := kargs["GO_API_ADMIN_SECRET"].String()
 	if !ok {
-		panic("Secret is not defined")
+		log.Panics("Secret is not defined")
 	}
 
 	instance = &Configuration{
@@ -42,7 +43,7 @@ func Initialize(kargs map[string]utils.Any, mod *Mod, project *Project) Configur
 
 func Instance() Configuration {
 	if instance == nil {
-		panic("")
+		log.Panics("The configuration is not initialized yet")
 	}
 	return *instance
 }

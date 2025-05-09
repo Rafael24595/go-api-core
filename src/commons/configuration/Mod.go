@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"os"
 	"strings"
+
+	"github.com/Rafael24595/go-api-core/src/commons/log"
 )
 
 type Mod struct {
@@ -70,7 +72,7 @@ func DecodeMod(file *os.File) *Mod {
 		if strings.HasPrefix(line, "replace ") {
 			fragments := strings.Split(strings.TrimSpace(strings.TrimPrefix(line, "replace")), "=>")
 			if len(fragments) < 2 {
-				panic("Bad format")
+				log.Panics("go.mod bad format, replace has not valid structure")
 			}
 
 			module := strings.TrimSpace(fragments[0])
@@ -93,7 +95,7 @@ func makeDependency(line string) *Dependency {
 	fragments := strings.Split(strings.TrimSpace(line), " ")
 
 	if len(fragments) < 2 {
-		panic("Bad format")
+		log.Panics("go.mod bad format, the dependency has not valid structure")
 	}
 
 	module := fragments[0]

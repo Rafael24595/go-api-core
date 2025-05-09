@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-api-core/src/domain/openapi"
 )
@@ -12,13 +13,13 @@ import (
 func readRaw(t *testing.T) map[string]any {
 	file, err := os.Open("test_openaoi.yaml")
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	defer file.Close()
 
 	yamlFile, err := io.ReadAll(file)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	raw, err := openapi.DeserializeFromYaml(yamlFile)
