@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   block-non-main:
-    if: github.ref != 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.ref_name == 'main'
     runs-on: ubuntu-latest
     steps:
       - run: |
