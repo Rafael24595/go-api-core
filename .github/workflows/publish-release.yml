@@ -8,12 +8,14 @@ permissions:
 
 jobs:
   block-non-main:
-    if: github.event_name == 'workflow_dispatch' && github.ref_name != 'main'
     runs-on: ubuntu-latest
     steps:
       - run: |
-          echo "🚫 Manual dispatch is only allowed from the 'main' branch."
-          exit 1
+          if [[ "${GITHUB_REF_NAME}" != "main" ]]; then
+            echo "🚫 Manual dispatch is only allowed from the 'main' branch."
+            exit 1
+          fi
+          echo "✅ Branch '${GITHUB_REF_NAME}' allowed. Continuing..."
 
   validate-version:
       needs: block-non-main
