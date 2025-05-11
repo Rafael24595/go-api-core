@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   block-non-main:
-    if: github.event_name == 'workflow_dispatch' && github.ref_name == 'main'
+    if: github.event_name == 'workflow_dispatch' && github.ref_name != 'main'
     runs-on: ubuntu-latest
     steps:
       - run: |
@@ -17,7 +17,6 @@ jobs:
 
   validate-version:
       needs: block-non-main
-      if: github.ref == 'refs/heads/main'
       runs-on: ubuntu-latest
       outputs:
         version: ${{ steps.check.outputs.version }}
