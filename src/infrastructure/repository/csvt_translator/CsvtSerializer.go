@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-collections/collection"
 )
 
@@ -36,12 +37,12 @@ func (s *CsvtSerializer) Serialize(entities ...any) string {
 
 	rootKey := s.key(reflect.ValueOf(entities[0]))
 	if rootKey == "common-array" || rootKey == "common-map" {
-		panic("Common structures cannot be root.")
+		log.Panics("Common structures cannot be root.")
 	}
 
 	for _, e := range entities {
 		if reflect.ValueOf(e).Kind() == reflect.Pointer {
-			panic("Not supported yet")
+			log.Panics("Not supported yet")
 		}
 		s.serialize(e)
 	}
@@ -131,8 +132,9 @@ func (s *CsvtSerializer) makeEmpty(entity reflect.Value) string {
 	case reflect.Slice, reflect.Array:
 		return string(ARR_CLOSING)
 	default:
-		panic("Cannot be empty.")
+		log.Panics("The current structure cannot be empty.")
 	}
+	return ""
 }
 
 func (s *CsvtSerializer) serializeEntity(entity any, rEntity reflect.Value) string {

@@ -1,36 +1,48 @@
 package configuration
 
 import (
+	"time"
+
+	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
+	"github.com/google/uuid"
 )
 
 var instance *Configuration
 
 type Configuration struct {
-	admin  string
-	secret []byte
-	kargs  map[string]utils.Any
+	Mod       Mod
+	Project   Project
+	sessionId string
+	timestamp int64
+	admin     string
+	secret    []byte
+	kargs     map[string]utils.Any
 }
 
-func Initialize(kargs map[string]utils.Any) Configuration {
+func Initialize(kargs map[string]utils.Any, mod *Mod, project *Project) Configuration {
 	if instance != nil {
-		panic("")
+		log.Panics("The configuration is alredy initialized")
 	}
 
 	admin, ok := kargs["GO_API_ADMIN_USER"].String()
 	if !ok {
-		panic("Admin is not defined")
+		log.Panics("Admin is not defined")
 	}
 
 	secret, ok := kargs["GO_API_ADMIN_SECRET"].String()
 	if !ok {
-		panic("Secret is not defined")
+		log.Panics("Secret is not defined")
 	}
 
 	instance = &Configuration{
-		admin:  admin,
-		secret: []byte(secret),
-		kargs:  kargs,
+		Mod:       *mod,
+		Project:   *project,
+		sessionId: uuid.NewString(),
+		timestamp: time.Now().UnixMilli(),
+		admin:     admin,
+		secret:    []byte(secret),
+		kargs:     kargs,
 	}
 
 	return *instance
@@ -38,9 +50,17 @@ func Initialize(kargs map[string]utils.Any) Configuration {
 
 func Instance() Configuration {
 	if instance == nil {
-		panic("")
+		log.Panics("The configuration is not initialized yet")
 	}
 	return *instance
+}
+
+func (c Configuration) SessionId() string {
+	return c.sessionId
+}
+
+func (c Configuration) Timestamp() int64 {
+	return c.timestamp
 }
 
 func (c Configuration) Admin() string {

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/domain/body"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
@@ -75,12 +76,12 @@ func TestProcessRequest(t *testing.T) {
 
 	err := json.Unmarshal(readJSON("sources/request001_raw.json"), &dtoRequestRaw)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	err = json.Unmarshal(readJSON("sources/request001_expected.json"), &requestExpected)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	ctx := context.NewContext("anonymous").
@@ -151,13 +152,13 @@ func TestProcessRequest(t *testing.T) {
 func readJSON(filename string) []byte {
 	file, err := os.Open(filename)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	defer file.Close()
 
 	bytes, err := io.ReadAll(file)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	return bytes

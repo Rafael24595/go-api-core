@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
@@ -102,6 +103,6 @@ func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, domain.
 
 	err := r.file.Write(items)
 	if err != nil {
-		println(err.Error())
+		log.Error(err)
 	}
 }
