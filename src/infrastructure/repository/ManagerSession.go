@@ -218,7 +218,9 @@ func (s *ManagerSession) update(session *session.Session) (*session.Session, boo
 	if _, ok := s.sessions.Get(session.Username); !ok {
 		return nil, false
 	}
-	return s.sessions.Put(session.Username, *session)
+	old, exists := s.sessions.Put(session.Username, *session)
+	go s.write(s.sessions)
+	return old, exists
 }
 
 func (s *ManagerSession) Authorize(user, password string) (*session.Session, error) {
