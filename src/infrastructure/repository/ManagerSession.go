@@ -187,7 +187,12 @@ func (s *ManagerSession) Verify(username, oldPassword, newPassword1, newPassword
 		return nil, errors.New("session not found")
 	}
 
-	session.Secret = []byte(newPassword2)
+	secret, err := HashPassword(newPassword2)
+	if err != nil {
+		return nil, err
+	}
+
+	session.Secret = secret
 	session.Count += 1
 	s.update(session)
 
