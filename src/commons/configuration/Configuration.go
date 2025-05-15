@@ -13,6 +13,7 @@ var instance *Configuration
 type Configuration struct {
 	Mod       Mod
 	Project   Project
+	dev       bool
 	sessionId string
 	timestamp int64
 	admin     string
@@ -35,9 +36,12 @@ func Initialize(kargs map[string]utils.Any, mod *Mod, project *Project) Configur
 		log.Panics("Secret is not defined")
 	}
 
+	dev, ok := kargs["GO_API_DEV"].Bool()
+
 	instance = &Configuration{
 		Mod:       *mod,
 		Project:   *project,
+		dev:       dev,
 		sessionId: uuid.NewString(),
 		timestamp: time.Now().UnixMilli(),
 		admin:     admin,
@@ -53,6 +57,10 @@ func Instance() Configuration {
 		log.Panics("The configuration is not initialized yet")
 	}
 	return *instance
+}
+
+func (c Configuration) Dev () bool {
+	return c.dev
 }
 
 func (c Configuration) SessionId() string {
