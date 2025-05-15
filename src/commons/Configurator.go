@@ -20,6 +20,7 @@ func Initialize(kargs map[string]utils.Any) (*configuration.Configuration, *depe
 
 	log.Messagef("Session ID: %s", config.SessionId())
 	log.Messagef("Started at: %s", utils.FormatMilliseconds(config.Timestamp()))
+	log.Messagef("Dev mode: %v", config.Dev())
 
 	container := dependency.Initialize()
 	initializeManagerSession(container)
