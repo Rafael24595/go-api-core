@@ -11,6 +11,7 @@ import (
 var instance *Configuration
 
 type Configuration struct {
+	Signal    *signalHandler
 	Mod       Mod
 	Project   Project
 	dev       bool
@@ -36,9 +37,10 @@ func Initialize(kargs map[string]utils.Any, mod *Mod, project *Project) Configur
 		log.Panics("Secret is not defined")
 	}
 
-	dev, ok := kargs["GO_API_DEV"].Bool()
+	dev, _ := kargs["GO_API_DEV"].Bool()
 
 	instance = &Configuration{
+		Signal:    newSignalHandler(),
 		Mod:       *mod,
 		Project:   *project,
 		dev:       dev,
@@ -59,7 +61,7 @@ func Instance() Configuration {
 	return *instance
 }
 
-func (c Configuration) Dev () bool {
+func (c Configuration) Dev() bool {
 	return c.dev
 }
 
