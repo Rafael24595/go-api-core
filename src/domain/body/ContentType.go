@@ -50,7 +50,9 @@ func ContentTypeFromHeader(contentType string) (ContentType, bool) {
 	if strings.Contains(contentType, "application/json") {
 		return Json, true
 	}
-	if strings.Contains(contentType, "text/xml") {
+	if strings.Contains(contentType, "text/xml") || 
+		strings.Contains(contentType, "application/xml") ||
+		strings.Contains(contentType, "application/xhtml+xml") {
 		return Xml, true
 	}
 	if strings.Contains(contentType, "text/html") {
