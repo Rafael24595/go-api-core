@@ -264,6 +264,7 @@ func sprintf(pattern string, values ...any) string {
 		switch v := v.(type) {
 		case string:
 			fixed := strings.ReplaceAll(v, "\"", "\\'")
+			fixed = strings.ReplaceAll(fixed, "\\n", "\\\\n")
 			fixed = strings.ReplaceAll(fixed, "\n", "\\n")
 			values[i] = fmt.Sprintf("\"%v\"", fixed)
 		}
