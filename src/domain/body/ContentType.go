@@ -3,6 +3,8 @@ package body
 import (
 	"bytes"
 	"strings"
+
+	"github.com/Rafael24595/go-api-core/src/domain/query"
 )
 
 type ContentType string
@@ -29,7 +31,7 @@ func RequestContentTypes() []ContentType {
 	}
 }
 
-func (c ContentType) LoadStrategy() func(a *BodyRequest) *bytes.Buffer {
+func (c ContentType) LoadStrategy() func(a *BodyRequest, q *query.Queries) (*bytes.Buffer, *query.Queries) {
 	switch c {
 	case Form:
 		return applyFormData
