@@ -7,18 +7,27 @@ import (
 	"mime/multipart"
 
 	"github.com/Rafael24595/go-api-core/src/commons/log"
+	"github.com/Rafael24595/go-api-core/src/domain/query"
 )
 
 const (
 	FORM_DATA_PARAM = "form-data"
 )
 
-func applyFormData(b *BodyRequest) *bytes.Buffer {
-	var body *bytes.Buffer
+func applyFormData(b *BodyRequest, q *query.Queries) (*bytes.Buffer, *query.Queries) {
+	if !hasFiles(b) {
+		return applyFormEncode(b, q)
+	}
+
+	body := &bytes.Buffer{}
 
 	writer := multipart.NewWriter(body)
-	for k, v := range b.Parameters[FORM_DATA_PARAM] {
-		for _, v := range v {
+	for k, p := range b.Parameters[FORM_DATA_PARAM] {
+		for _, v := range p {
+			if !v.Status {
+				continue
+			}
+
 			if !v.IsFile {
 				err := writer.WriteField(k, v.Value)
 				if err != nil {
@@ -34,7 +43,8 @@ func applyFormData(b *BodyRequest) *bytes.Buffer {
 	}
 
 	writer.Close()
-	return body
+
+	return body, q
 }
 
 func makeFormDataFile(parameter *BodyParameter, writer *multipart.Writer) error {

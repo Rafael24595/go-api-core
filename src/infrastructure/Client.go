@@ -71,7 +71,7 @@ func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, *exce
 	body := new(bytes.Buffer)
 	if !operation.Body.Empty() && operation.Body.Status && method != "GET" && method != "HEAD" {
 		strategy := operation.Body.ContentType.LoadStrategy()
-		body = strategy(&operation.Body)
+		body, _ = strategy(&operation.Body, &operation.Query)
 	}
 
 	req, err := http.NewRequest(method, url, body)
