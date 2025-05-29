@@ -77,6 +77,7 @@ func InstanceManagerSession() *ManagerSession {
 
 func (s *ManagerSession) defineDefaultUser(username, secret string, isProtected, isAdmin bool, count int) error {
 	if _, exists := s.sessions.Get(username); !exists {
+		log.Messagef("Defining default user %s with admin status: %v", username, isAdmin)
 		collection, history, group := s.makeDependencies(username)
 		_, err := s.insert(username, string(secret), collection, history, group, isProtected, isAdmin, count)
 		if err != nil {
@@ -104,13 +105,18 @@ func (s *ManagerSession) FindUserCollection(user string) (*domain.Collection, er
 		return collection, nil
 	}
 
-	if collection != nil {
+	exists := collection != nil
+	if exists {
 		collection.Status = domain.USER
 	} else {
 		collection = domain.NewUserCollection(user)
 	}
 
 	collection = s.managerCollection.Insert(user, collection)
+
+	if !exists {
+		log.Messagef("Defined global collection '%s' for %s user", collection.Id, user)
+	}
 
 	session.Collection = collection.Id
 
@@ -133,13 +139,18 @@ func (s *ManagerSession) FindUserHistoric(user string) (*domain.Collection, erro
 		return collection, nil
 	}
 
-	if collection != nil {
+	exists := collection != nil
+	if exists {
 		collection.Status = domain.TALE
 	} else {
 		collection = domain.NewUserCollection(user)
 	}
 
 	collection = s.managerCollection.Insert(user, collection)
+
+	if !exists {
+		log.Messagef("Defined historic collection '%s' for %s user", collection.Id, user)
+	}
 
 	session.History = collection.Id
 
@@ -162,8 +173,13 @@ func (s *ManagerSession) FindUserGroup(user string) (*domain.Group, error) {
 		return group, nil
 	}
 	
+	exists := group != nil
 	group = domain.NewGroup(user)
 	group = s.managerGroup.Insert(user, group)
+
+	if !exists {
+		log.Messagef("Defined group '%s' for %s user", group.Id, user)
+	}
 
 	session.Group = group.Id
 
