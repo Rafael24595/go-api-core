@@ -9,14 +9,19 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 )
 
 func Initialize(kargs map[string]utils.Any) (*configuration.Configuration, *dependency.DependencyContainer) {
+	session := uuid.NewString()
+
+	log.ConfigureLog(session, kargs)
+
 	mod := ReadGoMod()
 	pkg := ReadPackage()
-	config := configuration.Initialize(kargs, mod, &pkg.Project)
+	config := configuration.Initialize(session, kargs, mod, &pkg.Project)
 
 	log.Messagef("Session ID: %s", config.SessionId())
 	log.Messagef("Started at: %s", utils.FormatMilliseconds(config.Timestamp()))
@@ -69,9 +74,14 @@ func ReadGoMod() *configuration.Mod {
 	if err != nil {
 		log.Panic(err)
 	}
-	defer file.Close()
 
-	return configuration.DecodeMod(file)
+	result := configuration.DecodeMod(file)
+	err = file.Close()
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return result
 }
 
 func ReadPackage() *configuration.Package {

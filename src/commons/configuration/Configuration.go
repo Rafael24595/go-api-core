@@ -5,7 +5,6 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
-	"github.com/google/uuid"
 )
 
 var instance *Configuration
@@ -22,7 +21,7 @@ type Configuration struct {
 	kargs     map[string]utils.Any
 }
 
-func Initialize(kargs map[string]utils.Any, mod *Mod, project *Project) Configuration {
+func Initialize(session string, kargs map[string]utils.Any, mod *Mod, project *Project) Configuration {
 	if instance != nil {
 		log.Panics("The configuration is alredy initialized")
 	}
@@ -44,7 +43,7 @@ func Initialize(kargs map[string]utils.Any, mod *Mod, project *Project) Configur
 		Mod:       *mod,
 		Project:   *project,
 		dev:       dev,
-		sessionId: uuid.NewString(),
+		sessionId: session,
 		timestamp: time.Now().UnixMilli(),
 		admin:     admin,
 		secret:    []byte(secret),
