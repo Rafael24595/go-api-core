@@ -15,31 +15,38 @@ func ReadFile(filePath string) ([]byte, error) {
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		if !os.IsNotExist(err) {
-			return make([]byte, 0), err
-		}
-		file, err = os.Create(filePath)
-		if err != nil {
-			return make([]byte, 0), err
-		}
-		defer file.Close()
 		return make([]byte, 0), err
 	}
-	defer file.Close()
 
-	return io.ReadAll(file)
+	result, readErr  := io.ReadAll(file)
+	err = file.Close()
+	if err != nil {
+		return make([]byte, 0), err
+	}
+
+	return result, readErr 
 }
 
 func WriteFile(filePath, content string) error {
+	dir := filepath.Dir(filePath)
+    err := os.MkdirAll(dir, os.ModePerm)
+    if err != nil {
+        return err
+    }
+	
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
-	_, err = file.Write([]byte(content))
+	_, errWrite := file.Write([]byte(content))
+	err = file.Close()
 	if err != nil {
 		return err
+	}
+
+	if errWrite != nil {
+		return errWrite
 	}
 
 	return nil
