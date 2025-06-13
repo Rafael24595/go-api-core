@@ -2,6 +2,7 @@ package commons
 
 import (
 	"os"
+	"time"
 
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/dependency"
@@ -16,12 +17,13 @@ import (
 
 func Initialize(kargs map[string]utils.Any) (*configuration.Configuration, *dependency.DependencyContainer) {
 	session := uuid.NewString()
+	timestamp := time.Now().UnixMilli()
 
-	log.ConfigureLog(session, kargs)
+	log.ConfigureLog(session, timestamp, kargs)
 
 	mod := ReadGoMod()
 	pkg := ReadPackage()
-	config := configuration.Initialize(session, kargs, mod, &pkg.Project)
+	config := configuration.Initialize(session, timestamp, kargs, mod, &pkg.Project)
 
 	log.Messagef("Session ID: %s", config.SessionId())
 	log.Messagef("Started at: %s", utils.FormatMilliseconds(config.Timestamp()))
@@ -89,12 +91,15 @@ func ReadPackage() *configuration.Package {
 	if err != nil {
 		log.Panicf("Error opening go.package.yml: %v", err)
 	}
-	defer file.Close()
 
 	var pkg configuration.Package
 	decoder := yaml.NewDecoder(file)
 	if err := decoder.Decode(&pkg); err != nil {
 		log.Panicf("Error decoding YAML: %v", err)
+	}
+
+	if err := file.Close(); err != nil {
+		log.Panicf("Error closing file: %v", err)
 	}
 
 	return &pkg

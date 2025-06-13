@@ -2,11 +2,13 @@ package log
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
 
 type Module interface {
+	Name() string
 	Vector([]Record) []Record
 	Record(*Record, bool) *Record
 }
@@ -22,7 +24,7 @@ type loggerModule struct {
 func newloggerModule() *loggerModule {
 	return &loggerModule{
 		loggerModules: make([]Module, 0),
-		records: make([]Record, 0),
+		records:       make([]Record, 0),
 	}
 }
 
@@ -33,6 +35,14 @@ func (l *loggerModule) pushModule(module Module) *loggerModule {
 
 func (l *loggerModule) Name() string {
 	return CODE_LOGGER_MODULE
+}
+
+func (l *loggerModule) Metadata() string {
+	modules := make([]string, len(l.loggerModules))
+	for i, v := range l.loggerModules {
+		modules[i] = v.Name()
+	}
+	return fmt.Sprintf("Modules[%d]: %s", len(l.loggerModules), strings.Join(modules, ", "))
 }
 
 func (l *loggerModule) Records() []Record {

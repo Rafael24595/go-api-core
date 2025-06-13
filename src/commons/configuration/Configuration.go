@@ -1,8 +1,6 @@
 package configuration
 
 import (
-	"time"
-
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 )
@@ -21,7 +19,7 @@ type Configuration struct {
 	kargs     map[string]utils.Any
 }
 
-func Initialize(session string, kargs map[string]utils.Any, mod *Mod, project *Project) Configuration {
+func Initialize(session string, timestamp int64, kargs map[string]utils.Any, mod *Mod, project *Project) Configuration {
 	if instance != nil {
 		log.Panics("The configuration is alredy initialized")
 	}
@@ -44,7 +42,7 @@ func Initialize(session string, kargs map[string]utils.Any, mod *Mod, project *P
 		Project:   *project,
 		dev:       dev,
 		sessionId: session,
-		timestamp: time.Now().UnixMilli(),
+		timestamp: timestamp,
 		admin:     admin,
 		secret:    []byte(secret),
 		kargs:     kargs,

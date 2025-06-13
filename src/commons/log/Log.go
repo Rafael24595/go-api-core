@@ -8,6 +8,7 @@ import (
 
 type Log interface {
 	Name() string
+	Metadata() string
 	Records() []Record
 	Message(string) *Record
 	Messagef(string, ...any) *Record
@@ -26,31 +27,31 @@ var log Log = defaultLog()
 func defaultLog() Log {
 	log := newloggerModule()
 	log.pushModule(newModuleConsole())
-	log.Messagef("Default logging is configured to use the %s instance with modules: %s", log.Name(), MODULE_CONSOLE)
+	log.Messagef("Default logging is configured to use the %s instance. %s", log.Name(), log.Metadata())
 	return log
 }
 
-func ConfigureLog(session string, kargs map[string]utils.Any) Log {
+func ConfigureLog(session string, timestamp int64, kargs map[string]utils.Any) Log {
 	code, ok := kargs["GO_LOG_INSTANCE"]
 	if !ok {
 		return log
 	}
 
 	if codeStr, _ := code.String(); codeStr == CODE_LOGGER_MODULE {
-		log = instanceModuleLogger(session, kargs)
+		log = instanceModuleLogger(session, timestamp, kargs)
 	}
 
 	return log
 }
 
-func instanceModuleLogger(session string, kargs map[string]utils.Any) Log {
+func instanceModuleLogger(session string, timestamp int64, kargs map[string]utils.Any) Log {
 	modulesInterface, ok := kargs["GO_LOG_MODULES"]
 	if !ok {
 		return log
 	}
 
 	modulesStr, _ := modulesInterface.String()
-	modules := strings.Split(modulesStr, "|") 
+	modules := strings.Split(modulesStr, "|")
 
 	newInstance := newloggerModule()
 	loaded := make(map[string]int)
@@ -61,7 +62,7 @@ func instanceModuleLogger(session string, kargs map[string]utils.Any) Log {
 			if _, ok := loaded[v]; ok {
 				continue
 			}
-			newInstance.pushModule(newModuleFile(session))
+			newInstance.pushModule(newModuleFile(session, timestamp))
 			loaded[MODULE_FILE] = 1
 		case MODULE_CONSOLE:
 			if _, ok := loaded[v]; ok {
@@ -74,12 +75,7 @@ func instanceModuleLogger(session string, kargs map[string]utils.Any) Log {
 		}
 	}
 
-	keys := make([]string, 0, len(loaded))
-	for k := range loaded {
-		keys = append(keys, k)
-	}
-
-	newInstance.Messagef("The logging is configured to use the %s instance with modules: %s", newInstance.Name(), strings.Join(keys, ", "))
+	newInstance.Messagef("The logging is configured to use the %s instance. %s", log.Name(), log.Metadata())
 
 	return newInstance
 }
