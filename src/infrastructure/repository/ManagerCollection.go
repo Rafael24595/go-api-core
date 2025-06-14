@@ -112,17 +112,6 @@ func (m *ManagerCollection) CollectRequest(owner string, payload PayloadCollectR
 		return nil, nil
 	}
 
-	if source, exists := m.collection.Find(payload.SourceId); exists {
-		if source.Owner != owner {
-			return nil, nil
-		}
-
-		_, exists := source.TakeRequest(request.Id)
-		if exists {
-			m.Insert(owner, source)
-		}
-	}
-
 	target, exists := m.collection.Find(payload.TargetId)
 	if !exists {
 		target = domain.NewFreeCollection(owner)
@@ -135,7 +124,11 @@ func (m *ManagerCollection) CollectRequest(owner string, payload PayloadCollectR
 	}
 
 	if payload.Movement == MOVE && request.Status != domain.DRAFT {
-		request, _ = m.managerRequest.Delete(owner, request)
+		result, isOwner := m.moveRequest(owner, payload, request)
+		if !isOwner {
+			return nil, nil
+		}
+		request = result
 	}
 
 	request.Id = ""
@@ -145,6 +138,23 @@ func (m *ManagerCollection) CollectRequest(owner string, payload PayloadCollectR
 	request = m.managerRequest.InsertRequest(owner, request)
 
 	return m.collection.PushToCollection(owner, target, request)
+}
+
+func (m *ManagerCollection) moveRequest(owner string, payload PayloadCollectRequest, request *domain.Request) (*domain.Request, bool) {
+	if source, exists := m.collection.Find(payload.SourceId); exists {
+		if source.Owner != owner {
+			return request, false
+		}
+
+		_, exists := source.TakeRequest(request.Id)
+		if exists {
+			m.Insert(owner, source)
+		}
+	}
+
+	request, _ = m.managerRequest.Delete(owner, request)
+
+	return request, true
 }
 
 func (m *ManagerCollection) ImportOpenApi(owner string, file []byte) (*domain.Collection, error) {

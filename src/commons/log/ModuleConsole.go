@@ -12,6 +12,10 @@ func newModuleConsole() *moduleConsole {
 	}
 }
 
+func (m *moduleConsole) Name() string {
+	return MODULE_CONSOLE
+}
+
 func (m *moduleConsole) Vector(records []Record) []Record {
 	return records
 }
