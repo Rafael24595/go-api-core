@@ -14,6 +14,8 @@ import (
 	"github.com/Rafael24595/go-api-core/src/domain/body"
 	"github.com/Rafael24595/go-api-core/src/domain/cookie"
 	"github.com/Rafael24595/go-api-core/src/domain/header"
+
+	"golang.org/x/net/html/charset"
 )
 
 type HttpClient struct {
@@ -56,7 +58,7 @@ func (c *HttpClient) Fetch(request domain.Request) (*domain.Response, *exception
 		return nil, exception.NewCauseApiError(500, "Cannot execute HTTP request", respErr)
 	}
 
-	response, err := c.makeResponse(request.Owner, start, end, request, *resp)
+	response, err := c.makeResponse(request.Owner, start, end, request, resp)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +152,7 @@ func (c *HttpClient) applyAuth(operation domain.Request, req *http.Request) *htt
 	return req
 }
 
-func (c *HttpClient) makeResponse(owner string, start int64, end int64, req domain.Request, resp http.Response) (*domain.Response, *exception.ApiError) {
+func (c *HttpClient) makeResponse(owner string, start int64, end int64, req domain.Request, resp *http.Response) (*domain.Response, *exception.ApiError) {
 	headers := c.makeHeaders(resp)
 
 	cookies, err := c.makeCookies(headers)
@@ -177,7 +179,7 @@ func (c *HttpClient) makeResponse(owner string, start int64, end int64, req doma
 	}, nil
 }
 
-func (c *HttpClient) makeHeaders(resp http.Response) *header.Headers {
+func (c *HttpClient) makeHeaders(resp *http.Response) *header.Headers {
 	headersResponse := map[string][]header.Header{}
 	for k, h := range resp.Header {
 		if _, ok := headersResponse[k]; !ok {
@@ -218,18 +220,26 @@ func (c *HttpClient) makeCookies(headers *header.Headers) (*cookie.CookiesServer
 	}, nil
 }
 
-func (c *HttpClient) makeBody(resp http.Response) (*body.BodyResponse, int, error) {
-	defer resp.Body.Close()
+func (c *HttpClient) makeBody(resp *http.Response) (*body.BodyResponse, int, error) {
+	contentTypeHeader := resp.Header.Get("Content-Type")
 
-	bodyResponse, err := io.ReadAll(resp.Body)
+	reader, err := charset.NewReader(resp.Body, contentTypeHeader)
 	if err != nil {
-		return nil, 0, exception.NewCauseApiError(http.StatusInternalServerError, "Failed to read the payload", err)
+		return nil, 0, err
+	}
+
+	bodyResponse, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, 0, err
 	}
 
 	contentType := body.Text
-	sContentType := resp.Header.Get("content-type")
-	if oContentType, ok := body.ContentTypeFromHeader(sContentType); ok {
+	if oContentType, ok := body.ContentTypeFromHeader(contentTypeHeader); ok {
 		contentType = oContentType
+	}
+
+	if err := resp.Body.Close(); err != nil {
+		return nil, 0, err
 	}
 
 	return &body.BodyResponse{
