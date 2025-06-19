@@ -13,9 +13,9 @@ func ReadFile(filePath string) ([]byte, error) {
 		return make([]byte, 0), err
 	}
 
-	file, err := os.Open(filePath)
+	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
-		return make([]byte, 0), err
+		return nil, err
 	}
 
 	result, readErr  := io.ReadAll(file)
