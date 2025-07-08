@@ -19,3 +19,8 @@ func ToCollectionNodes(dto []DtoNodeCollection) []domain.NodeReference {
 
 	return nodes
 }
+
+type DtoLiteNodeCollection struct {
+	Order      int               `json:"order"`
+	Collection DtoLiteCollection `json:"collection"`
+}

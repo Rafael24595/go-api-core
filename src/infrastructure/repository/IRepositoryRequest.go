@@ -8,10 +8,11 @@ import (
 type IRepositoryRequest interface {
 	Find(key string) (*domain.Request, bool)
 	FindMany(ids []string) []domain.Request
+	FindLiteNodes(steps []domain.NodeReference) []dto.DtoLiteNodeRequest
 	FindNodes(steps []domain.NodeReference) []dto.DtoNodeRequest
 	FindRequests(steps []domain.NodeReference) []domain.Request
 	Insert(owner string, request *domain.Request) *domain.Request
 	InsertMany(owner string, requests []domain.Request) []domain.Request
-	Delete(request *domain.Request) *domain.Request 
+	Delete(request *domain.Request) *domain.Request
 	DeleteMany(requests ...domain.Request) []domain.Request
 }

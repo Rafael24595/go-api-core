@@ -20,8 +20,8 @@ func NewManagerHistoric(managerRequest *ManagerRequest, managerCollection *Manag
 	}
 }
 
-func (m *ManagerHistoric) Find(owner string, collection *domain.Collection) []dto.DtoNodeRequest {
-	return m.managerCollection.FindRequestNodes(owner, collection)
+func (m *ManagerHistoric) FindLite(owner string, collection *domain.Collection) []dto.DtoLiteNodeRequest {
+	return m.managerCollection.FindLiteRequestNodes(owner, collection)
 }
 
 func (m *ManagerHistoric) Insert(owner string, collection *domain.Collection, request *domain.Request, response *domain.Response) (*domain.Collection, *domain.Request, *domain.Response) {
