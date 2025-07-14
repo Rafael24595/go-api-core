@@ -55,6 +55,23 @@ func (l *loggerModule) Records() []Record {
 	return clone
 }
 
+func (l *loggerModule) Custom(category string, message string) *Record {
+	return l.custom(category, message, false)
+}
+
+func (l *loggerModule) Custome(category string, err error) *Record {
+	return l.custom(category, err.Error(), false)
+}
+
+func (l *loggerModule) Customf(category string, format string, args ...any) *Record {
+	return l.custom(category, fmt.Sprintf(format, args...), false)
+}
+
+func (l *loggerModule) custom(category string, message string, throwPanic bool) *Record {
+	category = strings.ToUpper(category)
+	return l.record(Category(category), message, false)
+}
+
 func (l *loggerModule) Message(message string) *Record {
 	return l.record(MESSAGE, message, false)
 }

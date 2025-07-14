@@ -33,12 +33,39 @@ func (m *ManagerCollection) Find(owner string, id string) (*domain.Collection, b
 	return collection, exists
 }
 
-func (m *ManagerCollection) FindRequestNodes(owner string, collection *domain.Collection) []dto.DtoNodeRequest {
-	if collection.Owner != owner {
-		return make([]dto.DtoNodeRequest, 0)
+func (m *ManagerCollection) FindDto(owner string, id string) (*dto.DtoCollection, bool) {
+	collection, exists := m.Find(owner, id)
+	if !exists {
+		return nil, false
 	}
 
-	dtos := m.managerRequest.FindNodes(owner, collection.Nodes)
+	requests := m.managerRequest.FindNodes(owner, collection.Nodes)
+	context, _ := m.managerContext.Find(owner, collection.Context)
+	if context == nil {
+		return nil, false
+	}
+	
+	dtoContext := dto.FromContext(context)
+
+	dtoCollection := dto.FromCollection(collection, dtoContext, requests)
+	
+	return dtoCollection, dtoCollection != nil
+}
+
+func (m *ManagerCollection) FindDtoLite(owner string, id string) (*dto.DtoLiteCollection, bool) {
+	collection, exists := m.Find(owner, id)
+	if !exists {
+		return nil, false
+	}
+	return m.makeLiteCollection(owner, *collection), false
+}
+
+func (m *ManagerCollection) FindLiteRequestNodes(owner string, collection *domain.Collection) []dto.DtoLiteNodeRequest {
+	if collection.Owner != owner {
+		return make([]dto.DtoLiteNodeRequest, 0)
+	}
+
+	dtos := m.managerRequest.FindLiteNodes(owner, collection.Nodes)
 	if len(dtos) == len(collection.Nodes) {
 		return dtos
 	}
@@ -58,30 +85,39 @@ func (m *ManagerCollection) FindRequestNodes(owner string, collection *domain.Co
 	return dtos
 }
 
-func (m *ManagerCollection) FindCollectionNodes(owner string, nodes []domain.NodeReference) []dto.DtoNodeCollection {
+func (m *ManagerCollection) FindLiteCollectionNodes(owner string, nodes []domain.NodeReference) []dto.DtoLiteNodeCollection {
 	collections := m.collection.FindCollections(nodes)
-	
-	dtos := make([]dto.DtoNodeCollection, 0)
+
+	dtos := make([]dto.DtoLiteNodeCollection, 0)
 	for _, v := range collections {
-		collection := v.Collection
-		if collection.Owner != owner {
+		collection := m.makeLiteCollection(owner, v.Collection)
+		if collection == nil {
 			continue
 		}
 
-		requests := m.managerRequest.FindNodes(owner, collection.Nodes)
-		context, _ := m.managerContext.Find(owner, collection.Context)
-		if context == nil {
-			continue
-		}
-		
-		dtoContext := dto.FromContext(context)
-		dtos = append(dtos, dto.DtoNodeCollection{
-			Order:   v.Order,
-			Collection: *dto.FromCollection(&collection, dtoContext, requests),
+		dtos = append(dtos, dto.DtoLiteNodeCollection{
+			Order:      v.Order,
+			Collection: *collection,
 		})
 	}
-	
+
 	return dtos
+}
+
+func (m *ManagerCollection) makeLiteCollection(owner string, collection domain.Collection) *dto.DtoLiteCollection {
+	if collection.Owner != owner {
+		return nil
+	}
+
+	requests := m.managerRequest.FindLiteNodes(owner, collection.Nodes)
+	context, _ := m.managerContext.Find(owner, collection.Context)
+	if context == nil {
+		return nil
+	}
+
+	dtoContext := dto.FromContext(context)
+
+	return dto.ToLiteCollection(&collection, dtoContext, requests)
 }
 
 func (m *ManagerCollection) Insert(owner string, collection *domain.Collection) *domain.Collection {
@@ -225,7 +261,7 @@ func (m *ManagerCollection) ImportDtoRequests(owner string, collection *domain.C
 		v.Status = *requestStatus
 		requests[i] = *dto.ToRequest(&v)
 	}
-	
+
 	requests = m.managerRequest.InsertManyRequest(owner, requests)
 
 	len := len(collection.Nodes)
@@ -483,13 +519,13 @@ func (m *ManagerCollection) isNotOwner(owner string, collection *domain.Collecti
 }
 
 func (m *ManagerCollection) isOwner(owner string, collection *domain.Collection) bool {
-	if (collection == nil) {
+	if collection == nil {
 		return false
 	}
 
-	if (collection.Id != "" && collection.Owner != owner) {
+	if collection.Id != "" && collection.Owner != owner {
 		return false
 	}
-	
+
 	return true
 }

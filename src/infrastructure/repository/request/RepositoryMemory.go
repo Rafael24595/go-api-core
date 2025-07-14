@@ -57,6 +57,23 @@ func (r *RepositoryMemory) FindMany(ids []string) []domain.Request {
 	return requests
 }
 
+func (r *RepositoryMemory) FindLiteNodes(references []domain.NodeReference) []dto.DtoLiteNodeRequest {
+	r.muMemory.RLock()
+	defer r.muMemory.RUnlock()
+
+	requests := make([]dto.DtoLiteNodeRequest, 0)
+	for _, v := range references {
+		if request, ok := r.collection.Get(v.Item); ok {
+			requests = append(requests, dto.DtoLiteNodeRequest{
+				Order:   v.Order,
+				Request: *dto.ToLiteRequest(request),
+			})
+		}
+	}
+
+	return requests
+}
+
 func (r *RepositoryMemory) FindNodes(references []domain.NodeReference) []dto.DtoNodeRequest {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()

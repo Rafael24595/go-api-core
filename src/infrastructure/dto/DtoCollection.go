@@ -13,7 +13,7 @@ type DtoCollection struct {
 	Status    domain.StatusCollection `json:"status"`
 }
 
-func FromCollection(collection *domain.Collection, ctx *DtoContext, nodes []DtoNodeRequest) *DtoCollection{
+func FromCollection(collection *domain.Collection, ctx *DtoContext, nodes []DtoNodeRequest) *DtoCollection {
 	return &DtoCollection{
 		Id:        collection.Id,
 		Name:      collection.Name,
@@ -35,5 +35,28 @@ func ToCollection(dto *DtoCollection) *domain.Collection {
 		Owner:     dto.Owner,
 		Modified:  dto.Modified,
 		Status:    dto.Status,
+	}
+}
+
+type DtoLiteCollection struct {
+	Id        string                  `json:"_id"`
+	Name      string                  `json:"name"`
+	Timestamp int64                   `json:"timestamp"`
+	Context   DtoContext              `json:"context"`
+	Nodes     []DtoLiteNodeRequest    `json:"nodes"`
+	Owner     string                  `json:"owner"`
+	Modified  int64                   `json:"modified"`
+	Status    domain.StatusCollection `json:"status"`
+}
+
+func ToLiteCollection(collection *domain.Collection, ctx *DtoContext, nodes []DtoLiteNodeRequest) *DtoLiteCollection {
+	return &DtoLiteCollection{
+		Id:        collection.Id,
+		Name:      collection.Name,
+		Timestamp: collection.Timestamp,
+		Context:   *ctx,
+		Nodes:     nodes,
+		Owner:     collection.Owner,
+		Modified:  collection.Modified,
 	}
 }

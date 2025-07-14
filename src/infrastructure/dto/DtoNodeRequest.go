@@ -19,3 +19,8 @@ func ToRequestNodes(dto []DtoNodeRequest) []domain.NodeReference {
 
 	return nodes
 }
+
+type DtoLiteNodeRequest struct {
+	Order   int            `json:"order"`
+	Request DtoLiteRequest `json:"request"`
+}

@@ -52,6 +52,15 @@ func (m *ManagerRequest) FindResponse(owner string, key string) (*domain.Respons
 	return response, exits
 }
 
+func (m *ManagerRequest) FindLiteNodes(owner string, nodes []domain.NodeReference) []dto.DtoLiteNodeRequest {
+	requests := m.request.FindLiteNodes(nodes)
+	return collection.VectorFromList(requests).
+		Filter(func(n dto.DtoLiteNodeRequest) bool {
+			return n.Request.Owner == owner
+		}).
+		Collect()
+}
+
 func (m *ManagerRequest) FindNodes(owner string, nodes []domain.NodeReference) []dto.DtoNodeRequest {
 	requests := m.request.FindNodes(nodes)
 	return collection.VectorFromList(requests).
