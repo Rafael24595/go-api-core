@@ -10,6 +10,9 @@ type Log interface {
 	Name() string
 	Metadata() string
 	Records() []Record
+	Custom(string, string) *Record
+	Custome(string, error) *Record
+	Customf(string, string, ...any) *Record
 	Message(string) *Record
 	Messagef(string, ...any) *Record
 	Warning(string) *Record
@@ -86,6 +89,18 @@ func Name() string {
 
 func Records() []Record {
 	return log.Records()
+}
+
+func Custome(category string, err error) {
+	log.Custome(category, err)
+}
+
+func Custom(category string, message string) {
+	log.Custom(category, message)
+}
+
+func Customf(category string, format string, args ...any) {
+	log.Customf(category, format, args...)
 }
 
 func Message(message string) {
