@@ -52,6 +52,14 @@ func (m *ManagerCollection) FindDto(owner string, id string) (*dto.DtoCollection
 	return dtoCollection, dtoCollection != nil
 }
 
+func (m *ManagerCollection) FindDtoLite(owner string, id string) (*dto.DtoLiteCollection, bool) {
+	collection, exists := m.Find(owner, id)
+	if !exists {
+		return nil, false
+	}
+	return m.makeLiteCollection(owner, *collection), false
+}
+
 func (m *ManagerCollection) FindLiteRequestNodes(owner string, collection *domain.Collection) []dto.DtoLiteNodeRequest {
 	if collection.Owner != owner {
 		return make([]dto.DtoLiteNodeRequest, 0)
