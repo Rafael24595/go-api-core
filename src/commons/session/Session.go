@@ -10,6 +10,7 @@ type Session struct {
 	IsProtected bool   `json:"is_protected"`
 	IsAdmin     bool   `json:"is_admin"`
 	Count       int    `json:"count"`
+	Refresh     string `json:"refresh"`
 }
 
 func (s Session) IsVerified() bool {

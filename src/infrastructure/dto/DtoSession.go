@@ -12,6 +12,7 @@ type DtoSession struct {
 	IsProtected bool   `json:"is_protected"`
 	IsAdmin     bool   `json:"is_admin"`
 	Count       int    `json:"count"`
+	Refresh     string `json:"refresh"`
 }
 
 func NewDtoSessionDefault() *DtoSession {
@@ -33,6 +34,7 @@ func ToSession(dto DtoSession) *session.Session {
 		IsProtected: dto.IsProtected,
 		IsAdmin:     dto.IsAdmin,
 		Count:       dto.Count,
+		Refresh:     dto.Refresh,
 	}
 }
 
@@ -47,5 +49,6 @@ func FromSession(session session.Session) *DtoSession {
 		IsProtected: session.IsProtected,
 		IsAdmin:     session.IsAdmin,
 		Count:       session.Count,
+		Refresh:     session.Refresh,
 	}
 }
