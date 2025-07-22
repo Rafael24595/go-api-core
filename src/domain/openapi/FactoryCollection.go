@@ -177,7 +177,7 @@ func (b *FactoryCollection) MakeFromRequestBody(requestBody *RequestBody) *body.
 		}
 	}
 
-	return body.NewBody(false, body.None, make(map[string]map[string][]body.BodyParameter))
+	return body.NewBody(false, body.Text, make(map[string]map[string][]body.BodyParameter))
 }
 
 func (b *FactoryCollection) fromExample(content string, schema *Schema) *body.BodyRequest {
@@ -188,7 +188,7 @@ func (b *FactoryCollection) fromExample(content string, schema *Schema) *body.Bo
 
 	data := make(map[string]map[string][]body.BodyParameter)
 
-	bodyType := body.None
+	var bodyType body.ContentType
 	switch content {
 	case "multipart/form-data":
 		bodyType = body.Form
@@ -425,11 +425,6 @@ func (b *FactoryCollection) MakeFromSecurity(security []SecurityRequirement, que
 					auth.BASIC_PARAM_PASSWORD: auth.BASIC_PARAM_PASSWORD,
 				}))
 			case "bearer":
-				bearer := schema.BearerFormat
-				if bearer == "" {
-					bearer = auth.BEARER_PARAM_PREFIX
-				}
-
 				auths.PutAuth(*auth.NewAuth(true, auth.Bearer, map[string]string{
 					auth.BEARER_PARAM_PREFIX: schema.BearerFormat,
 					auth.BEARER_PARAM_TOKEN:  auth.BEARER_PARAM_TOKEN,

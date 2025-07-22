@@ -2,8 +2,10 @@ package repository
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
+	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/domain/openapi"
@@ -198,10 +200,22 @@ func (m *ManagerCollection) ImportOpenApi(owner string, file []byte) (*domain.Co
 	if err != nil {
 		oapi, raw, err = openapi.MakeFromYaml(file)
 		if err != nil {
-			err = errors.New("the file provide has not valid format, it must be an JSON or YAML")
+			err = errors.New("the provided file has an invalid format, it must be an JSON or YAML")
 			return nil, err
 		}
 	}
+	
+	version, err := utils.ParseVersion(oapi.OpenAPI)
+	if err != nil {
+		return nil, err
+	}
+
+	if version.Major < 3 {
+		//TODO: Add support to previous and future versions.
+		err = fmt.Errorf("the provided file has an invalid version '%s'; it must be 3.0.0 or higher", oapi.Info.Version)
+		return nil, err
+	}
+	
 
 	collection, ctx, requests, err := openapi.NewFactoryCollection(owner, oapi).SetRaw(*raw).Make()
 	if err != nil {
