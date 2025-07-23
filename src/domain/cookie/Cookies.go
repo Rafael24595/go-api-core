@@ -10,6 +10,15 @@ func NewCookiesClient() *CookiesClient {
 	}
 }
 
+func (h *CookiesClient) Put(key, value string) *CookiesClient {
+	h.Cookies[key] = CookieClient{
+		Order: int64(len(h.Cookies)),
+		Status: true,
+		Value: value,
+	}
+	return h
+}
+
 type CookiesServer struct {
 	Cookies map[string]CookieServer `json:"cookies"`
 }

@@ -19,7 +19,7 @@ func applyFormEncode(b *BodyRequest, q *query.Queries) (*bytes.Buffer, *query.Qu
 				continue
 			}
 			if v.Status {
-				q.Add(k, query.Query{
+				q.AddQuery(k, query.Query{
 					Order:  0,
 					Status: true,
 					Value:  v.Value,

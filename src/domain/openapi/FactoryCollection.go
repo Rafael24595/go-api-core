@@ -97,7 +97,7 @@ func (b *FactoryCollection) MakeFromOperation(method domain.HttpMethod, path str
 		name = operation.Summary
 	}
 
-	path, ctx, queries, headers := b.MakeFromParameters(path, operation.Parameters, ctx)
+	path, ctx, queries, headers, cookies := b.MakeFromParameters(path, operation.Parameters, ctx)
 	payload := b.MakeFromRequestBody(operation.RequestBody)
 	auth := b.MakeFromSecurity(operation.Security, headers)
 
@@ -109,7 +109,7 @@ func (b *FactoryCollection) MakeFromOperation(method domain.HttpMethod, path str
 		Uri:       path,
 		Query:     *queries,
 		Header:    *headers,
-		Cookie:    *cookie.NewCookiesClient(),
+		Cookie:    *cookies,
 		Body:      *payload,
 		Auth:      *auth,
 		Owner:     b.owner,
@@ -118,9 +118,10 @@ func (b *FactoryCollection) MakeFromOperation(method domain.HttpMethod, path str
 	}
 }
 
-func (b *FactoryCollection) MakeFromParameters(path string, parameters []Parameter, ctx *context.Context) (string, *context.Context, *query.Queries, *header.Headers) {
+func (b *FactoryCollection) MakeFromParameters(path string, parameters []Parameter, ctx *context.Context) (string, *context.Context, *query.Queries, *header.Headers, *cookie.CookiesClient) {
 	queries := query.NewQueries()
 	headers := header.NewHeaders()
+	cookies := cookie.NewCookiesClient()
 
 	for _, v := range parameters {
 		switch v.In {
@@ -130,15 +131,15 @@ func (b *FactoryCollection) MakeFromParameters(path string, parameters []Paramet
 			replacement := fmt.Sprintf("${%s}", v.Name)
 			path = strings.ReplaceAll(path, placeholder, replacement)
 		case "query":
-			order := len(queries.Queries)
-			queries.Add(v.Name, query.NewQuery(int64(order), true, v.Description))
+			queries.Add(v.Name, v.Description)
 		case "header":
-			order := len(headers.Headers)
-			headers.Add(v.Name, header.NewHeader(int64(order), true, v.Description))
+			headers.Add(v.Name, v.Description)
+		case "cookie":
+			cookies.Put(v.Name, v.Description)
 		}
 	}
 
-	return path, ctx, queries, headers
+	return path, ctx, queries, headers, cookies
 }
 
 func (b *FactoryCollection) MakeFromRequestBody(requestBody *RequestBody) *body.BodyRequest {
@@ -415,7 +416,7 @@ func (b *FactoryCollection) MakeFromSecurity(security []SecurityRequirement, que
 				name := schema.Name
 				order := queries.SizeOf(name)
 				header := header.NewHeader(int64(order), true, name)
-				queries.Add(schema.Name, header)
+				queries.AddHeader(schema.Name, header)
 			}
 
 			switch schema.Scheme {
