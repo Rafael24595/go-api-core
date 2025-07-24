@@ -78,7 +78,7 @@ func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, *exce
 
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		return nil, exception.NewCauseApiError(http.StatusInternalServerError, "Cannot build the HTTP request", err)
+		return nil, exception.NewCauseApiError(http.StatusUnprocessableEntity, "Cannot build the HTTP request", err)
 	}
 
 	req = c.applyQuery(operation, req)
