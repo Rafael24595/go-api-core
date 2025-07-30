@@ -172,7 +172,7 @@ func (s *ManagerSession) FindUserGroup(user string) (*domain.Group, error) {
 	if group != nil {
 		return group, nil
 	}
-	
+
 	exists := group != nil
 	group = domain.NewGroup(user)
 	group = s.managerGroup.Insert(user, group)
@@ -294,6 +294,7 @@ func (s *ManagerSession) insert(user, password string, collection *domain.Collec
 		IsProtected: isProtected,
 		IsAdmin:     isAdmin,
 		Count:       count,
+		Refresh:     "",
 	}
 
 	s.sessions.Put(user, session)
@@ -301,6 +302,12 @@ func (s *ManagerSession) insert(user, password string, collection *domain.Collec
 	go s.write(s.sessions)
 
 	return &session, nil
+}
+
+func (s *ManagerSession) Refresh(session *session.Session, refresh string) *session.Session {
+	session.Refresh = refresh
+	s.update(session)
+	return session
 }
 
 func (s *ManagerSession) makeDependencies(username string) (*domain.Collection, *domain.Collection, *domain.Group) {

@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -54,7 +53,7 @@ func HttpMethodFromString(value string) (*HttpMethod, error) {
 		CONNECT := CONNECT
 		return &CONNECT, nil
 	default:
-		return nil, errors.New(fmt.Sprintf("unknown method value: '%s'", value))
+		return nil, fmt.Errorf("unknown method value: '%s'", value)
 	}
 }
 

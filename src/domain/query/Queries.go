@@ -10,7 +10,15 @@ func NewQueries() *Queries {
 	}
 }
 
-func (q *Queries) Add(key string, query Query) *Queries {
+func (q *Queries) Add(key, value string) *Queries {
+	return q.AddQuery(key, Query{
+		Order: int64(len(q.Queries)),
+		Status: true,
+		Value: value,
+	})
+}
+
+func (q *Queries) AddQuery(key string, query Query) *Queries {
 	if _, ok := q.Queries[key]; !ok {
 		q.Queries[key] = make([]Query, 0)
 	}

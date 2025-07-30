@@ -1,0 +1,106 @@
+[
+  {
+    "input": "1.2",
+    "expected": {
+      "prefix": "",
+      "major": 1,
+      "minor": 2,
+      "patch": 0,
+      "preRelease": ""
+    },
+    "expectError": false
+  },
+  {
+    "input": "v1.0.0",
+    "expected": {
+      "prefix": "v",
+      "major": 1,
+      "minor": 0,
+      "patch": 0,
+      "preRelease": ""
+    },
+    "expectError": false
+  },
+  {
+    "input": "v1.0.0-rc.1",
+    "expected": {
+      "prefix": "v",
+      "major": 1,
+      "minor": 0,
+      "patch": 0,
+      "preRelease": "rc.1"
+    },
+    "expectError": false
+  },
+  {
+    "input": "version.1.2.3",
+    "expected": {
+      "prefix": "version.",
+      "major": 1,
+      "minor": 2,
+      "patch": 3,
+      "preRelease": ""
+    },
+    "expectError": false
+  },
+  {
+    "input": "version.1.2.3-beta.2",
+    "expected": {
+      "prefix": "version.",
+      "major": 1,
+      "minor": 2,
+      "patch": 3,
+      "preRelease": "beta.2"
+    },
+    "expectError": false
+  },
+  {
+    "input": "1.2.3",
+    "expected": {
+      "prefix": "",
+      "major": 1,
+      "minor": 2,
+      "patch": 3,
+      "preRelease": ""
+    },
+    "expectError": false
+  },
+  {
+    "input": "1.2.3-rc",
+    "expected": {
+      "prefix": "",
+      "major": 1,
+      "minor": 2,
+      "patch": 3,
+      "preRelease": "rc"
+    },
+    "expectError": false
+  },
+  {
+    "input": "ver1.2",
+    "expected": {
+      "prefix": "ver",
+      "major": 1,
+      "minor": 2,
+      "patch": 0,
+      "preRelease": ""
+    },
+    "expectError": false
+  },
+  {
+    "input": "1",
+    "expected": {
+      "prefix": "",
+      "major": 1,
+      "minor": 0,
+      "patch": 0,
+      "preRelease": ""
+    },
+    "expectError": false
+  },
+  {
+    "input": "v1.2.3.4",
+    "expected": null,
+    "expectError": true
+  }
+]

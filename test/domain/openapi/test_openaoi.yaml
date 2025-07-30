@@ -81,6 +81,13 @@ paths:
             type: string
             format: uuid
           required: true
+
+        - name: MyToken
+          in: cookie
+          required: true
+          description: Auth token
+          schema:
+            type: string
       responses:
         '200':
           description: A list of user's collection

@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -30,6 +29,6 @@ func StatusRequestFromString(value string) (*StatusRequest, error) {
 		status := GROUP
 		return &status, nil
 	default:
-		return nil, errors.New(fmt.Sprintf("unknown same-site value: '%s'", value))
+		return nil, fmt.Errorf("unknown same-site value: '%s'", value)
 	}
 }

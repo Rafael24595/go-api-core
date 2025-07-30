@@ -10,7 +10,15 @@ func NewHeaders() *Headers {
 	}
 }
 
-func (h *Headers) Add(key string, header Header) *Headers {
+func (h *Headers) Add(key, value string) *Headers {
+	return h.AddHeader(key, Header{
+		Order: int64(len(h.Headers)),
+		Status: true,
+		Value: value,
+	})
+}
+
+func (h *Headers) AddHeader(key string, header Header) *Headers {
 	if _, ok := h.Headers[key]; !ok {
 		h.Headers[key] = make([]Header, 0)
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/Rafael24595/go-api-core/src/domain/auth"
 	"github.com/Rafael24595/go-api-core/src/domain/body"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
+	"github.com/Rafael24595/go-api-core/src/domain/cookie"
 	"github.com/Rafael24595/go-api-core/src/domain/header"
 	"github.com/Rafael24595/go-api-core/src/domain/openapi"
 	"github.com/Rafael24595/go-api-core/src/domain/query"
@@ -121,12 +122,13 @@ func TestMakeFromParameters(t *testing.T) {
 
 	path := "/collection/{userId}"
 	parameters := oapi.Paths[path].Get.Parameters
-	fixPath, ctx, queries, headers := builder.MakeFromParameters(path, parameters, ctx)
+	fixPath, ctx, queries, headers, cookies := builder.MakeFromParameters(path, parameters, ctx)
 
 	valideParametersPath(t, fixPath)
 	valideParametersContext(t, ctx)
 	valideParametersQuery(t, queries)
 	valideParametersHeader(t, headers)
+	valideParametersCookie(t, cookies)
 }
 
 func valideParametersPath(t *testing.T, path string) {
@@ -193,6 +195,21 @@ func valideParametersHeader(t *testing.T, headers *header.Headers) {
 
 	value := header[0].Value
 	expected := "X-Request-ID header"
+	if value != expected {
+		t.Errorf("Found variable %v but %v expected", value, expected)
+	}
+}
+
+func valideParametersCookie(t *testing.T, cookies *cookie.CookiesClient) {
+	key := "MyToken"
+
+	cookie, ok := cookies.Cookies[key]
+	if !ok {
+		t.Errorf("Cookie '%s' found.", key)
+	}
+
+	value := cookie.Value
+	expected := "Auth token"
 	if value != expected {
 		t.Errorf("Found variable %v but %v expected", value, expected)
 	}
