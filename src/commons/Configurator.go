@@ -36,12 +36,7 @@ func Initialize(kargs map[string]utils.Any) (*configuration.Configuration, *depe
 
 func initializeManagerSession(container *dependency.DependencyContainer) *repository.ManagerSession {
 	file := repository.NewManagerCsvtFile(dto.NewDtoSessionDefault, repository.CSVT_FILE_PATH_SESSION)
-	manager, err := repository.InitializeManagerSession(file, container.ManagerCollection, container.ManagerGroup)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	return manager
+	return repository.InitializeManagerSession(file, container.ManagerCollection, container.ManagerGroup)
 }
 
 func ReadEnv(file string) map[string]utils.Any {

@@ -162,7 +162,7 @@ func (c *HttpClient) makeResponse(owner string, start int64, end int64, req doma
 
 	bodyData, size, err := c.makeBody(resp)
 	if err != nil {
-		return nil, exception.NewCauseApiError(http.StatusInternalServerError, "Failed to read the cookies", err)
+		return nil, exception.NewCauseApiError(http.StatusInternalServerError, "Failed to read the body", err)
 	}
 
 	return &domain.Response{
@@ -223,8 +223,16 @@ func (c *HttpClient) makeCookies(headers *header.Headers) (*cookie.CookiesServer
 func (c *HttpClient) makeBody(resp *http.Response) (*body.BodyResponse, int, error) {
 	contentTypeHeader := resp.Header.Get("Content-Type")
 
+	contentType := body.Text
+	if oContentType, ok := body.ContentTypeFromHeader(contentTypeHeader); ok {
+		contentType = oContentType
+	}
+
 	reader, err := charset.NewReader(resp.Body, contentTypeHeader)
-	if err != nil {
+	switch {
+	case err == io.EOF:
+		return body.EmptyResponseBody(contentType), 0, nil
+	case err != nil:
 		return nil, 0, err
 	}
 
@@ -233,18 +241,10 @@ func (c *HttpClient) makeBody(resp *http.Response) (*body.BodyResponse, int, err
 		return nil, 0, err
 	}
 
-	contentType := body.Text
-	if oContentType, ok := body.ContentTypeFromHeader(contentTypeHeader); ok {
-		contentType = oContentType
-	}
-
 	if err := resp.Body.Close(); err != nil {
 		return nil, 0, err
 	}
 
-	return &body.BodyResponse{
-		Status:      true,
-		ContentType: contentType,
-		Payload:     string(bodyResponse),
-	}, len(bodyResponse), nil
+	return body.NewResponseBody(contentType, string(bodyResponse)),
+		len(bodyResponse), nil
 }

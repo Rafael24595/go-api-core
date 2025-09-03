@@ -15,7 +15,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var manager *ManagerSession
+var (
+	manager *ManagerSession
+	once    sync.Once
+)
 
 type ManagerSession struct {
 	mut               sync.RWMutex
@@ -26,30 +29,33 @@ type ManagerSession struct {
 	sessions          collection.IDictionary[string, session.Session]
 }
 
-func InitializeManagerSession(file IFileManager[dto.DtoSession], managerCollection *ManagerCollection, managerGroup *ManagerGroup) (*ManagerSession, error) {
-	if manager != nil {
-		return nil, errors.New("already instanced")
-	}
+func InitializeManagerSession(file IFileManager[dto.DtoSession], managerCollection *ManagerCollection, managerGroup *ManagerGroup) *ManagerSession {
+	once.Do(func() {
+		steps, err := file.Read()
+		if err != nil {
+			log.Panic(err)
+			return
+		}
 
-	steps, err := file.Read()
-	if err != nil {
-		return nil, err
-	}
+		sessions := collection.DictionarySyncMap(collection.DictionarySyncFromMap(steps), func(k string, d dto.DtoSession) session.Session {
+			return *dto.ToSession(d)
+		})
 
-	sessions := collection.DictionarySyncMap(collection.DictionarySyncFromMap(steps), func(k string, d dto.DtoSession) session.Session {
-		return *dto.ToSession(d)
+		instance := &ManagerSession{
+			file:              file,
+			managerCollection: managerCollection,
+			managerGroup:      managerGroup,
+			sessions:          sessions,
+		}
+
+		manager = defineDefaultSessions(instance)
 	})
 
-	instance := &ManagerSession{
-		file:              file,
-		managerCollection: managerCollection,
-		managerGroup:      managerGroup,
-		sessions:          sessions,
+	if manager == nil {
+		log.Panics("The session manager is not initialized properly")
 	}
 
-	manager = defineDefaultSessions(instance)
-
-	return manager, nil
+	return manager
 }
 
 func defineDefaultSessions(instance *ManagerSession) *ManagerSession {
