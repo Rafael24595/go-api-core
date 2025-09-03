@@ -1,11 +1,16 @@
 package configuration
 
 import (
+	"sync"
+
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 )
 
-var instance *Configuration
+var (
+	instance *Configuration
+	once     sync.Once
+)
 
 type Configuration struct {
 	Signal    *signalHandler
@@ -20,32 +25,34 @@ type Configuration struct {
 }
 
 func Initialize(session string, timestamp int64, kargs map[string]utils.Any, mod *Mod, project *Project) Configuration {
-	if instance != nil {
-		log.Panics("The configuration is alredy initialized")
-	}
+	once.Do(func() {
+		admin, ok := kargs["GO_API_ADMIN_USER"].String()
+		if !ok {
+			log.Panics("Admin is not defined")
+		}
 
-	admin, ok := kargs["GO_API_ADMIN_USER"].String()
-	if !ok {
-		log.Panics("Admin is not defined")
-	}
+		secret, ok := kargs["GO_API_ADMIN_SECRET"].String()
+		if !ok {
+			log.Panics("Secret is not defined")
+		}
 
-	secret, ok := kargs["GO_API_ADMIN_SECRET"].String()
-	if !ok {
-		log.Panics("Secret is not defined")
-	}
+		dev, _ := kargs["GO_API_DEV"].Bool()
 
-	dev, _ := kargs["GO_API_DEV"].Bool()
+		instance = &Configuration{
+			Signal:    newSignalHandler(),
+			Mod:       *mod,
+			Project:   *project,
+			dev:       dev,
+			sessionId: session,
+			timestamp: timestamp,
+			admin:     admin,
+			secret:    []byte(secret),
+			kargs:     kargs,
+		}
+	})
 
-	instance = &Configuration{
-		Signal:    newSignalHandler(),
-		Mod:       *mod,
-		Project:   *project,
-		dev:       dev,
-		sessionId: session,
-		timestamp: timestamp,
-		admin:     admin,
-		secret:    []byte(secret),
-		kargs:     kargs,
+	if instance == nil {
+		log.Panics("The configuration is not initialized properly")
 	}
 
 	return *instance
