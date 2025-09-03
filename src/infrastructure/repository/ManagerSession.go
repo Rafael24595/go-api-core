@@ -179,13 +179,8 @@ func (s *ManagerSession) FindUserGroup(user string) (*domain.Group, error) {
 		return group, nil
 	}
 
-	exists := group != nil
 	group = domain.NewGroup(user)
 	group = s.managerGroup.Insert(user, group)
-
-	if !exists {
-		log.Messagef("Defined group '%s' for %s user", group.Id, user)
-	}
 
 	session.Group = group.Id
 
