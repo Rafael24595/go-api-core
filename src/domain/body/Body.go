@@ -7,7 +7,6 @@ type BodyRequest struct {
 }
 
 type BodyResponse struct {
-	Status      bool        `json:"status"`
 	ContentType ContentType `json:"content_type"`
 	Payload     string      `json:"payload"`
 }
@@ -19,6 +18,17 @@ type BodyParameter struct {
 	FileType string `json:"file_type"`
 	FileName string `json:"file_name"`
 	Value    string `json:"value"`
+}
+
+func NewResponseBody(contentType ContentType, payload string) *BodyResponse {
+	return &BodyResponse{
+		ContentType: contentType,
+		Payload: payload,
+	}
+}
+
+func EmptyResponseBody(contentType ContentType) *BodyResponse {
+	return NewResponseBody(contentType, "")
 }
 
 func NewBody(status bool, contentType ContentType, parameters map[string]map[string][]BodyParameter) *BodyRequest {
