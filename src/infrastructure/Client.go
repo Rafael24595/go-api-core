@@ -11,9 +11,11 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/exception"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/domain"
+	auth_strategy "github.com/Rafael24595/go-api-core/src/domain/auth/strategy"
 	"github.com/Rafael24595/go-api-core/src/domain/body"
 	"github.com/Rafael24595/go-api-core/src/domain/cookie"
 	"github.com/Rafael24595/go-api-core/src/domain/header"
+	"github.com/Rafael24595/go-api-core/src/domain/query"
 
 	"golang.org/x/net/html/charset"
 )
@@ -70,21 +72,26 @@ func (c *HttpClient) makeRequest(operation domain.Request) (*http.Request, *exce
 	method := operation.Method.String()
 	url := strings.TrimSpace(operation.Uri)
 
-	body := new(bytes.Buffer)
+	payload := new(bytes.Buffer)
 	if !operation.Body.Empty() && operation.Body.Status && method != "GET" && method != "HEAD" {
-		strategy := operation.Body.ContentType.LoadStrategy()
-		body, _ = strategy(&operation.Body, &operation.Query)
+		strategy := body.LoadStrategy(operation.Body.ContentType)
+
+		var queries *query.Queries
+		payload, queries = strategy(&operation.Body, &operation.Query)
+
+		operation.Query = *queries
 	}
 
-	req, err := http.NewRequest(method, url, body)
+	req, err := http.NewRequest(method, url, payload)
 	if err != nil {
 		return nil, exception.NewCauseApiError(http.StatusUnprocessableEntity, "Cannot build the HTTP request", err)
 	}
 
+	operation = *auth_strategy.ApplyAuth(&operation)
+
 	req = c.applyQuery(operation, req)
 	req = c.applyHeader(operation, req)
 	req = c.applyCookies(operation, req)
-	req = c.applyAuth(operation, req)
 
 	return req, nil
 }
@@ -135,20 +142,6 @@ func (c *HttpClient) applyCookies(operation domain.Request, req *http.Request) *
 		strings.Join(cookies, "; "),
 	}
 
-	return req
-}
-
-func (c *HttpClient) applyAuth(operation domain.Request, req *http.Request) *http.Request {
-	if !operation.Auth.Status {
-		return req
-	}
-	for _, a := range operation.Auth.Auths {
-		if !a.Status {
-			continue
-		}
-		strategy := a.Type.LoadStrategy()
-		req = strategy(a, req)
-	}
 	return req
 }
 

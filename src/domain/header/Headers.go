@@ -11,9 +11,13 @@ func NewHeaders() *Headers {
 }
 
 func (h *Headers) Add(key, value string) *Headers {
+	return h.AddStatus(key, value, true)
+}
+
+func (h *Headers) AddStatus(key, value string, status bool) *Headers {
 	return h.AddHeader(key, Header{
 		Order: int64(len(h.Headers)),
-		Status: true,
+		Status: status,
 		Value: value,
 	})
 }
