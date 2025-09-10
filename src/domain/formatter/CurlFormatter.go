@@ -38,7 +38,11 @@ func ToCurl(ctx *context.Context, req *domain.Request, inline bool) (string, err
 	payload := bodyToCurl(req)
 	buffer = append(buffer, payload...)
 
-	delimiter := " \\\n"
+	for i := 0; i < len(buffer); i++ {
+		buffer[i] = strings.ReplaceAll(buffer[i], "\n", " ")
+	}
+
+	delimiter := " \\\n "
 	if inline {
 		delimiter = " "
 	}

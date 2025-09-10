@@ -319,7 +319,7 @@ func TestToCurl_InlineVsMultiline(t *testing.T) {
 		t.Error(err)
 	}
 
-	expectedMult := "curl -X POST http://api.test \\\n-H \"Content-Type: application/json\""
+	expectedMult := "curl -X POST http://api.test \\\n -H \"Content-Type: application/json\""
 	if curlMulti != expectedMult {
 		t.Errorf("Expected '%s', but got '%s'", expectedMult, curlMulti)
 	}
