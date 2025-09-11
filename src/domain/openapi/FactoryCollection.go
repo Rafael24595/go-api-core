@@ -10,6 +10,7 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/auth"
+	auth_strategy "github.com/Rafael24595/go-api-core/src/domain/auth/strategy"
 	"github.com/Rafael24595/go-api-core/src/domain/body"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/domain/cookie"
@@ -144,13 +145,13 @@ func (b *FactoryCollection) MakeFromParameters(path string, parameters []Paramet
 
 func (b *FactoryCollection) MakeFromRequestBody(requestBody *RequestBody) *body.BodyRequest {
 	if requestBody == nil {
-		return body.NewBody(false, body.None, make(map[string]map[string][]body.BodyParameter))
+		return body.EmptyBody(false, body.None)
 	}
 
 	if requestBody.Ref != "" {
 		reference, err := b.findRequestBodyReference(requestBody.Ref)
 		if reference == nil || err != nil {
-			return body.NewBody(false, body.None, make(map[string]map[string][]body.BodyParameter))
+			return body.EmptyBody(false, body.None)
 		}
 		return b.MakeFromRequestBody(reference)
 	}
@@ -178,7 +179,7 @@ func (b *FactoryCollection) MakeFromRequestBody(requestBody *RequestBody) *body.
 		}
 	}
 
-	return body.NewBody(false, body.Text, make(map[string]map[string][]body.BodyParameter))
+	return body.EmptyBody(false, body.Text)
 }
 
 func (b *FactoryCollection) fromExample(content string, schema *Schema) *body.BodyRequest {
@@ -186,8 +187,6 @@ func (b *FactoryCollection) fromExample(content string, schema *Schema) *body.Bo
 	if err != nil {
 		fmt.Printf("%s", err.Error())
 	}
-
-	data := make(map[string]map[string][]body.BodyParameter)
 
 	var bodyType body.ContentType
 	switch content {
@@ -202,45 +201,37 @@ func (b *FactoryCollection) fromExample(content string, schema *Schema) *body.Bo
 	}
 
 	if bodyType != body.Form {
-		data[body.DOCUMENT_PARAM] = make(map[string][]body.BodyParameter)
-		data[body.DOCUMENT_PARAM][body.PAYLOAD_PARAM] = []body.BodyParameter{
-			body.NewBodyDocument(0, true, string(example)),
-		}
+		return body.DocumentBody(false, bodyType, string(example))
 	}
 
-	return body.NewBody(false, bodyType, data)
+	return body.EmptyBody(false, bodyType)
 }
 
 func (b *FactoryCollection) toFormData(parameters map[string]BuildParameter) *body.BodyRequest {
-	data := make(map[string]map[string][]body.BodyParameter)
+	builder := body.NewBuilderFromDataBody()
 
 	count := int64(0)
 	for k, v := range parameters {
-		data[body.FORM_DATA_PARAM] = make(map[string][]body.BodyParameter)
-		data[body.FORM_DATA_PARAM][k] = []body.BodyParameter{
-			{
-				Order:    count,
-				Status:   true,
-				IsFile:   v.Binary,
-				FileType: "",
-				FileName: fmt.Sprintf("%s file", k),
-				Value:    v.Value,
-			},
+		parameter := &body.BodyParameter{
+			Order:    count,
+			Status:   true,
+			IsFile:   v.Binary,
+			FileType: "",
+			FileName: fmt.Sprintf("%s file", k),
+			Value:    v.Value,
 		}
+
+		builder.Add(k, parameter)
+		
 		count++
 	}
 
-	return body.NewBody(false, body.Form, data)
+	return body.FormDataBody(false, body.Form, builder)
 }
 
 func (b *FactoryCollection) toDocument(content string, schema *Schema, parameters map[string]BuildParameter) *body.BodyRequest {
 	payload, contenType := b.formatDocument(content, schema, parameters)
-	data := make(map[string]map[string][]body.BodyParameter)
-	data[body.DOCUMENT_PARAM] = make(map[string][]body.BodyParameter)
-	data[body.DOCUMENT_PARAM][body.PAYLOAD_PARAM] = []body.BodyParameter{
-		body.NewBodyDocument(0, true, payload),
-	}
-	return body.NewBody(false, contenType, data)
+	return body.DocumentBody(false, contenType, payload)
 }
 
 func (b *FactoryCollection) formatDocument(content string, schema *Schema, parameters map[string]BuildParameter) (string, body.ContentType) {
@@ -421,15 +412,13 @@ func (b *FactoryCollection) MakeFromSecurity(security []SecurityRequirement, que
 
 			switch schema.Scheme {
 			case "basic":
-				auths.PutAuth(*auth.NewAuth(true, auth.Basic, map[string]string{
-					auth.BASIC_PARAM_USER:     auth.BASIC_PARAM_USER,
-					auth.BASIC_PARAM_PASSWORD: auth.BASIC_PARAM_PASSWORD,
-				}))
+				auths.PutAuth(*auth_strategy.BasicAuth(true, 
+					auth_strategy.BASIC_PARAM_USER, 
+					auth_strategy.BASIC_PARAM_PASSWORD))
 			case "bearer":
-				auths.PutAuth(*auth.NewAuth(true, auth.Bearer, map[string]string{
-					auth.BEARER_PARAM_PREFIX: schema.BearerFormat,
-					auth.BEARER_PARAM_TOKEN:  auth.BEARER_PARAM_TOKEN,
-				}))
+				auths.PutAuth(*auth_strategy.BearerAuth(true, 
+					schema.BearerFormat,
+					auth_strategy.BEARER_PARAM_TOKEN))
 			}
 		}
 	}

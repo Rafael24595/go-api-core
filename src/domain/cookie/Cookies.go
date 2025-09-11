@@ -11,9 +11,13 @@ func NewCookiesClient() *CookiesClient {
 }
 
 func (h *CookiesClient) Put(key, value string) *CookiesClient {
+	return h.PutStatus(key, value, true)
+}
+
+func (h *CookiesClient) PutStatus(key, value string, status bool) *CookiesClient {
 	h.Cookies[key] = CookieClient{
 		Order: int64(len(h.Cookies)),
-		Status: true,
+		Status: status,
 		Value: value,
 	}
 	return h

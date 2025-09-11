@@ -11,10 +11,14 @@ func NewQueries() *Queries {
 }
 
 func (q *Queries) Add(key, value string) *Queries {
+	return q.AddStatus(key, value, true)
+}
+
+func (q *Queries) AddStatus(key, value string, status bool) *Queries {
 	return q.AddQuery(key, Query{
-		Order: int64(len(q.Queries)),
-		Status: true,
-		Value: value,
+		Order:  int64(len(q.Queries)),
+		Status: status,
+		Value:  value,
 	})
 }
 

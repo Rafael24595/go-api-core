@@ -8,6 +8,7 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/auth"
+	"github.com/Rafael24595/go-api-core/src/domain/auth/strategy"
 	"github.com/Rafael24595/go-api-core/src/domain/body"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/domain/cookie"
@@ -321,14 +322,14 @@ func TestMakeFromSecurityBasic(t *testing.T) {
 		t.Error("Basic authentication not found.")
 	}
 
-	value := authResult.Parameters[auth.BASIC_PARAM_USER]
-	expected := auth.BASIC_PARAM_USER
+	value := authResult.Parameters[auth_strategy.BASIC_PARAM_USER]
+	expected := auth_strategy.BASIC_PARAM_USER
 	if value != expected {
 		t.Errorf("Found variable %v but %v expected", value, expected)
 	}
 
-	value = authResult.Parameters[auth.BASIC_PARAM_PASSWORD]
-	expected = auth.BASIC_PARAM_PASSWORD
+	value = authResult.Parameters[auth_strategy.BASIC_PARAM_PASSWORD]
+	expected = auth_strategy.BASIC_PARAM_PASSWORD
 	if value != expected {
 		t.Errorf("Found variable %v but %v expected", value, expected)
 	}
@@ -351,7 +352,7 @@ func TestMakeFromSecurityBearer(t *testing.T) {
 		t.Error("Bearer authentication not found.")
 	}
 
-	value := authResult.Parameters[auth.BEARER_PARAM_PREFIX]
+	value := authResult.Parameters[auth_strategy.BEARER_PARAM_PREFIX]
 	expected := "JWT"
 	if value != expected {
 		t.Errorf("Found variable %v but %v expected", value, expected)

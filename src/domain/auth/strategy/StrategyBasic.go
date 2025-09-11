@@ -1,22 +1,31 @@
-package auth
+package auth_strategy
 
 import (
 	"encoding/base64"
 	"fmt"
-	"net/http"
+
+	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/auth"
 )
 
-const(
-	BASIC_PARAM_USER = "username"
+const (
+	BASIC_PARAM_USER     = "username"
 	BASIC_PARAM_PASSWORD = "password"
 )
 
-func applyBasicAuth(a Auth, r *http.Request) *http.Request {
+func BasicAuth(status bool, user, pass string) *auth.Auth {
+	return auth.NewAuth(status, auth.Basic, map[string]string{
+		BASIC_PARAM_USER:     user,
+		BASIC_PARAM_PASSWORD: pass,
+	})
+}
+
+func applyBasicAuth(a auth.Auth, r *domain.Request) *domain.Request {
 	user := ""
 	if pUser, ok := a.Parameters[BASIC_PARAM_USER]; ok {
 		user = pUser
 	}
-	
+
 	password := ""
 	if pPassword, ok := a.Parameters[BASIC_PARAM_PASSWORD]; ok {
 		user = pPassword

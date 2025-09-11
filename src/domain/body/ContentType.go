@@ -31,8 +31,8 @@ func RequestContentTypes() []ContentType {
 	}
 }
 
-func (c ContentType) LoadStrategy() func(a *BodyRequest, q *query.Queries) (*bytes.Buffer, *query.Queries) {
-	switch c {
+func LoadStrategy(typ ContentType) func(a *BodyRequest, q *query.Queries) (*bytes.Buffer, *query.Queries) {
+	switch typ {
 	case Form:
 		return applyFormData
 	default:
