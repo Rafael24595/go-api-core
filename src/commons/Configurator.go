@@ -1,7 +1,9 @@
 package commons
 
 import (
+	"maps"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
@@ -11,11 +13,10 @@ import (
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/google/uuid"
-	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 )
 
-func Initialize(kargs map[string]utils.Any) (*configuration.Configuration, *dependency.DependencyContainer) {
+func Initialize(kargs map[string]utils.Argument) (*configuration.Configuration, *dependency.DependencyContainer) {
 	session := uuid.NewString()
 	timestamp := time.Now().UnixMilli()
 
@@ -39,31 +40,55 @@ func initializeManagerSession(container *dependency.DependencyContainer) *reposi
 	return repository.InitializeManagerSession(file, container.ManagerCollection, container.ManagerGroup)
 }
 
-func ReadEnv(file string) map[string]utils.Any {
-	if len(file) > 0 {
-		if err := godotenv.Load(".env"); err != nil {
-			log.Warningf("Error during environment loading file from '%s'", file)
-		}
+func ReadAllEnv(path string) map[string]utils.Argument {
+	envs := ReadDotEnv(path)
+	maps.Copy(envs, ReadEnv())
+	return envs
+}
+
+func ReadDotEnv(path string) map[string]utils.Argument {
+	envs := make(map[string]utils.Argument)
+
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return envs
 	}
 
-	envs := make(map[string]utils.Any)
-	for _, env := range os.Environ() {
-		pair := splitEnv(env)
-		envs[pair[0]] = *utils.AnyFrom(pair[1])
+	result, err := os.ReadFile(path)
+	if err != nil {
+		return envs
+	}
+
+	for line := range strings.SplitSeq(string(result), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		if key, value, ok := manageEnv(line); ok {
+			envs[key] = *value
+		}
 	}
 
 	return envs
 }
 
-func splitEnv(env string) []string {
-	var pair []string
-	for i, char := range env {
-		if char == '=' {
-			pair = append(pair, env[:i], env[i+1:])
-			break
+func ReadEnv() map[string]utils.Argument {
+	envs := make(map[string]utils.Argument)
+	for _, env := range os.Environ() {
+		if key, value, ok := manageEnv(env); ok {
+			envs[key] = *value
 		}
 	}
-	return pair
+	return envs
+}
+
+func manageEnv(env string) (string, *utils.Argument, bool) {
+	parts := strings.SplitN(env, "=", 2)
+	if len(parts) == 2 {
+		return parts[0], utils.ArgumentFrom(parts[1]), true
+	}
+	return "", nil, false
 }
 
 func ReadGoMod() *configuration.Mod {
