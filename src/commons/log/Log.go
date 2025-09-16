@@ -34,26 +34,26 @@ func defaultLog() Log {
 	return log
 }
 
-func ConfigureLog(session string, timestamp int64, kargs map[string]utils.Any) Log {
+func ConfigureLog(session string, timestamp int64, kargs map[string]utils.Argument) Log {
 	code, ok := kargs["GO_LOG_INSTANCE"]
 	if !ok {
 		return log
 	}
 
-	if codeStr, _ := code.String(); codeStr == CODE_LOGGER_MODULE {
+	if codeStr := code.String(); codeStr == CODE_LOGGER_MODULE {
 		log = instanceModuleLogger(session, timestamp, kargs)
 	}
 
 	return log
 }
 
-func instanceModuleLogger(session string, timestamp int64, kargs map[string]utils.Any) Log {
+func instanceModuleLogger(session string, timestamp int64, kargs map[string]utils.Argument) Log {
 	modulesInterface, ok := kargs["GO_LOG_MODULES"]
 	if !ok {
 		return log
 	}
 
-	modulesStr, _ := modulesInterface.String()
+	modulesStr := modulesInterface.String()
 	modules := strings.Split(modulesStr, "|")
 
 	newInstance := newloggerModule()

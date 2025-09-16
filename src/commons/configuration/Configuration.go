@@ -21,22 +21,22 @@ type Configuration struct {
 	timestamp int64
 	admin     string
 	secret    []byte
-	kargs     map[string]utils.Any
+	kargs     map[string]utils.Argument
 }
 
-func Initialize(session string, timestamp int64, kargs map[string]utils.Any, mod *Mod, project *Project) Configuration {
+func Initialize(session string, timestamp int64, kargs map[string]utils.Argument, mod *Mod, project *Project) Configuration {
 	once.Do(func() {
-		admin, ok := kargs["GO_API_ADMIN_USER"].String()
-		if !ok {
+		admin := kargs["GO_API_ADMIN_USER"].String()
+		if admin == "" {
 			log.Panics("Admin is not defined")
 		}
 
-		secret, ok := kargs["GO_API_ADMIN_SECRET"].String()
-		if !ok {
+		secret := kargs["GO_API_ADMIN_SECRET"].String()
+		if secret == "" {
 			log.Panics("Secret is not defined")
 		}
 
-		dev, _ := kargs["GO_API_DEV"].Bool()
+		dev := kargs["GO_API_DEV"].Boold(false)
 
 		instance = &Configuration{
 			Signal:    newSignalHandler(),
