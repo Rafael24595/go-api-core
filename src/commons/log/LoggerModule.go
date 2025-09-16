@@ -56,18 +56,18 @@ func (l *loggerModule) Records() []Record {
 }
 
 func (l *loggerModule) Custom(category string, message string) *Record {
-	return l.custom(category, message, false)
+	return l.custom(category, message)
 }
 
 func (l *loggerModule) Custome(category string, err error) *Record {
-	return l.custom(category, err.Error(), false)
+	return l.custom(category, err.Error())
 }
 
 func (l *loggerModule) Customf(category string, format string, args ...any) *Record {
-	return l.custom(category, fmt.Sprintf(format, args...), false)
+	return l.custom(category, fmt.Sprintf(format, args...))
 }
 
-func (l *loggerModule) custom(category string, message string, throwPanic bool) *Record {
+func (l *loggerModule) custom(category string, message string) *Record {
 	category = strings.ToUpper(category)
 	return l.record(Category(category), message, false)
 }
