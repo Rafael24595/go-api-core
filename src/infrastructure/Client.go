@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -76,7 +77,11 @@ func (c *HttpClient) Fetch(request *domain.Request) (*domain.Response, *exceptio
 
 func (c *HttpClient) makeRequest(operation *domain.Request) (*http.Request, *exception.ApiError) {
 	method := operation.Method.String()
-	url := strings.TrimSpace(operation.Uri)
+	uri := strings.TrimSpace(operation.Uri)
+
+	if _, err := url.ParseRequestURI(uri); err != nil {
+		return nil, exception.NewCauseApiError(http.StatusUnprocessableEntity, "Invalid URI", err)
+	}
 
 	payload := new(bytes.Buffer)
 	if !operation.Body.Empty() && operation.Body.Status && method != "GET" && method != "HEAD" {
@@ -88,7 +93,7 @@ func (c *HttpClient) makeRequest(operation *domain.Request) (*http.Request, *exc
 		operation.Query = *queries
 	}
 
-	req, err := http.NewRequest(method, url, payload)
+	req, err := http.NewRequest(method, uri, payload)
 	if err != nil {
 		return nil, exception.NewCauseApiError(http.StatusUnprocessableEntity, "Cannot build the HTTP request", err)
 	}
@@ -156,12 +161,12 @@ func (c *HttpClient) makeResponse(owner string, start int64, end int64, req *dom
 
 	cookies, err := c.makeCookies(headers)
 	if err != nil {
-		return nil, exception.NewCauseApiError(http.StatusInternalServerError, "Failed to read the cookies", err)
+		return nil, exception.NewCauseApiError(http.StatusUnprocessableEntity, "Failed to read the cookies", err)
 	}
 
 	bodyData, size, err := c.makeBody(resp)
 	if err != nil {
-		return nil, exception.NewCauseApiError(http.StatusInternalServerError, "Failed to read the body", err)
+		return nil, exception.NewCauseApiError(http.StatusUnprocessableEntity, "Failed to read the body", err)
 	}
 
 	return &domain.Response{
