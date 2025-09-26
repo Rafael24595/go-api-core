@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
-	"github.com/Rafael24595/go-api-core/src/commons/exception"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	auth_strategy "github.com/Rafael24595/go-api-core/src/domain/auth/strategy"
@@ -47,12 +45,12 @@ func WarmUp() (*domain.Response, error) {
 	return response, nil
 }
 
-func (c *HttpClient) FetchWithContext(ctx *context.Context, request *domain.Request) (*domain.Response, *exception.ApiError) {
+func (c *HttpClient) FetchWithContext(ctx *context.Context, request *domain.Request) (*domain.Response, error) {
 	request = context.ProcessRequest(request, ctx)
 	return c.Fetch(request)
 }
 
-func (c *HttpClient) Fetch(request *domain.Request) (*domain.Response, *exception.ApiError) {
+func (c *HttpClient) Fetch(request *domain.Request) (*domain.Response, error) {
 	req, err := c.makeRequest(request)
 	if err != nil {
 		return nil, err
@@ -64,7 +62,7 @@ func (c *HttpClient) Fetch(request *domain.Request) (*domain.Response, *exceptio
 	resp, respErr := client.Do(req)
 	end := time.Now().UnixMilli()
 	if respErr != nil {
-		return nil, exception.NewCauseApiError(500, "Cannot execute HTTP request", respErr)
+		return nil, fmt.Errorf("cannot execute HTTP request: %s", respErr.Error())
 	}
 
 	response, err := c.makeResponse(request.Owner, start, end, request, resp)
@@ -75,13 +73,9 @@ func (c *HttpClient) Fetch(request *domain.Request) (*domain.Response, *exceptio
 	return response, nil
 }
 
-func (c *HttpClient) makeRequest(operation *domain.Request) (*http.Request, *exception.ApiError) {
+func (c *HttpClient) makeRequest(operation *domain.Request) (*http.Request, error) {
 	method := operation.Method.String()
 	uri := strings.TrimSpace(operation.Uri)
-
-	if _, err := url.ParseRequestURI(uri); err != nil {
-		return nil, exception.NewCauseApiError(http.StatusUnprocessableEntity, "Invalid URI", err)
-	}
 
 	payload := new(bytes.Buffer)
 	if !operation.Body.Empty() && operation.Body.Status && method != "GET" && method != "HEAD" {
@@ -95,7 +89,7 @@ func (c *HttpClient) makeRequest(operation *domain.Request) (*http.Request, *exc
 
 	req, err := http.NewRequest(method, uri, payload)
 	if err != nil {
-		return nil, exception.NewCauseApiError(http.StatusUnprocessableEntity, "Cannot build the HTTP request", err)
+		return nil, fmt.Errorf("cannot build the HTTP request: %s", err.Error())
 	}
 
 	operation = auth_strategy.ApplyAuth(operation)
@@ -156,17 +150,17 @@ func (c *HttpClient) applyCookies(operation *domain.Request, req *http.Request) 
 	return req
 }
 
-func (c *HttpClient) makeResponse(owner string, start int64, end int64, req *domain.Request, resp *http.Response) (*domain.Response, *exception.ApiError) {
+func (c *HttpClient) makeResponse(owner string, start int64, end int64, req *domain.Request, resp *http.Response) (*domain.Response, error) {
 	headers := c.makeHeaders(resp)
 
 	cookies, err := c.makeCookies(headers)
 	if err != nil {
-		return nil, exception.NewCauseApiError(http.StatusUnprocessableEntity, "Failed to read the cookies", err)
+		return nil, fmt.Errorf("failed to read the cookies: %s", err.Error())
 	}
 
 	bodyData, size, err := c.makeBody(resp)
 	if err != nil {
-		return nil, exception.NewCauseApiError(http.StatusUnprocessableEntity, "Failed to read the body", err)
+		return nil, fmt.Errorf("failed to read the body: %s", err.Error())
 	}
 
 	return &domain.Response{
