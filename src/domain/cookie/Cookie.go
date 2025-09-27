@@ -85,12 +85,12 @@ func CookieServerFromString(cookieString string) (*CookieServer, error) {
 			if value != "" {
 				sameSite, err := SameSiteFromString(value)
 				if err != nil {
-					return nil, errors.New(fmt.Sprintf("unknown SameSite value: '%s'", value))
+					return nil, fmt.Errorf("unknown SameSite value: '%s'", value)
 				}
 				cookie.SameSite = *sameSite
 			}
 		default:
-			return nil, errors.New(fmt.Sprintf("unknown field code: '%s'", key))
+			return nil, fmt.Errorf("unknown field code: '%s'", key)
 		}
 	}
 

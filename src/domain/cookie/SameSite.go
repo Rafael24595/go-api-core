@@ -1,7 +1,6 @@
 package cookie
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -30,6 +29,6 @@ func SameSiteFromString(value string) (*SameSite, error) {
 		sameSite := None
 		return &sameSite, nil
 	default:
-		return nil, errors.New(fmt.Sprintf("unknown same-site value: '%s'", value))
+		return nil, fmt.Errorf("unknown same-site value: '%s'", value)
 	}
 }
