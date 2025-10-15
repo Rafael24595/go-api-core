@@ -164,16 +164,17 @@ func (c *HttpClient) makeResponse(owner string, start int64, end int64, req *dom
 	}
 
 	return &domain.Response{
-		Id:      req.Id,
-		Request: req.Id,
-		Date:    start,
-		Time:    end - start,
-		Status:  int16(resp.StatusCode),
-		Headers: *headers,
-		Cookies: *cookies,
-		Body:    *bodyData,
-		Size:    size,
-		Owner:   owner,
+		Id:        req.Id,
+		Timestamp: end,
+		Request:   req.Id,
+		Date:      start,
+		Time:      end - start,
+		Status:    int16(resp.StatusCode),
+		Headers:   *headers,
+		Cookies:   *cookies,
+		Body:      *bodyData,
+		Size:      size,
+		Owner:     owner,
 	}, nil
 }
 
