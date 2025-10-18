@@ -38,7 +38,7 @@ jobs:
               echo "⚠️ Unstamped development version detected. Updated version to: $VERSION"
             fi
 
-            if [[ "$IS_DEV" == "true" and "${GITHUB_REF_NAME}" != "dev" ]]; then
+            if [[ "$IS_DEV" == "true" && "${GITHUB_REF_NAME}" != "dev" ]]; then
               echo "🚫 Development versions can only be released from the 'dev' branch."
               exit 1
             fi
