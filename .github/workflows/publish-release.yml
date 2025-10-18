@@ -43,7 +43,7 @@ jobs:
               exit 1
             fi
 
-            if [[ "${GITHUB_REF_NAME}" != "main" ]]; then
+            if [[ "$IS_DEV" == "false" && "${GITHUB_REF_NAME}" != "main" ]]; then
               echo "🚫 Manual dispatch is only allowed from the 'main' branch."
               exit 1
             fi
