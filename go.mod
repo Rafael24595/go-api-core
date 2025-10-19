@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/Rafael24595/go-collections v0.2.3
+	github.com/Rafael24595/go-csvt v0.1.0
 	github.com/google/uuid v1.6.0
 	golang.org/x/crypto v0.39.0
 	golang.org/x/net v0.41.0

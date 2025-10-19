@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/csvt_translator"
+	"github.com/Rafael24595/go-csvt/csvt"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/utils"
 )
 
@@ -27,26 +27,25 @@ func (m *ManagerCsvtFile[T]) Read() (map[string]T, error) {
 		return make(map[string]T), nil
 	}
 
-	deserializer, err := csvt_translator.NewDeserialzer(string(buffer))
+	var vector []T
+	err = csvt.Unmarshal(buffer, &vector)
+	if err != nil {
+		return nil, err
+	}
 
 	items := map[string]T{}
-
-	iterator := deserializer.Iterate()
-	for iterator.Next() {
-		item := m.builder()
-		_ , err := iterator.Deserialize(item)
-		if err != nil {
-			return nil, err
-		}
-		items[(*item).PersistenceId()] = *item
+	for _, v := range vector {
+		items[v.PersistenceId()] = v
 	}
 
 	return items, nil
 }
 
 func (m *ManagerCsvtFile[T]) Write(items []any) error {
-	csvt := csvt_translator.NewSerializer().
-		Serialize(items...)
+	result, err := csvt.Marshal(items...)
+	if err != nil {
+		return err
+	}
 
-	return utils.WriteFile(m.path, csvt)
+	return utils.WriteFile(m.path, string(result))
 }
