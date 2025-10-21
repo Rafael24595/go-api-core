@@ -1,5 +1,7 @@
 github.com/Rafael24595/go-collections v0.2.3 h1:bN+EzgWXh98cAGXjXSd0hGC2KyjBUmssrss9zTdCfd8=
 github.com/Rafael24595/go-collections v0.2.3/go.mod h1:XanWz5msL1Wf4gv2PkApCW2EaRLzM/VUVUBCNewo/j8=
+github.com/Rafael24595/go-csvt v0.2.0 h1:TqNLF0ASAEoPiKpG5SotQRITBnRb0yr6J0FhYa8unQ0=
+github.com/Rafael24595/go-csvt v0.2.0/go.mod h1:/If27Y6+Hngm8lHVK9CNAbcTce/4wwthcnp7I1wZS7s=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 golang.org/x/crypto v0.39.0 h1:SHs+kF4LP+f+p14esP5jAoDpHU8Gu/v9lFRK6IT5imM=

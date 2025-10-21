@@ -7,18 +7,7 @@ permissions:
   contents: write 
 
 jobs:
-  block-non-main:
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          if [[ "${GITHUB_REF_NAME}" != "main" ]]; then
-            echo "🚫 Manual dispatch is only allowed from the 'main' branch."
-            exit 1
-          fi
-          echo "✅ Branch '${GITHUB_REF_NAME}' allowed. Continuing..."
-
   validate-version:
-      needs: block-non-main
       runs-on: ubuntu-latest
       outputs:
         version: ${{ steps.check.outputs.version }}
@@ -40,6 +29,27 @@ jobs:
               echo "✅ Expected format: v1.2.3 or v1.2.3-beta.1"
               exit 1
             fi
+
+            IS_DEV=false
+            if [[ "$VERSION" =~ -dev.0$ ]]; then
+              TIMESTAMP=$(date +%Y%m%d%H%M%S)
+              VERSION="${VERSION%-dev.0}-dev.$TIMESTAMP"
+              IS_DEV=true
+              echo "⚠️ Unstamped development version detected. Updated version to: $VERSION"
+            fi
+
+            if [[ "$IS_DEV" == "true" && "${GITHUB_REF_NAME}" != "dev" ]]; then
+              echo "🚫 Development versions can only be released from the 'dev' branch."
+              exit 1
+            fi
+
+            if [[ "$IS_DEV" == "false" && "${GITHUB_REF_NAME}" != "main" ]]; then
+              echo "🚫 Manual dispatch is only allowed from the 'main' branch."
+              exit 1
+            fi
+
+            echo "✅ Branch '${GITHUB_REF_NAME}' allowed. Continuing..."
+
             echo "✅ Valid version: $VERSION"
             echo "version=$VERSION" >> $GITHUB_OUTPUT
 

@@ -11,10 +11,13 @@ import (
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 )
 
-func ToCurl(ctx *context.Context, req *domain.Request, inline bool) (string, error) {
-	buffer := make([]string, 0)
-
+func ToCurlWithContext(ctx *context.Context, req *domain.Request, inline bool) (string, error) {
 	req = context.ProcessRequest(req, ctx)
+	return ToCurl(req, inline)
+}
+
+func ToCurl(req *domain.Request, inline bool) (string, error) {
+	buffer := make([]string, 0)
 
 	method := strings.ToUpper(req.Method.String())
 	url := strings.TrimSpace(req.Uri)
