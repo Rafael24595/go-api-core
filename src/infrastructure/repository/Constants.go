@@ -6,5 +6,6 @@ const (
 	CSVT_FILE_PATH_RESPONSE   string = "./db/table_response.csvt"
 	CSVT_FILE_PATH_COLLECTION string = "./db/table_collection.csvt"
 	CSVT_FILE_PATH_GROUP      string = "./db/table_group.csvt"
+	CSVT_FILE_PATH_END_POINT  string = "./db/table_end_point.csvt"
 	CSVT_FILE_PATH_SESSION    string = "./db/table_session.csvt"
 )

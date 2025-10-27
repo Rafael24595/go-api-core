@@ -13,10 +13,6 @@ type Group struct {
 	Modified  int64           `json:"modified"`
 }
 
-func NewGroupDefault() *Group {
-	return &Group{}
-}
-
 func NewGroup(owner string) *Group {
 	return &Group{
 		Id:        "",

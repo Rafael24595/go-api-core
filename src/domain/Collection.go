@@ -16,10 +16,6 @@ type Collection struct {
 	Status    StatusCollection `json:"status"`
 }
 
-func NewCollectionDefault() *Collection {
-	return &Collection{}
-}
-
 func NewUserCollection(owner string) *Collection {
 	return newCollection(owner, USER)
 }

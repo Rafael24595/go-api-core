@@ -36,7 +36,7 @@ func Initialize(kargs map[string]utils.Argument) (*configuration.Configuration, 
 }
 
 func initializeManagerSession(container *dependency.DependencyContainer) *repository.ManagerSession {
-	file := repository.NewManagerCsvtFile(dto.NewDtoSessionDefault, repository.CSVT_FILE_PATH_SESSION)
+	file := repository.NewManagerCsvtFile[dto.DtoSession](repository.CSVT_FILE_PATH_SESSION)
 	return repository.InitializeManagerSession(file, container.ManagerCollection, container.ManagerGroup)
 }
 

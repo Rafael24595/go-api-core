@@ -5,6 +5,7 @@ import "github.com/Rafael24595/go-api-core/src/domain"
 type EndPoint struct {
 	Id        string
 	Timestamp int64
+	Modified  int64
 	Name      string
 	Method    domain.HttpMethod
 	Uri       string

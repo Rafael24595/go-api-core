@@ -4,12 +4,14 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
+	mock_domain "github.com/Rafael24595/go-api-core/src/domain/mock"
 	"github.com/Rafael24595/go-api-core/src/infrastructure"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	repository_collection "github.com/Rafael24595/go-api-core/src/infrastructure/repository/collection"
 	repository_context "github.com/Rafael24595/go-api-core/src/infrastructure/repository/context"
 	repository_group "github.com/Rafael24595/go-api-core/src/infrastructure/repository/group"
+	repository_mock "github.com/Rafael24595/go-api-core/src/infrastructure/repository/mock"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/request"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/response"
 	"github.com/Rafael24595/go-collections/collection"
@@ -29,6 +31,7 @@ type DependencyContainer struct {
 	ManagerCollection *repository.ManagerCollection
 	ManagerHistoric   *repository.ManagerHistoric
 	ManagerGroup      *repository.ManagerGroup
+	ManagerEndPoint   *repository.ManagerEndPoint
 }
 
 func Initialize() *DependencyContainer {
@@ -47,12 +50,14 @@ func Initialize() *DependencyContainer {
 	repositoryContext := loadRepositoryContext()
 	repositoryCollection := loadRepositoryCollection()
 	repositoryGroup := loadRepositoryGroup()
+	repositoryEndPoint := loadRepositoryEndPoint()
 
 	managerRequest := loadManagerRequest(repositoryRequest, repositoryResponse)
 	managerContext := loadManagerContext(repositoryContext)
 	managerCollection := loadManagerCollection(repositoryCollection, managerContext, managerRequest)
 	managerHistoric := loadManagerHistoric(managerRequest, managerCollection)
 	managerGroup := loadManagerGroup(repositoryGroup, managerCollection)
+	managerEndPoint := loadManagerEndPoint(repositoryEndPoint)
 
 	container := &DependencyContainer{
 		RepositoryContext: repositoryContext,
@@ -61,6 +66,7 @@ func Initialize() *DependencyContainer {
 		ManagerCollection: managerCollection,
 		ManagerHistoric:   managerHistoric,
 		ManagerGroup:      managerGroup,
+		ManagerEndPoint:   managerEndPoint,
 	}
 
 	instance = container
@@ -69,7 +75,7 @@ func Initialize() *DependencyContainer {
 }
 
 func loadRepositoryRequest() repository.IRepositoryRequest {
-	file := repository.NewManagerCsvtFile(domain.NewRequestDefault, repository.CSVT_FILE_PATH_REQUEST)
+	file := repository.NewManagerCsvtFile[domain.Request](repository.CSVT_FILE_PATH_REQUEST)
 	impl := collection.DictionarySyncEmpty[string, domain.Request]()
 	repository, err := request.InitializeRepositoryMemory(impl, file)
 	if err != nil {
@@ -80,7 +86,7 @@ func loadRepositoryRequest() repository.IRepositoryRequest {
 }
 
 func loadRepositoryResponse() repository.IRepositoryResponse {
-	file := repository.NewManagerCsvtFile(domain.NewResponseDefault, repository.CSVT_FILE_PATH_RESPONSE)
+	file := repository.NewManagerCsvtFile[domain.Response](repository.CSVT_FILE_PATH_RESPONSE)
 	impl := collection.DictionarySyncEmpty[string, domain.Response]()
 	repository, err := response.InitializeRepositoryMemory(impl, file)
 	if err != nil {
@@ -91,7 +97,7 @@ func loadRepositoryResponse() repository.IRepositoryResponse {
 }
 
 func loadRepositoryContext() repository.IRepositoryContext {
-	file := repository.NewManagerCsvtFile(dto.NewDtoContextDefault, repository.CSVT_FILE_PATH_CONTEXT)
+	file := repository.NewManagerCsvtFile[dto.DtoContext](repository.CSVT_FILE_PATH_CONTEXT)
 	impl := collection.DictionarySyncEmpty[string, context.Context]()
 	repository, err := repository_context.InitializeRepositoryMemory(impl, file)
 	if err != nil {
@@ -102,7 +108,7 @@ func loadRepositoryContext() repository.IRepositoryContext {
 }
 
 func loadRepositoryCollection() repository.IRepositoryCollection {
-	file := repository.NewManagerCsvtFile(domain.NewCollectionDefault, repository.CSVT_FILE_PATH_COLLECTION)
+	file := repository.NewManagerCsvtFile[domain.Collection](repository.CSVT_FILE_PATH_COLLECTION)
 	impl := collection.DictionarySyncEmpty[string, domain.Collection]()
 	repository, err := repository_collection.InitializeRepositoryMemory(impl, file)
 	if err != nil {
@@ -113,7 +119,7 @@ func loadRepositoryCollection() repository.IRepositoryCollection {
 }
 
 func loadRepositoryGroup() repository.IRepositoryGroup {
-	file := repository.NewManagerCsvtFile(domain.NewGroupDefault, repository.CSVT_FILE_PATH_GROUP)
+	file := repository.NewManagerCsvtFile[domain.Group](repository.CSVT_FILE_PATH_GROUP)
 	impl := collection.DictionarySyncEmpty[string, domain.Group]()
 	repository, err := repository_group.InitializeRepositoryMemory(impl, file)
 	if err != nil {
@@ -123,6 +129,16 @@ func loadRepositoryGroup() repository.IRepositoryGroup {
 	return repository
 }
 
+func loadRepositoryEndPoint() repository.IRepositoryEndPoint {
+	file := repository.NewManagerCsvtFile[mock_domain.EndPoint](repository.CSVT_FILE_PATH_END_POINT)
+	impl := collection.DictionarySyncEmpty[string, mock_domain.EndPoint]()
+	repository, err := repository_mock.InitializeRepositoryMemory(impl, file)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return repository
+}
 
 func loadManagerRequest(request repository.IRepositoryRequest, response repository.IRepositoryResponse) *repository.ManagerRequest {
 	return repository.NewManagerRequest(request, response)
@@ -142,4 +158,8 @@ func loadManagerHistoric(managerRequest *repository.ManagerRequest, managerColle
 
 func loadManagerGroup(group repository.IRepositoryGroup, managerCollection *repository.ManagerCollection) *repository.ManagerGroup {
 	return repository.NewManagerGroup(group, managerCollection)
+}
+
+func loadManagerEndPoint(endPoint repository.IRepositoryEndPoint) *repository.ManagerEndPoint {
+	return repository.NewManagerEndPoint(endPoint)
 }

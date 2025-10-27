@@ -6,13 +6,11 @@ import (
 )
 
 type ManagerCsvtFile[T IStructure] struct {
-	builder func() *T
 	path string
 }
 
-func NewManagerCsvtFile[T IStructure](builder func() *T, path string) *ManagerCsvtFile[T] {
+func NewManagerCsvtFile[T IStructure](path string) *ManagerCsvtFile[T] {
 	return &ManagerCsvtFile[T]{
-		builder: builder,
 		path: path,
 	}
 }

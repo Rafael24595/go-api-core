@@ -28,10 +28,6 @@ type Request struct {
 	Status    StatusRequest        `json:"status"`
 }
 
-func NewRequestDefault() *Request {
-	return &Request{}
-}
-
 func NewRequestEmpty() *Request {
 	return NewRequest("", GET, "")
 }
