@@ -4,10 +4,11 @@ import (
 	"testing"
 
 	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/collection"
 )
 
 func TestSortRequests(t *testing.T) {
-	collection := domain.NewFreeCollection("anonymous")
+	collection := collection.NewFreeCollection("anonymous")
 	collection.Nodes = []domain.NodeReference{
 		{
 			Order: 3,
@@ -38,7 +39,7 @@ func TestSortRequests(t *testing.T) {
 }
 
 func TestExistsRequest(t *testing.T) {
-	collection := domain.NewFreeCollection("anonymous")
+	collection := collection.NewFreeCollection("anonymous")
 	collection.Nodes = []domain.NodeReference{
 		{
 			Order: 3,
@@ -70,7 +71,7 @@ func TestExistsRequest(t *testing.T) {
 }
 
 func TestTakeRequest(t *testing.T) {
-	collection := domain.NewFreeCollection("anonymous")
+	collection := collection.NewFreeCollection("anonymous")
 	collection.Nodes = []domain.NodeReference{
 		{
 			Order: 3,

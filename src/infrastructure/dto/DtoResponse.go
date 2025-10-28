@@ -1,10 +1,10 @@
 package dto
 
 import (
-	"github.com/Rafael24595/go-api-core/src/domain"
-	"github.com/Rafael24595/go-api-core/src/domain/body"
-	"github.com/Rafael24595/go-api-core/src/domain/cookie"
-	"github.com/Rafael24595/go-api-core/src/domain/header"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
+	"github.com/Rafael24595/go-api-core/src/domain/action/body"
+	"github.com/Rafael24595/go-api-core/src/domain/action/cookie"
+	"github.com/Rafael24595/go-api-core/src/domain/action/header"
 )
 
 type DtoResponse struct {
@@ -21,8 +21,8 @@ type DtoResponse struct {
 	Owner     string               `json:"owner"`
 }
 
-func ToResponse(dto *DtoResponse) *domain.Response {
-	return &domain.Response{
+func ToResponse(dto *DtoResponse) *action.Response {
+	return &action.Response{
 		Id:        dto.Id,
 		Timestamp: dto.Timestamp,
 		Request:   dto.Request,
@@ -37,7 +37,7 @@ func ToResponse(dto *DtoResponse) *domain.Response {
 	}
 }
 
-func FromResponse(request *domain.Response) *DtoResponse {
+func FromResponse(request *action.Response) *DtoResponse {
 	return &DtoResponse{
 		Id:        request.Id,
 		Timestamp: request.Timestamp,

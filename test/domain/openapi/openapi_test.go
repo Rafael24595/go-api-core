@@ -7,14 +7,15 @@ import (
 	"testing"
 
 	"github.com/Rafael24595/go-api-core/src/domain"
-	"github.com/Rafael24595/go-api-core/src/domain/auth"
-	"github.com/Rafael24595/go-api-core/src/domain/auth/strategy"
-	"github.com/Rafael24595/go-api-core/src/domain/body"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
+	"github.com/Rafael24595/go-api-core/src/domain/action/auth"
+	auth_strategy "github.com/Rafael24595/go-api-core/src/domain/action/auth/strategy"
+	body_strategy "github.com/Rafael24595/go-api-core/src/domain/action/body/strategy"
+	"github.com/Rafael24595/go-api-core/src/domain/action/cookie"
+	"github.com/Rafael24595/go-api-core/src/domain/action/header"
+	"github.com/Rafael24595/go-api-core/src/domain/action/query"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
-	"github.com/Rafael24595/go-api-core/src/domain/cookie"
-	"github.com/Rafael24595/go-api-core/src/domain/header"
 	"github.com/Rafael24595/go-api-core/src/domain/openapi"
-	"github.com/Rafael24595/go-api-core/src/domain/query"
 )
 
 const TEST_OWNER = "anonymoys"
@@ -74,7 +75,7 @@ func valideContext(t *testing.T, ctx *context.Context) {
 	}
 }
 
-func valideRequests(t *testing.T, requests []domain.Request) {
+func valideRequests(t *testing.T, requests []action.Request) {
 	if len(requests) != 4 {
 		t.Fatalf("Expected 4 request object, got %d", len(requests))
 	}
@@ -83,7 +84,7 @@ func valideRequests(t *testing.T, requests []domain.Request) {
 	method := domain.GET
 	uri := "${server-0}/collection/${userId}"
 
-	var request *domain.Request
+	var request *action.Request
 	for _, v := range requests {
 		if v.Name == name && v.Method == method && v.Uri == uri {
 			request = &v
@@ -224,7 +225,7 @@ func TestMakeFromRequestBody(t *testing.T) {
 	payload := oapi.Paths["/request"].Post.RequestBody
 	result := builder.MakeFromRequestBody(payload)
 
-	bodyParameter, ok := result.Parameters[body.DOCUMENT_PARAM][body.PAYLOAD_PARAM]
+	bodyParameter, ok := result.Parameters[body_strategy.DOCUMENT_PARAM][body_strategy.PAYLOAD_PARAM]
 	if !ok || bodyParameter[0].IsFile {
 		t.Fatal("Body should be JSON")
 	}

@@ -1,4 +1,4 @@
-package domain
+package collection
 
 type NodeCollection struct {
 	Order      int        `json:"order"`

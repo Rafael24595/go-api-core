@@ -4,6 +4,8 @@ import (
 	"sync"
 
 	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
+	"github.com/Rafael24595/go-api-core/src/domain/collection"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 )
 
@@ -20,11 +22,11 @@ func NewManagerHistoric(managerRequest *ManagerRequest, managerCollection *Manag
 	}
 }
 
-func (m *ManagerHistoric) FindLite(owner string, collection *domain.Collection) []dto.DtoLiteNodeRequest {
+func (m *ManagerHistoric) FindLite(owner string, collection *collection.Collection) []dto.DtoLiteNodeRequest {
 	return m.managerCollection.FindLiteRequestNodes(owner, collection)
 }
 
-func (m *ManagerHistoric) Insert(owner string, collection *domain.Collection, request *domain.Request, response *domain.Response) (*domain.Collection, *domain.Request, *domain.Response) {
+func (m *ManagerHistoric) Insert(owner string, collection *collection.Collection, request *action.Request, response *action.Response) (*collection.Collection, *action.Request, *action.Response) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -62,6 +64,6 @@ func (m *ManagerHistoric) Insert(owner string, collection *domain.Collection, re
 	return collection, request, response
 }
 
-func (m *ManagerHistoric) Delete(owner string, collection *domain.Collection, requestId string) (*domain.Collection, *domain.Request, *domain.Response) {
+func (m *ManagerHistoric) Delete(owner string, collection *collection.Collection, requestId string) (*collection.Collection, *action.Request, *action.Response) {
 	return m.managerCollection.DeleteRequestFromCollection(owner, collection, requestId)
 }

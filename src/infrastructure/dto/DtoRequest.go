@@ -2,10 +2,11 @@ package dto
 
 import (
 	"github.com/Rafael24595/go-api-core/src/domain"
-	"github.com/Rafael24595/go-api-core/src/domain/auth"
-	"github.com/Rafael24595/go-api-core/src/domain/cookie"
-	"github.com/Rafael24595/go-api-core/src/domain/header"
-	"github.com/Rafael24595/go-api-core/src/domain/query"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
+	"github.com/Rafael24595/go-api-core/src/domain/action/auth"
+	"github.com/Rafael24595/go-api-core/src/domain/action/cookie"
+	"github.com/Rafael24595/go-api-core/src/domain/action/header"
+	"github.com/Rafael24595/go-api-core/src/domain/action/query"
 )
 
 const ANONYMOUS_OWNER = "anonymous"
@@ -23,11 +24,11 @@ type DtoRequest struct {
 	Auth      auth.Auths           `json:"auth"`
 	Owner     string               `json:"owner"`
 	Modified  int64                `json:"modified"`
-	Status    domain.StatusRequest `json:"status"`
+	Status    action.StatusRequest `json:"status"`
 }
 
-func ToRequest(dto *DtoRequest) *domain.Request {
-	return &domain.Request{
+func ToRequest(dto *DtoRequest) *action.Request {
+	return &action.Request{
 		Id:        dto.Id,
 		Timestamp: dto.Timestamp,
 		Name:      dto.Name,
@@ -44,7 +45,7 @@ func ToRequest(dto *DtoRequest) *domain.Request {
 	}
 }
 
-func FromRequest(request *domain.Request) *DtoRequest {
+func FromRequest(request *action.Request) *DtoRequest {
 	return &DtoRequest{
 		Id:        request.Id,
 		Timestamp: request.Timestamp,
@@ -63,16 +64,16 @@ func FromRequest(request *domain.Request) *DtoRequest {
 }
 
 type DtoLiteRequest struct {
-	Id        string               `json:"_id"`
-	Timestamp int64                `json:"timestamp"`
-	Name      string               `json:"name"`
-	Method    domain.HttpMethod    `json:"method"`
-	Uri       string               `json:"uri"`
-	Owner     string               `json:"owner"`
-	Modified  int64                `json:"modified"`
+	Id        string            `json:"_id"`
+	Timestamp int64             `json:"timestamp"`
+	Name      string            `json:"name"`
+	Method    domain.HttpMethod `json:"method"`
+	Uri       string            `json:"uri"`
+	Owner     string            `json:"owner"`
+	Modified  int64             `json:"modified"`
 }
 
-func ToLiteRequest(request *domain.Request) *DtoLiteRequest {
+func ToLiteRequest(request *action.Request) *DtoLiteRequest {
 	return &DtoLiteRequest{
 		Id:        request.Id,
 		Timestamp: request.Timestamp,

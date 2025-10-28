@@ -1,13 +1,14 @@
-package domain
+package action
 
 import (
 	"time"
 
-	"github.com/Rafael24595/go-api-core/src/domain/auth"
-	"github.com/Rafael24595/go-api-core/src/domain/body"
-	"github.com/Rafael24595/go-api-core/src/domain/cookie"
-	"github.com/Rafael24595/go-api-core/src/domain/header"
-	"github.com/Rafael24595/go-api-core/src/domain/query"
+	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/action/auth"
+	"github.com/Rafael24595/go-api-core/src/domain/action/body"
+	"github.com/Rafael24595/go-api-core/src/domain/action/cookie"
+	"github.com/Rafael24595/go-api-core/src/domain/action/header"
+	"github.com/Rafael24595/go-api-core/src/domain/action/query"
 )
 
 const ANONYMOUS_OWNER = "anonymous"
@@ -16,7 +17,7 @@ type Request struct {
 	Id        string               `json:"_id"`
 	Timestamp int64                `json:"timestamp"`
 	Name      string               `json:"name"`
-	Method    HttpMethod           `json:"method"`
+	Method    domain.HttpMethod    `json:"method"`
 	Uri       string               `json:"uri"`
 	Query     query.Queries        `json:"query"`
 	Header    header.Headers       `json:"header"`
@@ -29,10 +30,10 @@ type Request struct {
 }
 
 func NewRequestEmpty() *Request {
-	return NewRequest("", GET, "")
+	return NewRequest("", domain.GET, "")
 }
 
-func NewRequest(name string, method HttpMethod, uri string) *Request {
+func NewRequest(name string, method domain.HttpMethod, uri string) *Request {
 	return &Request{
 		Id:        "",
 		Timestamp: time.Now().UnixMilli(),

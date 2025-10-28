@@ -10,6 +10,7 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/session"
 	"github.com/Rafael24595/go-api-core/src/domain"
+	collection_domain "github.com/Rafael24595/go-api-core/src/domain/collection"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-collections/collection"
 	"golang.org/x/crypto/bcrypt"
@@ -97,7 +98,7 @@ func (s *ManagerSession) Find(user string) (*session.Session, bool) {
 	return s.sessions.Get(user)
 }
 
-func (s *ManagerSession) FindUserCollection(user string) (*domain.Collection, error) {
+func (s *ManagerSession) FindUserCollection(user string) (*collection_domain.Collection, error) {
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
@@ -107,15 +108,15 @@ func (s *ManagerSession) FindUserCollection(user string) (*domain.Collection, er
 	}
 
 	collection, _ := s.managerCollection.Find(user, session.Collection)
-	if collection != nil && collection.Status == domain.USER {
+	if collection != nil && collection.Status == collection_domain.USER {
 		return collection, nil
 	}
 
 	exists := collection != nil
 	if exists {
-		collection.Status = domain.USER
+		collection.Status = collection_domain.USER
 	} else {
-		collection = domain.NewUserCollection(user)
+		collection = collection_domain.NewUserCollection(user)
 	}
 
 	collection = s.managerCollection.Insert(user, collection)
@@ -131,7 +132,7 @@ func (s *ManagerSession) FindUserCollection(user string) (*domain.Collection, er
 	return collection, nil
 }
 
-func (s *ManagerSession) FindUserHistoric(user string) (*domain.Collection, error) {
+func (s *ManagerSession) FindUserHistoric(user string) (*collection_domain.Collection, error) {
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
@@ -141,15 +142,15 @@ func (s *ManagerSession) FindUserHistoric(user string) (*domain.Collection, erro
 	}
 
 	collection, _ := s.managerCollection.Find(user, session.History)
-	if collection != nil && collection.Status == domain.TALE {
+	if collection != nil && collection.Status == collection_domain.TALE {
 		return collection, nil
 	}
 
 	exists := collection != nil
 	if exists {
-		collection.Status = domain.TALE
+		collection.Status = collection_domain.TALE
 	} else {
-		collection = domain.NewUserCollection(user)
+		collection = collection_domain.NewUserCollection(user)
 	}
 
 	collection = s.managerCollection.Insert(user, collection)
@@ -271,7 +272,7 @@ func (s *ManagerSession) Insert(session *session.Session, user, password string,
 	return s.insert(user, password, collection, history, group, false, isAdmin, -1)
 }
 
-func (s *ManagerSession) insert(user, password string, collection *domain.Collection, history *domain.Collection, group *domain.Group, isProtected, isAdmin bool, count int) (*session.Session, error) {
+func (s *ManagerSession) insert(user, password string, collection *collection_domain.Collection, history *collection_domain.Collection, group *domain.Group, isProtected, isAdmin bool, count int) (*session.Session, error) {
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
@@ -311,12 +312,12 @@ func (s *ManagerSession) Refresh(session *session.Session, refresh string) *sess
 	return session
 }
 
-func (s *ManagerSession) makeDependencies(username string) (*domain.Collection, *domain.Collection, *domain.Group) {
-	collection := domain.NewUserCollection(username)
+func (s *ManagerSession) makeDependencies(username string) (*collection_domain.Collection, *collection_domain.Collection, *domain.Group) {
+	collection := collection_domain.NewUserCollection(username)
 	collection.Name = fmt.Sprintf("%s's global collection", username)
 	collection = s.managerCollection.Insert(username, collection)
 
-	history := domain.NewTaleCollection(username)
+	history := collection_domain.NewTaleCollection(username)
 	history.Name = fmt.Sprintf("%s's history collection", username)
 	history.Context = collection.Context
 	history = s.managerCollection.Insert(username, history)

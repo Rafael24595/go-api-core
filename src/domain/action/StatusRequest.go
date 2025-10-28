@@ -1,4 +1,4 @@
-package domain
+package action
 
 import (
 	"fmt"

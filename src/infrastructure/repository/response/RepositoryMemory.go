@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/Rafael24595/go-api-core/src/commons/log"
-	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
 	"github.com/google/uuid"
@@ -13,18 +13,18 @@ import (
 type RepositoryMemory struct {
 	muMemory   sync.RWMutex
 	muFile     sync.RWMutex
-	collection collection.IDictionary[string, domain.Response]
-	file       repository.IFileManager[domain.Response]
+	collection collection.IDictionary[string, action.Response]
+	file       repository.IFileManager[action.Response]
 }
 
-func NewRepositoryMemory(impl collection.IDictionary[string, domain.Response], file repository.IFileManager[domain.Response]) *RepositoryMemory {
+func NewRepositoryMemory(impl collection.IDictionary[string, action.Response], file repository.IFileManager[action.Response]) *RepositoryMemory {
 	return &RepositoryMemory{
 		collection: impl,
 		file:       file,
 	}
 }
 
-func InitializeRepositoryMemory(impl collection.IDictionary[string, domain.Response], file repository.IFileManager[domain.Response]) (*RepositoryMemory, error) {
+func InitializeRepositoryMemory(impl collection.IDictionary[string, action.Response], file repository.IFileManager[action.Response]) (*RepositoryMemory, error) {
 	responses, err := file.Read()
 	if err != nil {
 		return nil, err
@@ -34,17 +34,17 @@ func InitializeRepositoryMemory(impl collection.IDictionary[string, domain.Respo
 		file), nil
 }
 
-func (r *RepositoryMemory) Find(key string) (*domain.Response, bool) {
+func (r *RepositoryMemory) Find(key string) (*action.Response, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 	return r.collection.Get(key)
 }
 
-func (r *RepositoryMemory) FindMany(ids []string) []domain.Response {
+func (r *RepositoryMemory) FindMany(ids []string) []action.Response {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 
-	responses := make([]domain.Response, 0)
+	responses := make([]action.Response, 0)
 	for _, v := range ids {
 		if response, ok := r.collection.Get(v); ok {
 			responses = append(responses, *response)
@@ -54,7 +54,7 @@ func (r *RepositoryMemory) FindMany(ids []string) []domain.Response {
 	return responses
 }
 
-func (r *RepositoryMemory) Insert(owner string, response *domain.Response) *domain.Response {
+func (r *RepositoryMemory) Insert(owner string, response *action.Response) *action.Response {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
@@ -79,21 +79,21 @@ func (r *RepositoryMemory) Insert(owner string, response *domain.Response) *doma
 	return response
 }
 
-func (r *RepositoryMemory) Delete(response *domain.Response) *domain.Response {
+func (r *RepositoryMemory) Delete(response *action.Response) *action.Response {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
-	
+
 	cursor, _ := r.collection.Remove(response.Id)
 	go r.write(r.collection)
-	
+
 	return cursor
 }
 
-func (r *RepositoryMemory) DeleteMany(responses ...domain.Response) []domain.Response {
+func (r *RepositoryMemory) DeleteMany(responses ...action.Response) []action.Response {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
-	deleted := make([]domain.Response, 0)
+	deleted := make([]action.Response, 0)
 	for _, v := range responses {
 		cursor, _ := r.collection.Remove(v.Id)
 		deleted = append(deleted, *cursor)
@@ -104,11 +104,11 @@ func (r *RepositoryMemory) DeleteMany(responses ...domain.Response) []domain.Res
 	return deleted
 }
 
-func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, domain.Response]) {
+func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, action.Response]) {
 	r.muFile.Lock()
 	defer r.muFile.Unlock()
 
-	items := collection.DictionaryMap(snapshot, func(k string, v domain.Response) any {
+	items := collection.DictionaryMap(snapshot, func(k string, v action.Response) any {
 		return v
 	}).Values()
 

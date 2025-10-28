@@ -1,19 +1,21 @@
 package dto
 
-import "github.com/Rafael24595/go-api-core/src/domain"
+import (
+	"github.com/Rafael24595/go-api-core/src/domain/collection"
+)
 
 type DtoCollection struct {
-	Id        string                  `json:"_id"`
-	Name      string                  `json:"name"`
-	Timestamp int64                   `json:"timestamp"`
-	Context   DtoContext              `json:"context"`
-	Nodes     []DtoNodeRequest        `json:"nodes"`
-	Owner     string                  `json:"owner"`
-	Modified  int64                   `json:"modified"`
-	Status    domain.StatusCollection `json:"status"`
+	Id        string                      `json:"_id"`
+	Name      string                      `json:"name"`
+	Timestamp int64                       `json:"timestamp"`
+	Context   DtoContext                  `json:"context"`
+	Nodes     []DtoNodeRequest            `json:"nodes"`
+	Owner     string                      `json:"owner"`
+	Modified  int64                       `json:"modified"`
+	Status    collection.StatusCollection `json:"status"`
 }
 
-func FromCollection(collection *domain.Collection, ctx *DtoContext, nodes []DtoNodeRequest) *DtoCollection {
+func FromCollection(collection *collection.Collection, ctx *DtoContext, nodes []DtoNodeRequest) *DtoCollection {
 	return &DtoCollection{
 		Id:        collection.Id,
 		Name:      collection.Name,
@@ -25,8 +27,8 @@ func FromCollection(collection *domain.Collection, ctx *DtoContext, nodes []DtoN
 	}
 }
 
-func ToCollection(dto *DtoCollection) *domain.Collection {
-	return &domain.Collection{
+func ToCollection(dto *DtoCollection) *collection.Collection {
+	return &collection.Collection{
 		Id:        dto.Id,
 		Name:      dto.Name,
 		Timestamp: dto.Timestamp,
@@ -39,17 +41,17 @@ func ToCollection(dto *DtoCollection) *domain.Collection {
 }
 
 type DtoLiteCollection struct {
-	Id        string                  `json:"_id"`
-	Name      string                  `json:"name"`
-	Timestamp int64                   `json:"timestamp"`
-	Context   DtoContext              `json:"context"`
-	Nodes     []DtoLiteNodeRequest    `json:"nodes"`
-	Owner     string                  `json:"owner"`
-	Modified  int64                   `json:"modified"`
-	Status    domain.StatusCollection `json:"status"`
+	Id        string                      `json:"_id"`
+	Name      string                      `json:"name"`
+	Timestamp int64                       `json:"timestamp"`
+	Context   DtoContext                  `json:"context"`
+	Nodes     []DtoLiteNodeRequest        `json:"nodes"`
+	Owner     string                      `json:"owner"`
+	Modified  int64                       `json:"modified"`
+	Status    collection.StatusCollection `json:"status"`
 }
 
-func ToLiteCollection(collection *domain.Collection, ctx *DtoContext, nodes []DtoLiteNodeRequest) *DtoLiteCollection {
+func ToLiteCollection(collection *collection.Collection, ctx *DtoContext, nodes []DtoLiteNodeRequest) *DtoLiteCollection {
 	return &DtoLiteCollection{
 		Id:        collection.Id,
 		Name:      collection.Name,

@@ -1,8 +1,8 @@
 package auth_strategy
 
 import (
-	"github.com/Rafael24595/go-api-core/src/domain"
-	"github.com/Rafael24595/go-api-core/src/domain/auth"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
+	"github.com/Rafael24595/go-api-core/src/domain/action/auth"
 )
 
 const (
@@ -18,7 +18,7 @@ func BearerAuth(status bool, bearer, token string) *auth.Auth {
 	})
 }
 
-func applyBearerAuth(a auth.Auth, r *domain.Request) *domain.Request {
+func applyBearerAuth(a auth.Auth, r *action.Request) *action.Request {
 	prefix := DEFAULT_BEARER_PREFIX
 	if pPrefix, ok := a.Parameters[BEARER_PARAM_PREFIX]; ok {
 		prefix = pPrefix

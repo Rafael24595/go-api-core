@@ -5,18 +5,20 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Rafael24595/go-api-core/src/domain"
-	auth_strategy "github.com/Rafael24595/go-api-core/src/domain/auth/strategy"
-	"github.com/Rafael24595/go-api-core/src/domain/body"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
+	auth_strategy "github.com/Rafael24595/go-api-core/src/domain/action/auth/strategy"
+	"github.com/Rafael24595/go-api-core/src/domain/action/body"
+	body_strategy "github.com/Rafael24595/go-api-core/src/domain/action/body/strategy"
+
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 )
 
-func ToCurlWithContext(ctx *context.Context, req *domain.Request, inline bool) (string, error) {
+func ToCurlWithContext(ctx *context.Context, req *action.Request, inline bool) (string, error) {
 	req = context.ProcessRequest(req, ctx)
 	return ToCurl(req, inline)
 }
 
-func ToCurl(req *domain.Request, inline bool) (string, error) {
+func ToCurl(req *action.Request, inline bool) (string, error) {
 	buffer := make([]string, 0)
 
 	method := strings.ToUpper(req.Method.String())
@@ -53,7 +55,7 @@ func ToCurl(req *domain.Request, inline bool) (string, error) {
 	return strings.Join(buffer, delimiter), nil
 }
 
-func queryToCurl(req *domain.Request) string {
+func queryToCurl(req *action.Request) string {
 	buffer := make([]string, 0)
 	for k, q := range req.Query.Queries {
 		values := make([]string, 0)
@@ -79,7 +81,7 @@ func queryToCurl(req *domain.Request) string {
 	return fmt.Sprintf("?%s", strings.Join(buffer, "&"))
 }
 
-func cookiesToCurl(req *domain.Request) []string {
+func cookiesToCurl(req *action.Request) []string {
 	buffer := make([]string, 0)
 
 	for k, v := range req.Cookie.Cookies {
@@ -101,7 +103,7 @@ func cookiesToCurl(req *domain.Request) []string {
 	}
 }
 
-func headersToCurl(req *domain.Request) []string {
+func headersToCurl(req *action.Request) []string {
 	buffer := make([]string, 0)
 
 	for k, h := range req.Header.Headers {
@@ -119,7 +121,7 @@ func headersToCurl(req *domain.Request) []string {
 	return buffer
 }
 
-func bodyToCurl(req *domain.Request) []string {
+func bodyToCurl(req *action.Request) []string {
 	if !req.Body.Status || req.Body.ContentType == body.None {
 		return make([]string, 0)
 	}
@@ -134,12 +136,12 @@ func bodyToCurl(req *domain.Request) []string {
 func rawTocurl(b body.BodyRequest) []string {
 	buffer := make([]string, 0)
 
-	parameters, ok := b.Parameters[body.DOCUMENT_PARAM]
+	parameters, ok := b.Parameters[body_strategy.DOCUMENT_PARAM]
 	if !ok {
 		return buffer
 	}
 
-	payload, ok := parameters[body.PAYLOAD_PARAM]
+	payload, ok := parameters[body_strategy.PAYLOAD_PARAM]
 	if !ok {
 		return buffer
 	}
@@ -156,7 +158,7 @@ func rawTocurl(b body.BodyRequest) []string {
 func formDataTocurl(b body.BodyRequest) []string {
 	buffer := make([]string, 0)
 
-	for k, p := range b.Parameters[body.FORM_DATA_PARAM] {
+	for k, p := range b.Parameters[body_strategy.FORM_DATA_PARAM] {
 		for _, v := range p {
 			if !v.Status {
 				continue

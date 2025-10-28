@@ -35,24 +35,6 @@ func EmptyBody(status bool, contentType ContentType) *BodyRequest {
 	return NewBody(status, contentType, make(map[string]map[string][]BodyParameter))
 }
 
-func DocumentBody(status bool, contentType ContentType, document string) *BodyRequest {
-	parameters := make(map[string]map[string][]BodyParameter)
-
-	parameters[DOCUMENT_PARAM] = make(map[string][]BodyParameter)
-	parameters[DOCUMENT_PARAM][PAYLOAD_PARAM] = []BodyParameter{
-		NewBodyDocument(0, true, document),
-	}
-
-	return NewBody(status, contentType, parameters)
-}
-
-func FormDataBody(status bool, contentType ContentType, builder *BuilderFormDataBody) *BodyRequest {
-	parameters := make(map[string]map[string][]BodyParameter)
-	parameters[FORM_DATA_PARAM] = builder.formData
-
-	return NewBody(status, contentType, parameters)
-}
-
 func NewBody(status bool, contentType ContentType, parameters map[string]map[string][]BodyParameter) *BodyRequest {
 	return &BodyRequest{
 		Status:      status,
@@ -93,27 +75,4 @@ func NewBodyParameter(order int64, status, isFile bool, fileType, fileName, valu
 
 func (b BodyRequest) Empty() bool {
 	return b.ContentType == None
-}
-
-type BuilderFormDataBody struct {
-	formData map[string][]BodyParameter
-}
-
-func NewBuilderFromDataBody() *BuilderFormDataBody {
-	return &BuilderFormDataBody{
-		formData: make(map[string][]BodyParameter),
-	}
-}
-
-func (b *BuilderFormDataBody) Add(key string, parameter *BodyParameter) *BuilderFormDataBody {
-	var parameters []BodyParameter
-	if exists, ok := b.formData[key]; ok {
-		parameters = exists
-	} else {
-		parameters = make([]BodyParameter, 0)
-	}
-
-	b.formData[key] = append(parameters, *parameter)
-	
-	return b
 }

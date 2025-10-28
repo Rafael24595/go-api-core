@@ -7,6 +7,7 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
@@ -16,18 +17,18 @@ import (
 type RepositoryMemory struct {
 	muMemory   sync.RWMutex
 	muFile     sync.RWMutex
-	collection collection.IDictionary[string, domain.Request]
-	file       repository.IFileManager[domain.Request]
+	collection collection.IDictionary[string, action.Request]
+	file       repository.IFileManager[action.Request]
 }
 
-func NewRepositoryMemory(impl collection.IDictionary[string, domain.Request], file repository.IFileManager[domain.Request]) *RepositoryMemory {
+func NewRepositoryMemory(impl collection.IDictionary[string, action.Request], file repository.IFileManager[action.Request]) *RepositoryMemory {
 	return &RepositoryMemory{
 		collection: impl,
 		file:       file,
 	}
 }
 
-func InitializeRepositoryMemory(impl collection.IDictionary[string, domain.Request], file repository.IFileManager[domain.Request]) (*RepositoryMemory, error) {
+func InitializeRepositoryMemory(impl collection.IDictionary[string, action.Request], file repository.IFileManager[action.Request]) (*RepositoryMemory, error) {
 	requests, err := file.Read()
 	if err != nil {
 		return nil, err
@@ -37,17 +38,17 @@ func InitializeRepositoryMemory(impl collection.IDictionary[string, domain.Reque
 		file), nil
 }
 
-func (r *RepositoryMemory) Find(key string) (*domain.Request, bool) {
+func (r *RepositoryMemory) Find(key string) (*action.Request, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 	return r.collection.Get(key)
 }
 
-func (r *RepositoryMemory) FindMany(ids []string) []domain.Request {
+func (r *RepositoryMemory) FindMany(ids []string) []action.Request {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 
-	requests := make([]domain.Request, 0)
+	requests := make([]action.Request, 0)
 	for _, v := range ids {
 		if request, ok := r.collection.Get(v); ok {
 			requests = append(requests, *request)
@@ -91,11 +92,11 @@ func (r *RepositoryMemory) FindNodes(references []domain.NodeReference) []dto.Dt
 	return requests
 }
 
-func (r *RepositoryMemory) FindRequests(references []domain.NodeReference) []domain.Request {
+func (r *RepositoryMemory) FindRequests(references []domain.NodeReference) []action.Request {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 
-	requests := make([]domain.Request, 0)
+	requests := make([]action.Request, 0)
 	for _, v := range references {
 		if request, ok := r.collection.Get(v.Item); ok {
 			requests = append(requests, *request)
@@ -105,7 +106,7 @@ func (r *RepositoryMemory) FindRequests(references []domain.NodeReference) []dom
 	return requests
 }
 
-func (r *RepositoryMemory) Insert(owner string, request *domain.Request) *domain.Request {
+func (r *RepositoryMemory) Insert(owner string, request *action.Request) *action.Request {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
@@ -140,7 +141,7 @@ func (r *RepositoryMemory) Insert(owner string, request *domain.Request) *domain
 	return request
 }
 
-func (r *RepositoryMemory) InsertMany(owner string, requests []domain.Request) []domain.Request {
+func (r *RepositoryMemory) InsertMany(owner string, requests []action.Request) []action.Request {
 	for i, v := range requests {
 		req := r.Insert(owner, &v)
 		requests[i] = *req
@@ -148,7 +149,7 @@ func (r *RepositoryMemory) InsertMany(owner string, requests []domain.Request) [
 	return requests
 }
 
-func (r *RepositoryMemory) Delete(request *domain.Request) *domain.Request {
+func (r *RepositoryMemory) Delete(request *action.Request) *action.Request {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
@@ -160,11 +161,11 @@ func (r *RepositoryMemory) Delete(request *domain.Request) *domain.Request {
 	return cursor
 }
 
-func (r *RepositoryMemory) DeleteMany(requests ...domain.Request) []domain.Request {
+func (r *RepositoryMemory) DeleteMany(requests ...action.Request) []action.Request {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
-	deleted := make([]domain.Request, 0)
+	deleted := make([]action.Request, 0)
 	for _, v := range requests {
 		cursor, _ := r.collection.Remove(v.Id)
 		deleted = append(deleted, *cursor)
@@ -175,11 +176,11 @@ func (r *RepositoryMemory) DeleteMany(requests ...domain.Request) []domain.Reque
 	return deleted
 }
 
-func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, domain.Request]) {
+func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, action.Request]) {
 	r.muFile.Lock()
 	defer r.muFile.Unlock()
 
-	items := collection.DictionaryMap(snapshot, func(k string, v domain.Request) any {
+	items := collection.DictionaryMap(snapshot, func(k string, v action.Request) any {
 		return v
 	}).Values()
 

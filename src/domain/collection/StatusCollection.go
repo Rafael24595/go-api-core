@@ -1,8 +1,10 @@
-package domain
+package collection
 
 import (
 	"fmt"
 	"strings"
+
+	"github.com/Rafael24595/go-api-core/src/domain/action"
 )
 
 type StatusCollection string
@@ -33,17 +35,16 @@ func StatusCollectionFromString(value string) (*StatusCollection, error) {
 	}
 }
 
-
-func StatusCollectionToStatusRequest(status *StatusCollection) *StatusRequest{
+func StatusCollectionToStatusRequest(status *StatusCollection) *action.StatusRequest {
 	switch *status {
 	case USER:
-		status := FINAL
+		status := action.FINAL
 		return &status
 	case TALE:
-		status := DRAFT
+		status := action.DRAFT
 		return &status
 	default:
-		status := GROUP
+		status := action.GROUP
 		return &status
 	}
 }

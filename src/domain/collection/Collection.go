@@ -1,19 +1,21 @@
-package domain
+package collection
 
 import (
 	"slices"
 	"sort"
+
+	"github.com/Rafael24595/go-api-core/src/domain"
 )
 
 type Collection struct {
-	Id        string           `json:"_id"`
-	Name      string           `json:"name"`
-	Timestamp int64            `json:"timestamp"`
-	Context   string           `json:"context"`
-	Nodes     []NodeReference  `json:"nodes"`
-	Owner     string           `json:"owner"`
-	Modified  int64            `json:"modified"`
-	Status    StatusCollection `json:"status"`
+	Id        string                 `json:"_id"`
+	Name      string                 `json:"name"`
+	Timestamp int64                  `json:"timestamp"`
+	Context   string                 `json:"context"`
+	Nodes     []domain.NodeReference `json:"nodes"`
+	Owner     string                 `json:"owner"`
+	Modified  int64                  `json:"modified"`
+	Status    StatusCollection       `json:"status"`
 }
 
 func NewUserCollection(owner string) *Collection {
@@ -34,7 +36,7 @@ func newCollection(owner string, status StatusCollection) *Collection {
 		Name:      "",
 		Timestamp: 0,
 		Context:   "",
-		Nodes:     make([]NodeReference, 0),
+		Nodes:     make([]domain.NodeReference, 0),
 		Owner:     owner,
 		Modified:  0,
 		Status:    status,
@@ -50,7 +52,7 @@ func (c Collection) ExistsRequest(id string) bool {
 	return false
 }
 
-func (c *Collection) TakeRequest(id string) (*NodeReference, bool) {
+func (c *Collection) TakeRequest(id string) (*domain.NodeReference, bool) {
 	for i, v := range c.Nodes {
 		if v.Item == id {
 			c.Nodes = slices.Delete(c.Nodes, i, i+1)
@@ -60,17 +62,17 @@ func (c *Collection) TakeRequest(id string) (*NodeReference, bool) {
 	return nil, false
 }
 
-func (c *Collection) ResolveRequest(item string) (*NodeReference, bool) {
+func (c *Collection) ResolveRequest(item string) (*domain.NodeReference, bool) {
 	for i, v := range c.Nodes {
 		if v.Item == item {
-			c.Nodes[i] = NodeReference{
+			c.Nodes[i] = domain.NodeReference{
 				Order: v.Order,
 				Item:  item,
 			}
 			return &v, true
 		}
 	}
-	c.Nodes = append(c.Nodes, NodeReference{
+	c.Nodes = append(c.Nodes, domain.NodeReference{
 		Order: len(c.Nodes),
 		Item:  item,
 	})

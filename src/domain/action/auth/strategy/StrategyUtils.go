@@ -3,10 +3,10 @@ package auth_strategy
 import (
 	"fmt"
 
-	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
 )
 
-func applyHeaderAuth(key, prefix, token string, r *domain.Request) *domain.Request {
+func applyHeaderAuth(key, prefix, token string, r *action.Request) *action.Request {
 	if prefix != "" {
 		prefix = fmt.Sprintf("%s ", prefix)
 	}

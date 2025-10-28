@@ -3,8 +3,10 @@ package dependency
 import (
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	mock_domain "github.com/Rafael24595/go-api-core/src/domain/mock"
+	collection_domain "github.com/Rafael24595/go-api-core/src/domain/collection"
 	"github.com/Rafael24595/go-api-core/src/infrastructure"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
@@ -75,8 +77,8 @@ func Initialize() *DependencyContainer {
 }
 
 func loadRepositoryRequest() repository.IRepositoryRequest {
-	file := repository.NewManagerCsvtFile[domain.Request](repository.CSVT_FILE_PATH_REQUEST)
-	impl := collection.DictionarySyncEmpty[string, domain.Request]()
+	file := repository.NewManagerCsvtFile[action.Request](repository.CSVT_FILE_PATH_REQUEST)
+	impl := collection.DictionarySyncEmpty[string, action.Request]()
 	repository, err := request.InitializeRepositoryMemory(impl, file)
 	if err != nil {
 		log.Panic(err)
@@ -86,8 +88,8 @@ func loadRepositoryRequest() repository.IRepositoryRequest {
 }
 
 func loadRepositoryResponse() repository.IRepositoryResponse {
-	file := repository.NewManagerCsvtFile[domain.Response](repository.CSVT_FILE_PATH_RESPONSE)
-	impl := collection.DictionarySyncEmpty[string, domain.Response]()
+	file := repository.NewManagerCsvtFile[action.Response](repository.CSVT_FILE_PATH_RESPONSE)
+	impl := collection.DictionarySyncEmpty[string, action.Response]()
 	repository, err := response.InitializeRepositoryMemory(impl, file)
 	if err != nil {
 		log.Panic(err)
@@ -108,8 +110,8 @@ func loadRepositoryContext() repository.IRepositoryContext {
 }
 
 func loadRepositoryCollection() repository.IRepositoryCollection {
-	file := repository.NewManagerCsvtFile[domain.Collection](repository.CSVT_FILE_PATH_COLLECTION)
-	impl := collection.DictionarySyncEmpty[string, domain.Collection]()
+	file := repository.NewManagerCsvtFile[collection_domain.Collection](repository.CSVT_FILE_PATH_COLLECTION)
+	impl := collection.DictionarySyncEmpty[string, collection_domain.Collection]()
 	repository, err := repository_collection.InitializeRepositoryMemory(impl, file)
 	if err != nil {
 		log.Panic(err)

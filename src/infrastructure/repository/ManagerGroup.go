@@ -4,6 +4,8 @@ import (
 	"sync"
 
 	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
+	"github.com/Rafael24595/go-api-core/src/domain/collection"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 )
 
@@ -59,7 +61,7 @@ func (m *ManagerGroup) Insert(owner string, group *domain.Group) *domain.Group {
 	return m.group.Insert(owner, group)
 }
 
-func (m *ManagerGroup) ImportOpenApi(owner string, group *domain.Group, file []byte) (*domain.Group, *domain.Collection, error) {
+func (m *ManagerGroup) ImportOpenApi(owner string, group *domain.Group, file []byte) (*domain.Group, *collection.Collection, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -75,7 +77,7 @@ func (m *ManagerGroup) ImportOpenApi(owner string, group *domain.Group, file []b
 	return m.ResolveCollectionReferences(owner, group, *collection), collection, nil
 }
 
-func (m *ManagerGroup) ImportDtoCollections(owner string, group *domain.Group, dtos ...dto.DtoCollection) (*domain.Group, []domain.Collection, error) {
+func (m *ManagerGroup) ImportDtoCollections(owner string, group *domain.Group, dtos ...dto.DtoCollection) (*domain.Group, []collection.Collection, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -87,7 +89,7 @@ func (m *ManagerGroup) ImportDtoCollections(owner string, group *domain.Group, d
 	return m.ResolveCollectionReferences(owner, group, collections...), collections, nil
 }
 
-func (m *ManagerGroup) ImportCollection(owner string, group *domain.Group, collection *domain.Collection) (*domain.Group, *domain.Collection) {
+func (m *ManagerGroup) ImportCollection(owner string, group *domain.Group, collection *collection.Collection) (*domain.Group, *collection.Collection) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -99,7 +101,7 @@ func (m *ManagerGroup) ImportCollection(owner string, group *domain.Group, colle
 	return m.ResolveCollectionReferences(owner, group, *collection), collection
 }
 
-func (m *ManagerGroup) ImportDtoRequestsById(owner string, group *domain.Group, id string, dtos []dto.DtoRequest) (*domain.Group, *domain.Collection) {
+func (m *ManagerGroup) ImportDtoRequestsById(owner string, group *domain.Group, id string, dtos []dto.DtoRequest) (*domain.Group, *collection.Collection) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -111,7 +113,7 @@ func (m *ManagerGroup) ImportDtoRequestsById(owner string, group *domain.Group, 
 	return m.ResolveCollectionReferences(owner, group, *collection), collection
 }
 
-func (m *ManagerGroup) CollectRequest(owner string, group *domain.Group, payload PayloadCollectRequest) (*domain.Group, *domain.Collection, *domain.Request) {
+func (m *ManagerGroup) CollectRequest(owner string, group *domain.Group, payload PayloadCollectRequest) (*domain.Group, *collection.Collection, *action.Request) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -123,7 +125,7 @@ func (m *ManagerGroup) CollectRequest(owner string, group *domain.Group, payload
 	return m.ResolveCollectionReferences(owner, group, *collection), collection, request
 }
 
-func (m *ManagerGroup) ResolveCollectionReferences(owner string, group *domain.Group, collections ...domain.Collection) *domain.Group {
+func (m *ManagerGroup) ResolveCollectionReferences(owner string, group *domain.Group, collections ...collection.Collection) *domain.Group {
 	if group.Owner != owner {
 		return nil
 	}
@@ -131,7 +133,7 @@ func (m *ManagerGroup) ResolveCollectionReferences(owner string, group *domain.G
 	if len(collections) == 0 {
 		return group
 	}
-	
+
 	for _, v := range collections {
 		if v.Owner != owner {
 			continue
@@ -143,7 +145,7 @@ func (m *ManagerGroup) ResolveCollectionReferences(owner string, group *domain.G
 	return m.Insert(owner, group)
 }
 
-func (m *ManagerGroup) CloneCollection(owner string, group *domain.Group, id, name string) (*domain.Group, *domain.Collection) {
+func (m *ManagerGroup) CloneCollection(owner string, group *domain.Group, id, name string) (*domain.Group, *collection.Collection) {
 	if group.Owner != owner {
 		return nil, nil
 	}
@@ -195,7 +197,7 @@ func (m *ManagerGroup) Delete(owner string, group *domain.Group) *domain.Group {
 	return m.group.Delete(group)
 }
 
-func (m *ManagerGroup) DeleteCollection(owner string, group *domain.Group, id string) (*domain.Group, *domain.Collection) {
+func (m *ManagerGroup) DeleteCollection(owner string, group *domain.Group, id string) (*domain.Group, *collection.Collection) {
 	if group.Owner != owner {
 		return nil, nil
 	}

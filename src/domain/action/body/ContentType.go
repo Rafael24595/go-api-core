@@ -1,10 +1,7 @@
 package body
 
 import (
-	"bytes"
 	"strings"
-
-	"github.com/Rafael24595/go-api-core/src/domain/query"
 )
 
 type ContentType string
@@ -31,15 +28,6 @@ func RequestContentTypes() []ContentType {
 	}
 }
 
-func LoadStrategy(typ ContentType) func(a *BodyRequest, q *query.Queries) (*bytes.Buffer, *query.Queries) {
-	switch typ {
-	case Form:
-		return applyFormData
-	default:
-		return applyDefault
-	}
-}
-
 func ContentTypeFromHeader(contentType string) (ContentType, bool) {
 	contentType = strings.ToLower(contentType)
 
@@ -52,7 +40,7 @@ func ContentTypeFromHeader(contentType string) (ContentType, bool) {
 	if strings.Contains(contentType, "application/json") {
 		return Json, true
 	}
-	if strings.Contains(contentType, "text/xml") || 
+	if strings.Contains(contentType, "text/xml") ||
 		strings.Contains(contentType, "application/xml") ||
 		strings.Contains(contentType, "application/xhtml+xml") {
 		return Xml, true

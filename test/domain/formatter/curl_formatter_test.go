@@ -6,8 +6,10 @@ import (
 	"testing"
 
 	"github.com/Rafael24595/go-api-core/src/domain"
-	auth_strategy "github.com/Rafael24595/go-api-core/src/domain/auth/strategy"
-	"github.com/Rafael24595/go-api-core/src/domain/body"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
+	auth_strategy "github.com/Rafael24595/go-api-core/src/domain/action/auth/strategy"
+	"github.com/Rafael24595/go-api-core/src/domain/action/body"
+	body_strategy "github.com/Rafael24595/go-api-core/src/domain/action/body/strategy"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/domain/formatter"
 )
@@ -15,13 +17,13 @@ import (
 func TestToCurlWithContext_InvalidInput(t *testing.T) {
 	ctx := context.NewContext("tester")
 
-	req1 := domain.NewRequest("_test_001", "", "http://example.com")
+	req1 := action.NewRequest("_test_001", "", "http://example.com")
 	_, err := formatter.ToCurlWithContext(ctx, req1, false)
 	if err == nil {
 		t.Error("Error expected for invalid method")
 	}
 
-	req2 := domain.NewRequest("_test_002", domain.GET, "")
+	req2 := action.NewRequest("_test_002", domain.GET, "")
 	_, err = formatter.ToCurlWithContext(ctx, req2, false)
 	if err == nil {
 		t.Error("Error expected for invalid URI")
@@ -31,7 +33,7 @@ func TestToCurlWithContext_InvalidInput(t *testing.T) {
 func TestToCurlWithContext_NoQueries(t *testing.T) {
 	ctx := context.NewContext("tester")
 
-	req := domain.NewRequest("_test_001", domain.GET, "http://example.com")
+	req := action.NewRequest("_test_001", domain.GET, "http://example.com")
 
 	curl, err := formatter.ToCurlWithContext(ctx, req, false)
 
@@ -48,7 +50,7 @@ func TestToCurlWithContext_NoQueries(t *testing.T) {
 func TestToCurlWithContext_WithQueries(t *testing.T) {
 	ctx := context.NewContext("tester")
 
-	req := domain.NewRequest("_test_004", domain.GET, "http://example.com")
+	req := action.NewRequest("_test_004", domain.GET, "http://example.com")
 	req.Query.AddStatus("user", "username", true)
 	req.Query.AddStatus("id", "001", true)
 	req.Query.AddStatus("id", "002", false)
@@ -69,7 +71,7 @@ func TestToCurlWithContext_WithQueries(t *testing.T) {
 func TestToCurlWithContext_WithHeaders(t *testing.T) {
 	ctx := context.NewContext("tester")
 
-	req := domain.NewRequest("_test_headers_001", domain.GET, "http://example.com")
+	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer 123")
 
@@ -93,7 +95,7 @@ func TestToCurlWithContext_WithHeaders(t *testing.T) {
 func TestToCurlWithContext_HeadersDisabled(t *testing.T) {
 	ctx := context.NewContext("tester")
 
-	req := domain.NewRequest("_test_headers_002", domain.GET, "http://example.com")
+	req := action.NewRequest("_test_headers_002", domain.GET, "http://example.com")
 	req.Header.AddStatus("Authorization", "Bearer 123", false)
 
 	curl, err := formatter.ToCurlWithContext(ctx, req, true)
@@ -111,7 +113,7 @@ func TestToCurlWithContext_HeadersDisabled(t *testing.T) {
 func TestToCurlWithContext_WithCookies(t *testing.T) {
 	ctx := context.NewContext("tester")
 
-	req := domain.NewRequest("_test_headers_001", domain.GET, "http://example.com")
+	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
 	req.Cookie.Put("sessionid", "123abc")
 	req.Cookie.Put("theme", "marinego")
 
@@ -131,7 +133,7 @@ func TestToCurlWithContext_WithCookies(t *testing.T) {
 func TestToCurlWithContext_WithDisabledCookies(t *testing.T) {
 	ctx := context.NewContext("tester")
 
-	req := domain.NewRequest("_test_headers_001", domain.GET, "http://example.com")
+	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
 	req.Cookie.PutStatus("sessionid", "123abc", false)
 
 	curl, err := formatter.ToCurlWithContext(ctx, req, true)
@@ -149,7 +151,7 @@ func TestToCurlWithContext_WithDisabledCookies(t *testing.T) {
 func TestToCurlWithContext_WithBasicAuth(t *testing.T) {
 	ctx := context.NewContext("tester")
 
-	req := domain.NewRequest("_test_headers_001", domain.GET, "http://example.com")
+	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
 
 	req.Auth.Status = true
 	req.Auth.PutAuth(*auth_strategy.BasicAuth(true, "username", "123"))
@@ -169,7 +171,7 @@ func TestToCurlWithContext_WithBasicAuth(t *testing.T) {
 func TestToCurlWithContext_WithBearerAuth(t *testing.T) {
 	ctx := context.NewContext("tester")
 
-	req := domain.NewRequest("_test_headers_001", domain.GET, "http://example.com")
+	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
 
 	req.Auth.Status = true
 	req.Auth.PutAuth(*auth_strategy.BearerAuth(true, "Bearer", "123"))
@@ -189,7 +191,7 @@ func TestToCurlWithContext_WithBearerAuth(t *testing.T) {
 func TestToCurlWithContext_WithDisabledAuth(t *testing.T) {
 	ctx := context.NewContext("tester")
 
-	req := domain.NewRequest("_test_headers_001", domain.GET, "http://example.com")
+	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
 
 	req.Auth.Status = true
 	req.Auth.PutAuth(*auth_strategy.BearerAuth(false, "Bearer", "123"))
@@ -209,10 +211,10 @@ func TestToCurlWithContext_WithDisabledAuth(t *testing.T) {
 func TestToCurlWithContext_WithDocumentBody(t *testing.T) {
 	ctx := context.NewContext("tester")
 
-	req := domain.NewRequest("_test_headers_001", domain.GET, "http://example.com")
+	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
 
 	req.Body.Status = true
-	req.Body = *body.DocumentBody(true, body.Json, `{"id": 001, "user": "username"}`)
+	req.Body = *body_strategy.DocumentBody(true, body.Json, `{"id": 001, "user": "username"}`)
 
 	curl, err := formatter.ToCurlWithContext(ctx, req, true)
 
@@ -229,10 +231,10 @@ func TestToCurlWithContext_WithDocumentBody(t *testing.T) {
 func TestToCurlWithContext_WithDisabledDocumentBody(t *testing.T) {
 	ctx := context.NewContext("tester")
 
-	req := domain.NewRequest("_test_headers_001", domain.GET, "http://example.com")
+	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
 
 	req.Body.Status = true
-	req.Body = *body.DocumentBody(false, body.Json, `{"id": 001, "user": "username"}`)
+	req.Body = *body_strategy.DocumentBody(false, body.Json, `{"id": 001, "user": "username"}`)
 
 	curl, err := formatter.ToCurlWithContext(ctx, req, true)
 
@@ -249,9 +251,9 @@ func TestToCurlWithContext_WithDisabledDocumentBody(t *testing.T) {
 func TestToCurlWithContext_WithFormDataBody(t *testing.T) {
 	ctx := context.NewContext("tester")
 
-	req := domain.NewRequest("_test_headers_001", domain.GET, "http://example.com")
+	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
 
-	builder := body.NewBuilderFromDataBody()
+	builder := body_strategy.NewBuilderFromDataBody()
 	builder.Add("user", body.NewParameter(0, true, "username"))
 	builder.Add("id", body.NewParameter(0, true, "001"))
 
@@ -261,7 +263,7 @@ func TestToCurlWithContext_WithFormDataBody(t *testing.T) {
 	builder.Add(fileKey, body.NewFileParameter(0, true, "logs", fileName, base64))
 
 	req.Body.Status = true
-	req.Body = *body.FormDataBody(true, body.Form, builder)
+	req.Body = *body_strategy.FormDataBody(true, body.Form, builder)
 
 	curl, err := formatter.ToCurlWithContext(ctx, req, true)
 
@@ -288,13 +290,13 @@ func TestToCurlWithContext_WithFormDataBody(t *testing.T) {
 func TestToCurlWithContext_WithDisabledFormDataBody(t *testing.T) {
 	ctx := context.NewContext("tester")
 
-	req := domain.NewRequest("_test_headers_001", domain.GET, "http://example.com")
+	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
 
-	builder := body.NewBuilderFromDataBody()
+	builder := body_strategy.NewBuilderFromDataBody()
 	builder.Add("user", body.NewParameter(0, false, "username"))
 
 	req.Body.Status = true
-	req.Body = *body.FormDataBody(true, body.Form, builder)
+	req.Body = *body_strategy.FormDataBody(true, body.Form, builder)
 
 	curl, err := formatter.ToCurlWithContext(ctx, req, true)
 
@@ -311,7 +313,7 @@ func TestToCurlWithContext_WithDisabledFormDataBody(t *testing.T) {
 func TestToCurlWithContext_InlineVsMultiline(t *testing.T) {
 	ctx := context.NewContext("tester")
 
-	req := domain.NewRequest("_test_005", domain.POST, "http://api.test")
+	req := action.NewRequest("_test_005", domain.POST, "http://api.test")
 	req.Header.Add("Content-Type", "application/json")
 
 	curlMulti, err := formatter.ToCurlWithContext(ctx, req, false)

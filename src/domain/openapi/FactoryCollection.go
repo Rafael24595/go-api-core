@@ -9,13 +9,16 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-api-core/src/domain"
-	"github.com/Rafael24595/go-api-core/src/domain/auth"
-	auth_strategy "github.com/Rafael24595/go-api-core/src/domain/auth/strategy"
-	"github.com/Rafael24595/go-api-core/src/domain/body"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
+	"github.com/Rafael24595/go-api-core/src/domain/action/auth"
+	auth_strategy "github.com/Rafael24595/go-api-core/src/domain/action/auth/strategy"
+	"github.com/Rafael24595/go-api-core/src/domain/action/body"
+	body_strategy "github.com/Rafael24595/go-api-core/src/domain/action/body/strategy"
+	"github.com/Rafael24595/go-api-core/src/domain/action/cookie"
+	"github.com/Rafael24595/go-api-core/src/domain/action/header"
+	"github.com/Rafael24595/go-api-core/src/domain/action/query"
+	"github.com/Rafael24595/go-api-core/src/domain/collection"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
-	"github.com/Rafael24595/go-api-core/src/domain/cookie"
-	"github.com/Rafael24595/go-api-core/src/domain/header"
-	"github.com/Rafael24595/go-api-core/src/domain/query"
 )
 
 type FactoryCollection struct {
@@ -44,11 +47,11 @@ func (b *FactoryCollection) SetRaw(raw map[string]any) *FactoryCollection {
 	return b
 }
 
-func (b *FactoryCollection) Make() (*domain.Collection, *context.Context, []domain.Request, error) {
+func (b *FactoryCollection) Make() (*collection.Collection, *context.Context, []action.Request, error) {
 	now := time.Now().UnixMilli()
 
 	ctx := context.NewContext(b.owner)
-	nodes := make([]domain.Request, 0)
+	nodes := make([]action.Request, 0)
 
 	server := ""
 	for i, v := range b.openapi.Servers {
@@ -57,7 +60,7 @@ func (b *FactoryCollection) Make() (*domain.Collection, *context.Context, []doma
 		server = fmt.Sprintf("${%s}", key)
 	}
 
-	var node *domain.Request
+	var node *action.Request
 	for path, v := range b.openapi.Paths {
 		pathFull := fmt.Sprintf("%s%s", server, path)
 		if operation := v.Get; operation != nil {
@@ -78,7 +81,7 @@ func (b *FactoryCollection) Make() (*domain.Collection, *context.Context, []doma
 		}
 	}
 
-	return &domain.Collection{
+	return &collection.Collection{
 		Id:        "",
 		Name:      fmt.Sprintf("%s-%s", b.openapi.Info.Title, b.openapi.Info.Version),
 		Timestamp: now,
@@ -86,11 +89,11 @@ func (b *FactoryCollection) Make() (*domain.Collection, *context.Context, []doma
 		Nodes:     make([]domain.NodeReference, 0),
 		Owner:     b.owner,
 		Modified:  now,
-		Status:    domain.FREE,
+		Status:    collection.FREE,
 	}, ctx, nodes, nil
 }
 
-func (b *FactoryCollection) MakeFromOperation(method domain.HttpMethod, path string, operation *Operation, ctx *context.Context) (*context.Context, *domain.Request) {
+func (b *FactoryCollection) MakeFromOperation(method domain.HttpMethod, path string, operation *Operation, ctx *context.Context) (*context.Context, *action.Request) {
 	now := time.Now().UnixMilli()
 
 	name := path
@@ -102,7 +105,7 @@ func (b *FactoryCollection) MakeFromOperation(method domain.HttpMethod, path str
 	payload := b.MakeFromRequestBody(operation.RequestBody)
 	auth := b.MakeFromSecurity(operation.Security, headers)
 
-	return ctx, &domain.Request{
+	return ctx, &action.Request{
 		Id:        "",
 		Timestamp: now,
 		Name:      name,
@@ -115,7 +118,7 @@ func (b *FactoryCollection) MakeFromOperation(method domain.HttpMethod, path str
 		Auth:      *auth,
 		Owner:     b.owner,
 		Modified:  now,
-		Status:    domain.GROUP,
+		Status:    action.GROUP,
 	}
 }
 
@@ -201,14 +204,14 @@ func (b *FactoryCollection) fromExample(content string, schema *Schema) *body.Bo
 	}
 
 	if bodyType != body.Form {
-		return body.DocumentBody(false, bodyType, string(example))
+		return body_strategy.DocumentBody(false, bodyType, string(example))
 	}
 
 	return body.EmptyBody(false, bodyType)
 }
 
 func (b *FactoryCollection) toFormData(parameters map[string]BuildParameter) *body.BodyRequest {
-	builder := body.NewBuilderFromDataBody()
+	builder := body_strategy.NewBuilderFromDataBody()
 
 	count := int64(0)
 	for k, v := range parameters {
@@ -222,16 +225,16 @@ func (b *FactoryCollection) toFormData(parameters map[string]BuildParameter) *bo
 		}
 
 		builder.Add(k, parameter)
-		
+
 		count++
 	}
 
-	return body.FormDataBody(false, body.Form, builder)
+	return body_strategy.FormDataBody(false, body.Form, builder)
 }
 
 func (b *FactoryCollection) toDocument(content string, schema *Schema, parameters map[string]BuildParameter) *body.BodyRequest {
 	payload, contenType := b.formatDocument(content, schema, parameters)
-	return body.DocumentBody(false, contenType, payload)
+	return body_strategy.DocumentBody(false, contenType, payload)
 }
 
 func (b *FactoryCollection) formatDocument(content string, schema *Schema, parameters map[string]BuildParameter) (string, body.ContentType) {
@@ -412,11 +415,11 @@ func (b *FactoryCollection) MakeFromSecurity(security []SecurityRequirement, que
 
 			switch schema.Scheme {
 			case "basic":
-				auths.PutAuth(*auth_strategy.BasicAuth(true, 
-					auth_strategy.BASIC_PARAM_USER, 
+				auths.PutAuth(*auth_strategy.BasicAuth(true,
+					auth_strategy.BASIC_PARAM_USER,
 					auth_strategy.BASIC_PARAM_PASSWORD))
 			case "bearer":
-				auths.PutAuth(*auth_strategy.BearerAuth(true, 
+				auths.PutAuth(*auth_strategy.BearerAuth(true,
 					schema.BearerFormat,
 					auth_strategy.BEARER_PARAM_TOKEN))
 			}

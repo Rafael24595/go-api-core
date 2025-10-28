@@ -7,6 +7,8 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
+	"github.com/Rafael24595/go-api-core/src/domain/collection"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/domain/openapi"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
@@ -27,7 +29,7 @@ func NewManagerCollection(collection IRepositoryCollection, managerContext *Mana
 	}
 }
 
-func (m *ManagerCollection) Find(owner string, id string) (*domain.Collection, bool) {
+func (m *ManagerCollection) Find(owner string, id string) (*collection.Collection, bool) {
 	collection, exists := m.collection.Find(id)
 	if !exists || collection.Owner != owner {
 		return nil, false
@@ -46,11 +48,11 @@ func (m *ManagerCollection) FindDto(owner string, id string) (*dto.DtoCollection
 	if context == nil {
 		return nil, false
 	}
-	
+
 	dtoContext := dto.FromContext(context)
 
 	dtoCollection := dto.FromCollection(collection, dtoContext, requests)
-	
+
 	return dtoCollection, dtoCollection != nil
 }
 
@@ -62,7 +64,7 @@ func (m *ManagerCollection) FindDtoLite(owner string, id string) (*dto.DtoLiteCo
 	return m.makeLiteCollection(owner, *collection), false
 }
 
-func (m *ManagerCollection) FindLiteRequestNodes(owner string, collection *domain.Collection) []dto.DtoLiteNodeRequest {
+func (m *ManagerCollection) FindLiteRequestNodes(owner string, collection *collection.Collection) []dto.DtoLiteNodeRequest {
 	if collection.Owner != owner {
 		return make([]dto.DtoLiteNodeRequest, 0)
 	}
@@ -106,7 +108,7 @@ func (m *ManagerCollection) FindLiteCollectionNodes(owner string, nodes []domain
 	return dtos
 }
 
-func (m *ManagerCollection) makeLiteCollection(owner string, collection domain.Collection) *dto.DtoLiteCollection {
+func (m *ManagerCollection) makeLiteCollection(owner string, collection collection.Collection) *dto.DtoLiteCollection {
 	if collection.Owner != owner {
 		return nil
 	}
@@ -122,7 +124,7 @@ func (m *ManagerCollection) makeLiteCollection(owner string, collection domain.C
 	return dto.ToLiteCollection(&collection, dtoContext, requests)
 }
 
-func (m *ManagerCollection) Insert(owner string, collection *domain.Collection) *domain.Collection {
+func (m *ManagerCollection) Insert(owner string, collection *collection.Collection) *collection.Collection {
 	if m.isNotOwner(owner, collection) {
 		return nil
 	}
@@ -144,7 +146,7 @@ func (m *ManagerCollection) Insert(owner string, collection *domain.Collection) 
 	return m.collection.Insert(owner, collection)
 }
 
-func (m *ManagerCollection) CollectRequest(owner string, payload PayloadCollectRequest) (*domain.Collection, *domain.Request) {
+func (m *ManagerCollection) CollectRequest(owner string, payload PayloadCollectRequest) (*collection.Collection, *action.Request) {
 	request := &payload.Request
 	if request.Owner != owner {
 		return nil, nil
@@ -152,7 +154,7 @@ func (m *ManagerCollection) CollectRequest(owner string, payload PayloadCollectR
 
 	target, exists := m.collection.Find(payload.TargetId)
 	if !exists {
-		target = domain.NewFreeCollection(owner)
+		target = collection.NewFreeCollection(owner)
 		target.Name = payload.TargetName
 		target = m.Insert(owner, target)
 	}
@@ -161,7 +163,7 @@ func (m *ManagerCollection) CollectRequest(owner string, payload PayloadCollectR
 		return nil, nil
 	}
 
-	if payload.Movement == MOVE && request.Status != domain.DRAFT {
+	if payload.Movement == MOVE && request.Status != action.DRAFT {
 		result, isOwner := m.moveRequest(owner, payload, request)
 		if !isOwner {
 			return nil, nil
@@ -172,13 +174,13 @@ func (m *ManagerCollection) CollectRequest(owner string, payload PayloadCollectR
 	request.Id = ""
 
 	request.Name = payload.RequestName
-	request.Status = *domain.StatusCollectionToStatusRequest(&target.Status)
+	request.Status = *collection.StatusCollectionToStatusRequest(&target.Status)
 	request = m.managerRequest.InsertRequest(owner, request)
 
 	return m.collection.PushToCollection(owner, target, request)
 }
 
-func (m *ManagerCollection) moveRequest(owner string, payload PayloadCollectRequest, request *domain.Request) (*domain.Request, bool) {
+func (m *ManagerCollection) moveRequest(owner string, payload PayloadCollectRequest, request *action.Request) (*action.Request, bool) {
 	if source, exists := m.collection.Find(payload.SourceId); exists {
 		if source.Owner != owner {
 			return request, false
@@ -195,7 +197,7 @@ func (m *ManagerCollection) moveRequest(owner string, payload PayloadCollectRequ
 	return request, true
 }
 
-func (m *ManagerCollection) ImportOpenApi(owner string, file []byte) (*domain.Collection, error) {
+func (m *ManagerCollection) ImportOpenApi(owner string, file []byte) (*collection.Collection, error) {
 	oapi, raw, err := openapi.MakeFromJson(file)
 	if err != nil {
 		oapi, raw, err = openapi.MakeFromYaml(file)
@@ -204,7 +206,7 @@ func (m *ManagerCollection) ImportOpenApi(owner string, file []byte) (*domain.Co
 			return nil, err
 		}
 	}
-	
+
 	version, err := utils.ParseVersion(oapi.OpenAPI)
 	if err != nil {
 		return nil, err
@@ -215,7 +217,6 @@ func (m *ManagerCollection) ImportOpenApi(owner string, file []byte) (*domain.Co
 		err = fmt.Errorf("the provided file has an invalid version '%s'; it must be 3.0.0 or higher", oapi.Info.Version)
 		return nil, err
 	}
-	
 
 	collection, ctx, requests, err := openapi.NewFactoryCollection(owner, oapi).SetRaw(*raw).Make()
 	if err != nil {
@@ -225,8 +226,8 @@ func (m *ManagerCollection) ImportOpenApi(owner string, file []byte) (*domain.Co
 	return m.insertResources(owner, collection, ctx, requests)
 }
 
-func (m *ManagerCollection) ImportDtoCollections(owner string, dtos ...dto.DtoCollection) ([]domain.Collection, error) {
-	collections := make([]domain.Collection, len(dtos))
+func (m *ManagerCollection) ImportDtoCollections(owner string, dtos ...dto.DtoCollection) ([]collection.Collection, error) {
+	collections := make([]collection.Collection, len(dtos))
 
 	for i, v := range dtos {
 		requests := m.dtoNodeRequestToRequest(v.Nodes)
@@ -236,20 +237,20 @@ func (m *ManagerCollection) ImportDtoCollections(owner string, dtos ...dto.DtoCo
 
 		v.Id = ""
 		v.Nodes = make([]dto.DtoNodeRequest, 0)
-		collection := dto.ToCollection(&v)
+		coll := dto.ToCollection(&v)
 
-		collection, err := m.insertResources(owner, collection, ctx, requests)
+		coll, err := m.insertResources(owner, coll, ctx, requests)
 		if err != nil {
-			return make([]domain.Collection, 0), err
+			return make([]collection.Collection, 0), err
 		}
 
-		collections[i] = *collection
+		collections[i] = *coll
 	}
 
 	return collections, nil
 }
 
-func (m *ManagerCollection) ImportDtoRequestsById(owner string, id string, dtos ...dto.DtoRequest) *domain.Collection {
+func (m *ManagerCollection) ImportDtoRequestsById(owner string, id string, dtos ...dto.DtoRequest) *collection.Collection {
 	collection, exists := m.collection.Find(id)
 	if !exists {
 		return nil
@@ -257,19 +258,19 @@ func (m *ManagerCollection) ImportDtoRequestsById(owner string, id string, dtos 
 	return m.ImportDtoRequests(owner, collection, dtos)
 }
 
-func (m *ManagerCollection) ImportDtoRequests(owner string, collection *domain.Collection, dtos []dto.DtoRequest) *domain.Collection {
-	if collection.Owner != owner {
+func (m *ManagerCollection) ImportDtoRequests(owner string, coll *collection.Collection, dtos []dto.DtoRequest) *collection.Collection {
+	if coll.Owner != owner {
 		return nil
 	}
 
 	m.mu.Lock()
 
 	if len(dtos) == 0 {
-		return collection
+		return coll
 	}
 
-	requestStatus := domain.StatusCollectionToStatusRequest(&collection.Status)
-	requests := make([]domain.Request, len(dtos))
+	requestStatus := collection.StatusCollectionToStatusRequest(&coll.Status)
+	requests := make([]action.Request, len(dtos))
 	for i, v := range dtos {
 		v.Id = ""
 		v.Status = *requestStatus
@@ -278,9 +279,9 @@ func (m *ManagerCollection) ImportDtoRequests(owner string, collection *domain.C
 
 	requests = m.managerRequest.InsertManyRequest(owner, requests)
 
-	len := len(collection.Nodes)
+	len := len(coll.Nodes)
 	for i, v := range requests {
-		collection.Nodes = append(collection.Nodes, domain.NodeReference{
+		coll.Nodes = append(coll.Nodes, domain.NodeReference{
 			Order: len + i,
 			Item:  v.Id,
 		})
@@ -288,20 +289,20 @@ func (m *ManagerCollection) ImportDtoRequests(owner string, collection *domain.C
 
 	m.mu.Unlock()
 
-	return m.Insert(owner, collection)
+	return m.Insert(owner, coll)
 }
 
-func (m *ManagerCollection) insertResources(owner string, collection *domain.Collection, ctx *context.Context, requests []domain.Request) (*domain.Collection, error) {
+func (m *ManagerCollection) insertResources(owner string, coll *collection.Collection, ctx *context.Context, requests []action.Request) (*collection.Collection, error) {
 	m.mu.Lock()
 
-	collection = m.collection.Insert(owner, collection)
+	coll = m.collection.Insert(owner, coll)
 
-	ctx = m.managerContext.Insert(owner, collection, ctx)
-	collection.Context = ctx.Id
+	ctx = m.managerContext.Insert(owner, coll, ctx)
+	coll.Context = ctx.Id
 
-	collection = m.collection.Insert(owner, collection)
+	coll = m.collection.Insert(owner, coll)
 
-	requestStatus := domain.StatusCollectionToStatusRequest(&collection.Status)
+	requestStatus := collection.StatusCollectionToStatusRequest(&coll.Status)
 	for i := range requests {
 		requests[i].Status = *requestStatus
 	}
@@ -312,15 +313,15 @@ func (m *ManagerCollection) insertResources(owner string, collection *domain.Col
 			Order: i,
 			Item:  v.Id,
 		}
-		collection.Nodes = append(collection.Nodes, node)
+		coll.Nodes = append(coll.Nodes, node)
 	}
 
 	m.mu.Unlock()
 
-	return m.Insert(owner, collection), nil
+	return m.Insert(owner, coll), nil
 }
 
-func (m *ManagerCollection) ResolveRequestReferences(owner string, collection *domain.Collection, requests ...domain.Request) *domain.Collection {
+func (m *ManagerCollection) ResolveRequestReferences(owner string, collection *collection.Collection, requests ...action.Request) *collection.Collection {
 	if collection.Owner != owner {
 		return nil
 	}
@@ -344,7 +345,7 @@ func (m *ManagerCollection) ResolveRequestReferences(owner string, collection *d
 	return m.Insert(owner, collection)
 }
 
-func (m *ManagerCollection) MoveRequestBetweenCollectionsById(owner, sourceId, targetId, requestId string, movement Movement) (*domain.Collection, *domain.Collection, *domain.Request) {
+func (m *ManagerCollection) MoveRequestBetweenCollectionsById(owner, sourceId, targetId, requestId string, movement Movement) (*collection.Collection, *collection.Collection, *action.Request) {
 	source, exists := m.collection.Find(sourceId)
 	if !exists {
 		return nil, nil, nil
@@ -358,7 +359,7 @@ func (m *ManagerCollection) MoveRequestBetweenCollectionsById(owner, sourceId, t
 	return m.MoveRequestBetweenCollections(owner, source, target, requestId, movement)
 }
 
-func (m *ManagerCollection) MoveRequestBetweenCollections(owner string, source, target *domain.Collection, requestId string, movement Movement) (*domain.Collection, *domain.Collection, *domain.Request) {
+func (m *ManagerCollection) MoveRequestBetweenCollections(owner string, source, target *collection.Collection, requestId string, movement Movement) (*collection.Collection, *collection.Collection, *action.Request) {
 	if source.Owner != owner || target.Owner != owner {
 		return nil, nil, nil
 	}
@@ -375,7 +376,7 @@ func (m *ManagerCollection) MoveRequestBetweenCollections(owner string, source, 
 		return nil, nil, nil
 	}
 
-	requestStatus := domain.StatusCollectionToStatusRequest(&target.Status)
+	requestStatus := collection.StatusCollectionToStatusRequest(&target.Status)
 	if request.Status != *requestStatus {
 		request.Status = *requestStatus
 		request = m.managerRequest.InsertRequest(owner, request)
@@ -385,7 +386,7 @@ func (m *ManagerCollection) MoveRequestBetweenCollections(owner string, source, 
 	return source, target, request
 }
 
-func (m *ManagerCollection) SortCollectionRequestById(owner string, id string, payload PayloadSortNodes) *domain.Collection {
+func (m *ManagerCollection) SortCollectionRequestById(owner string, id string, payload PayloadSortNodes) *collection.Collection {
 	collection, exists := m.collection.Find(id)
 	if !exists {
 		return nil
@@ -393,7 +394,7 @@ func (m *ManagerCollection) SortCollectionRequestById(owner string, id string, p
 	return m.SortCollectionRequest(owner, collection, payload)
 }
 
-func (m *ManagerCollection) SortCollectionRequest(owner string, collection *domain.Collection, payload PayloadSortNodes) *domain.Collection {
+func (m *ManagerCollection) SortCollectionRequest(owner string, collection *collection.Collection, payload PayloadSortNodes) *collection.Collection {
 	if collection.Owner != owner {
 		return nil
 	}
@@ -421,18 +422,18 @@ func (m *ManagerCollection) SortCollectionRequest(owner string, collection *doma
 	return collection
 }
 
-func (m *ManagerCollection) CloneCollection(owner, id, name string) *domain.Collection {
-	collection, exists := m.collection.Find(id)
-	if !exists || collection.Owner != owner {
+func (m *ManagerCollection) CloneCollection(owner, id, name string) *collection.Collection {
+	coll, exists := m.collection.Find(id)
+	if !exists || coll.Owner != owner {
 		return nil
 	}
 
 	m.mu.Lock()
 
-	requestStatus := *domain.StatusCollectionToStatusRequest(&collection.Status)
+	requestStatus := *collection.StatusCollectionToStatusRequest(&coll.Status)
 
-	nodeRequests := m.managerRequest.FindRequests(owner, collection.Nodes)
-	requests := make([]domain.Request, len(nodeRequests))
+	nodeRequests := m.managerRequest.FindRequests(owner, coll.Nodes)
+	requests := make([]action.Request, len(nodeRequests))
 	for i, v := range nodeRequests {
 		v.Id = ""
 		v.Status = requestStatus
@@ -448,25 +449,25 @@ func (m *ManagerCollection) CloneCollection(owner, id, name string) *domain.Coll
 		})
 	}
 
-	if context, exists := m.managerContext.Find(owner, collection.Context); exists {
+	if context, exists := m.managerContext.Find(owner, coll.Context); exists {
 		context.Id = ""
-		context = m.managerContext.Insert(owner, collection, context)
-		collection.Context = context.Id
+		context = m.managerContext.Insert(owner, coll, context)
+		coll.Context = context.Id
 	} else {
-		collection.Context = ""
+		coll.Context = ""
 	}
 
-	collection.Id = ""
-	collection.Name = name
-	collection.Nodes = nodes
-	collection.Timestamp = 0
+	coll.Id = ""
+	coll.Name = name
+	coll.Nodes = nodes
+	coll.Timestamp = 0
 
 	m.mu.Unlock()
 
-	return m.Insert(owner, collection)
+	return m.Insert(owner, coll)
 }
 
-func (m *ManagerCollection) Delete(owner, id string) *domain.Collection {
+func (m *ManagerCollection) Delete(owner, id string) *collection.Collection {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -489,7 +490,7 @@ func (m *ManagerCollection) Delete(owner, id string) *domain.Collection {
 	return m.collection.Delete(collection)
 }
 
-func (m *ManagerCollection) DeleteRequestFromCollectionById(owner string, collectionId string, requestId string) (*domain.Collection, *domain.Request, *domain.Response) {
+func (m *ManagerCollection) DeleteRequestFromCollectionById(owner string, collectionId string, requestId string) (*collection.Collection, *action.Request, *action.Response) {
 	collection, exists := m.collection.Find(collectionId)
 	if !exists {
 		return nil, nil, nil
@@ -497,7 +498,7 @@ func (m *ManagerCollection) DeleteRequestFromCollectionById(owner string, collec
 	return m.DeleteRequestFromCollection(owner, collection, requestId)
 }
 
-func (m *ManagerCollection) DeleteRequestFromCollection(owner string, collection *domain.Collection, requestId string) (*domain.Collection, *domain.Request, *domain.Response) {
+func (m *ManagerCollection) DeleteRequestFromCollection(owner string, collection *collection.Collection, requestId string) (*collection.Collection, *action.Request, *action.Response) {
 	if collection.Owner != owner {
 		return nil, nil, nil
 	}
@@ -517,8 +518,8 @@ func (m *ManagerCollection) DeleteRequestFromCollection(owner string, collection
 	return collection, request, response
 }
 
-func (m *ManagerCollection) dtoNodeRequestToRequest(dtos []dto.DtoNodeRequest) []domain.Request {
-	requests := make([]domain.Request, len(dtos))
+func (m *ManagerCollection) dtoNodeRequestToRequest(dtos []dto.DtoNodeRequest) []action.Request {
+	requests := make([]action.Request, len(dtos))
 
 	for i, v := range dtos {
 		v.Request.Id = ""
@@ -528,11 +529,11 @@ func (m *ManagerCollection) dtoNodeRequestToRequest(dtos []dto.DtoNodeRequest) [
 	return requests
 }
 
-func (m *ManagerCollection) isNotOwner(owner string, collection *domain.Collection) bool {
+func (m *ManagerCollection) isNotOwner(owner string, collection *collection.Collection) bool {
 	return !m.isOwner(owner, collection)
 }
 
-func (m *ManagerCollection) isOwner(owner string, collection *domain.Collection) bool {
+func (m *ManagerCollection) isOwner(owner string, collection *collection.Collection) bool {
 	if collection == nil {
 		return false
 	}

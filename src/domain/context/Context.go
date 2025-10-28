@@ -6,12 +6,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Rafael24595/go-api-core/src/domain"
-	"github.com/Rafael24595/go-api-core/src/domain/auth"
-	"github.com/Rafael24595/go-api-core/src/domain/body"
-	"github.com/Rafael24595/go-api-core/src/domain/cookie"
-	"github.com/Rafael24595/go-api-core/src/domain/header"
-	"github.com/Rafael24595/go-api-core/src/domain/query"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
+	"github.com/Rafael24595/go-api-core/src/domain/action/auth"
+	"github.com/Rafael24595/go-api-core/src/domain/action/body"
+	"github.com/Rafael24595/go-api-core/src/domain/action/cookie"
+	"github.com/Rafael24595/go-api-core/src/domain/action/header"
+	"github.com/Rafael24595/go-api-core/src/domain/action/query"
 	"github.com/Rafael24595/go-collections/collection"
 )
 
@@ -122,12 +122,12 @@ func (c Context) IdentifyVariables(category, source string) []collection.Pair[st
 	return results.Values()
 }
 
-func ProcessRequest(request *domain.Request, context *Context) *domain.Request {
+func ProcessRequest(request *action.Request, context *Context) *action.Request {
 	if !context.Status {
 		return request
 	}
 
-	return &domain.Request{
+	return &action.Request{
 		Id:        request.Id,
 		Timestamp: request.Timestamp,
 		Name:      request.Name,

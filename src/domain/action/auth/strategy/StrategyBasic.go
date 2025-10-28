@@ -4,8 +4,8 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/Rafael24595/go-api-core/src/domain"
-	"github.com/Rafael24595/go-api-core/src/domain/auth"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
+	"github.com/Rafael24595/go-api-core/src/domain/action/auth"
 )
 
 const (
@@ -20,7 +20,7 @@ func BasicAuth(status bool, user, pass string) *auth.Auth {
 	})
 }
 
-func applyBasicAuth(a auth.Auth, r *domain.Request) *domain.Request {
+func applyBasicAuth(a auth.Auth, r *action.Request) *action.Request {
 	user := ""
 	if pUser, ok := a.Parameters[BASIC_PARAM_USER]; ok {
 		user = pUser

@@ -1,8 +1,6 @@
 package dto
 
-import (
-	"github.com/Rafael24595/go-api-core/src/domain/body"
-)
+import "github.com/Rafael24595/go-api-core/src/domain/action/body"
 
 type DtoBody struct {
 	Status      bool                                       `json:"status"`

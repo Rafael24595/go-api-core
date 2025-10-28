@@ -1,9 +1,9 @@
-package domain
+package action
 
 import (
-	"github.com/Rafael24595/go-api-core/src/domain/body"
-	"github.com/Rafael24595/go-api-core/src/domain/cookie"
-	"github.com/Rafael24595/go-api-core/src/domain/header"
+	"github.com/Rafael24595/go-api-core/src/domain/action/body"
+	"github.com/Rafael24595/go-api-core/src/domain/action/cookie"
+	"github.com/Rafael24595/go-api-core/src/domain/action/header"
 )
 
 type Response struct {

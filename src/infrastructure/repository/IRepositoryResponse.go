@@ -1,13 +1,11 @@
 package repository
 
-import (
-	"github.com/Rafael24595/go-api-core/src/domain"
-)
+import "github.com/Rafael24595/go-api-core/src/domain/action"
 
 type IRepositoryResponse interface {
-	Find(key string) (*domain.Response, bool)
-	FindMany(ids []string) []domain.Response
-	Insert(owner string, response *domain.Response) *domain.Response
-	Delete(response *domain.Response) *domain.Response 
-	DeleteMany(responses ...domain.Response) []domain.Response
+	Find(key string) (*action.Response, bool)
+	FindMany(ids []string) []action.Response
+	Insert(owner string, response *action.Response) *action.Response
+	Delete(response *action.Response) *action.Response
+	DeleteMany(responses ...action.Response) []action.Response
 }

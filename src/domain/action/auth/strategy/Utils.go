@@ -1,11 +1,11 @@
 package auth_strategy
 
 import (
-	"github.com/Rafael24595/go-api-core/src/domain"
-	"github.com/Rafael24595/go-api-core/src/domain/auth"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
+	"github.com/Rafael24595/go-api-core/src/domain/action/auth"
 )
 
-func ApplyAuth(req *domain.Request) *domain.Request {
+func ApplyAuth(req *action.Request) *action.Request {
 	if !req.Auth.Status {
 		return req
 	}
@@ -21,7 +21,7 @@ func ApplyAuth(req *domain.Request) *domain.Request {
 	return req
 }
 
-func LoadStrategy(typ auth.Type) func(a auth.Auth, r *domain.Request) *domain.Request {
+func LoadStrategy(typ auth.Type) func(a auth.Auth, r *action.Request) *action.Request {
 	switch typ {
 	case auth.Basic:
 		return applyBasicAuth
