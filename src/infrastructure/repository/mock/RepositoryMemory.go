@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Rafael24595/go-api-core/src/commons/log"
+	"github.com/Rafael24595/go-api-core/src/domain"
 	mock_domain "github.com/Rafael24595/go-api-core/src/domain/mock"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
@@ -34,6 +35,14 @@ func (r *RepositoryMemory) Find(id string) (*mock_domain.EndPoint, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 	return r.collection.Get(id)
+}
+
+func (r *RepositoryMemory) FindByRequest(owner string, method domain.HttpMethod, path string) (*mock_domain.EndPoint, bool) {
+	r.muMemory.RLock()
+	defer r.muMemory.RUnlock()
+	return r.collection.FindOne(func(s string, ep mock_domain.EndPoint) bool {
+		return ep.Owner == owner && ep.Method == method && ep.Path == path
+	})
 }
 
 func (r *RepositoryMemory) Insert(owner string, endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {

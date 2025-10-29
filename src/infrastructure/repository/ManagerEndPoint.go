@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"github.com/Rafael24595/go-api-core/src/domain"
 	mock_domain "github.com/Rafael24595/go-api-core/src/domain/mock"
 )
 
@@ -20,6 +21,10 @@ func (m *ManagerEndPoint) Find(owner, id string) (*mock_domain.EndPoint, bool) {
 		return nil, false
 	}
 	return endPoint, ok
+}
+
+func (m *ManagerEndPoint) FindByRequest(owner string, method domain.HttpMethod, path string) (*mock_domain.EndPoint, bool) {
+	return m.endPoint.FindByRequest(owner, method, path)
 }
 
 func (m *ManagerEndPoint) Insert(owner string, endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
