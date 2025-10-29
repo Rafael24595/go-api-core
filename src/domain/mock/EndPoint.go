@@ -1,6 +1,16 @@
 package mock
 
-import "github.com/Rafael24595/go-api-core/src/domain"
+import (
+	"github.com/Rafael24595/go-api-core/src/domain"
+)
+
+var defaultResponse = Response{
+	Status: 200,
+	Headers: map[string]string{
+		"content-type": "plain/text",
+	},
+	Body: "Default response",
+}
 
 type EndPoint struct {
 	Id        string              `json:"id"`
@@ -12,6 +22,10 @@ type EndPoint struct {
 	Responses map[string]Response `json:"responses"`
 	Safe      string              `json:"safe"`
 	Owner     string              `json:"owner"`
+}
+
+func (r EndPoint) DefaultResponse() Response {
+	return defaultResponse
 }
 
 func (r EndPoint) PersistenceId() string {
