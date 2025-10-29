@@ -1,0 +1,26 @@
+{
+    "timestamp": 1761764062906,
+    "lang": [
+        {
+            "code": "golang",
+            "name": "go",
+            "order": 1,
+            "active": true,
+            "rate": 0.15
+        },
+        {
+            "code": "zig-lang",
+            "name": "zig",
+            "order": 2,
+            "active": true,
+            "rate": 0.05
+        },
+        {
+            "code": "rust-lang",
+            "name": "rust",
+            "order": 3,
+            "active": false,
+            "rate": 0.175
+        }
+    ]
+}
