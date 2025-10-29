@@ -257,4 +257,75 @@ func TestFindRequirement_LTE_NotFound(t *testing.T) {
 	}
 }
 
-//TODO: Implement test for $and & $or operators.
+func TestFindRequirement_AND(t *testing.T) {
+	key1 := "payload.json.lang.[0].code.$eq.<golang>.$and.payload.json.lang.[0].order.$eq.<1>"
+
+	keys := []string{key1}
+	payload := support_test.ReadText(t, "../../support/test_source_langs.json")
+	headers := make(map[string]string)
+
+	result, _ := mock.FindRequirement(keys, string(payload), headers)
+
+	expected := key1
+	if result != expected {
+		t.Errorf("Found %#v, but %#v expected", result, expected)
+	}
+}
+
+func TestFindRequirement_AND_Long(t *testing.T) {
+	key1 := "payload.json.lang.[0].code.$eq.<golang>.$and.payload.json.lang.[0].order.$eq.<1>"
+	key1 += ".$and.payload.json.lang.[2].code.$eq.<rust-lang>.$and.payload.json.lang.[2].order.$eq.<3>"
+
+	keys := []string{key1}
+	payload := support_test.ReadText(t, "../../support/test_source_langs.json")
+	headers := make(map[string]string)
+
+	result, _ := mock.FindRequirement(keys, string(payload), headers)
+
+	expected := key1
+	if result != expected {
+		t.Errorf("Found %#v, but %#v expected", result, expected)
+	}
+}
+
+
+func TestFindRequirement_AND_NotFound(t *testing.T) {
+	key1 := "payload.json.lang.[1].code.$eq.<golang>.$and.payload.json.lang.[0].order.$eq.<1>"
+
+	keys := []string{key1}
+	payload := support_test.ReadText(t, "../../support/test_source_langs.json")
+	headers := make(map[string]string)
+
+	result, ok := mock.FindRequirement(keys, string(payload), headers)
+	if ok {
+		t.Errorf("Result found %#v, but nothing expected", result)
+	}
+}
+
+func TestFindRequirement_OR(t *testing.T) {
+	key1 := "payload.json.lang.[2].code.$eq.<rust-lang>.$or.payload.json.lang.[0].order.$eq.<1>"
+
+	keys := []string{key1}
+	payload := support_test.ReadText(t, "../../support/test_source_langs.json")
+	headers := make(map[string]string)
+
+	result, _ := mock.FindRequirement(keys, string(payload), headers)
+
+	expected := key1
+	if result != expected {
+		t.Errorf("Found %#v, but %#v expected", result, expected)
+	}
+}
+
+func TestFindRequirement_OR_NotFound(t *testing.T) {
+	key1 := "payload.json.lang.[1].code.$eq.<rust-lang>.$or.payload.json.lang.[2].order.$eq.<1>"
+
+	keys := []string{key1}
+	payload := support_test.ReadText(t, "../../support/test_source_langs.json")
+	headers := make(map[string]string)
+
+	result, ok := mock.FindRequirement(keys, string(payload), headers)
+	if ok {
+		t.Errorf("Result found %#v, but nothing expected", result)
+	}
+}

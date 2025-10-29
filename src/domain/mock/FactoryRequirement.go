@@ -55,7 +55,16 @@ func (f *factoryRequirement) evalue(req string) bool {
 }
 
 func (f *factoryRequirement) match(fragments *collection.Vector[string]) (any, bool) {
-	root, ok := f.findRoot(fragments)
+	cursor, ok := fragments.Shift()
+	if !ok {
+		return nil, false
+	}
+
+	if raw, ok := f.findRaw(*cursor); ok {
+		return raw, true
+	}
+
+	root, ok := f.findRoot(*cursor, fragments)
 	if !ok {
 		return nil, false
 	}
@@ -291,20 +300,15 @@ func (f *factoryRequirement) findRaw(cursor string) (any, bool) {
 	return matches[1], true
 }
 
-func (f *factoryRequirement) findRoot(fragments *collection.Vector[string]) (any, bool) {
-	root, ok := fragments.Shift()
-	if !ok {
-		return nil, false
-	}
-
-	switch *root {
+func (f *factoryRequirement) findRoot(cursor string, fragments *collection.Vector[string]) (any, bool) {
+	switch cursor {
 	case "header":
 		return f.headers, true
 	case "payload":
 		return f.findPayload(fragments)
+	default:
+		return nil, false
 	}
-
-	return f.findRaw(*root)
 }
 
 func (f *factoryRequirement) findPayload(fragments *collection.Vector[string]) (any, bool) {
