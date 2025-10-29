@@ -21,7 +21,7 @@ import (
 const TEST_OWNER = "anonymoys"
 
 func makeOpenApiArguments(t *testing.T) (*openapi.OpenAPI, *map[string]any) {
-	file, err := os.Open("test_openaoi.yaml")
+	file, err := os.Open("../../support/test_openaoi_002.yaml")
 	if err != nil {
 		t.Error(err)
 	}

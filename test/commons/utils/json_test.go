@@ -11,7 +11,7 @@ import (
 )
 
 func readRaw(t *testing.T) map[string]any {
-	file, err := os.Open("test_openaoi.yaml")
+	file, err := os.Open("../../support/test_openaoi_001.yaml")
 	if err != nil {
 		log.Panic(err)
 	}
