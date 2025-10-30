@@ -1,9 +1,10 @@
-package mock
+package swr
 
 import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"fmt"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -14,33 +15,105 @@ import (
 	"golang.org/x/net/html/charset"
 )
 
-type factoryRequirement struct {
-	cache   map[string]any
-	payload string
-	headers map[string]string
+/*********************************************************************************************
+*                     SWR – The Sequential Waggon Requirement language.                      *
+*   Because writing requirements should feel like driving a train through data structures.   *
+*********************************************************************************************/
+
+const (
+	// EQ represents the equality operator "$eq".
+	EQ  = "$eq"
+	// NE represents the inequality operator "$ne".
+	NE  = "$ne"
+	// GT represents the greater-than operator "$gt".
+	GT  = "$gt"
+	// GTE represents the greater-than-or-equal operator "$gte".
+	GTE = "$gte"
+	// LT represents the less-than operator "$lt".
+	LT  = "$lt"
+	// LTE represents the less-than-or-equal operator "$lte".
+	LTE = "$lte"
+	// AND represents the logical AND operator "$and".
+	AND = "$and"
+	// OR represents the logical OR operator "$or".
+	OR  = "$or"
+)
+
+const (
+	// REGEX_VECTOR_INDEX matches array/vector index expressions like [0], [1], etc.
+	REGEX_VECTOR_INDEX = `^\[([0-9]+)\]$`
+	// REGEX_RAW_VALUE matches raw literal values wrapped in angle brackets like <value>.
+	REGEX_RAW_VALUE    = `^<(.+)>$`
+)
+
+type logger func(string)
+
+func defaltLogger(string) {}
+
+type swrEngine struct {
+	logger    logger
+	cache     map[string]any
+	payload   string
+	arguments map[string]string
 }
 
-func newFactoryRequirement(payload string, headers map[string]string) factoryRequirement {
-	return factoryRequirement{
-		cache:   make(map[string]any),
-		payload: payload,
-		headers: headers,
+func newSwrEngine(payload string, arguments map[string]string) *swrEngine {
+	return &swrEngine{
+		logger:    defaltLogger,
+		cache:     make(map[string]any),
+		payload:   payload,
+		arguments: arguments,
 	}
 }
 
-func FindRequirement(keys []string, payload string, headers map[string]string) (string, bool) {
-	instance := newFactoryRequirement(payload, headers)
-	for _, v := range keys {
-		if instance.evalue(v) {
+// NewEngine returns a new SWR engine initialized with no payload and empty arguments.
+// This function is typically used to build an engine via method chaining.
+func NewEngine() *swrEngine {
+	return newSwrEngine("", make(map[string]string))
+}
+
+// MatchRequirement iterates through a list of requirement expressions (reqs)
+// and evaluates them sequentially against the provided payload and arguments.
+// It returns the first matching requirement and a boolean indicating success.
+func MatchRequirement(reqs []string, payload string, arguments map[string]string) (string, bool) {
+	return newSwrEngine(payload, arguments).Evalue(reqs)
+}
+
+// Payload sets the payload data (as a string) to be evaluated by the engine.
+// It supports JSON, XML, or plain text content.
+func (f *swrEngine) Payload(payload string) *swrEngine {
+	f.payload = payload
+	return f
+}
+
+// Arguments sets the argument map that can be referenced within SWR expressions.
+func (f *swrEngine) Arguments(arguments map[string]string) *swrEngine {
+	f.arguments = arguments
+	return f
+}
+
+// Logger sets a custom logger function for internal debug or error reporting.
+func (f *swrEngine) Logger(logger logger) *swrEngine {
+	f.logger = logger
+	return f
+}
+
+// Evalue sequentially evaluates a list of SWR requirement expressions
+// against the current engine state (payload and arguments).
+// It returns the first expression that successfully matches, along with a boolean
+// indicating whether any requirement was satisfied.
+func (f *swrEngine) Evalue(reqs []string) (string, bool) {
+	for _, v := range reqs {
+		if f.evalue(v) {
 			return v, true
 		}
 	}
 	return "", false
 }
 
-func (f *factoryRequirement) evalue(req string) bool {
+func (f *swrEngine) evalue(req string) bool {
 	fragments := collection.VectorFromList(utils.SplitByRune(req, '.'))
-	result, ok := f.match(fragments)
+	result, ok := f.match(fragments, true)
 	if !ok {
 		return ok
 	}
@@ -54,29 +127,25 @@ func (f *factoryRequirement) evalue(req string) bool {
 	}
 }
 
-func (f *factoryRequirement) match(fragments *collection.Vector[string]) (any, bool) {
-	cursor, ok := fragments.Shift()
-	if !ok {
-		return nil, false
-	}
-
-	if raw, ok := f.findRaw(*cursor); ok {
-		return raw, true
-	}
-
-	root, ok := f.findRoot(*cursor, fragments)
+func (f *swrEngine) match(fragments *collection.Vector[string], isMain bool) (any, bool) {
+	root, ok := f.findRoot(fragments)
 	if !ok {
 		return nil, false
 	}
 
 	target := root
 	for fragments.Size() > 0 {
+		isLogical := f.isNextLogical(fragments)
+		if !isMain && isLogical {
+			return target, true
+		}
+
 		cursor, ok := fragments.Shift()
 		if !ok {
 			return nil, false
 		}
 
-		if strings.HasPrefix(*cursor, "$") {
+		if f.isLogical(*cursor) {
 			target, ok = f.operate(*cursor, target, fragments)
 			if !ok {
 				return nil, false
@@ -98,40 +167,40 @@ func (f *factoryRequirement) match(fragments *collection.Vector[string]) (any, b
 	return target, true
 }
 
-func (f *factoryRequirement) operate(operation string, target any, fragments *collection.Vector[string]) (bool, bool) {
-	source, ok := f.match(fragments)
+func (f *swrEngine) operate(operation string, target any, fragments *collection.Vector[string]) (bool, bool) {
+	source, ok := f.match(fragments, false)
 	if !ok {
 		return false, false
 	}
 
 	switch operation {
-	case "$eq":
-		t := tryToString(target)
-		s := tryToString(source)
+	case EQ:
+		t := f.tryToString(target)
+		s := f.tryToString(source)
 		return eq(t, s), true
-	case "$ne":
-		t := tryToString(target)
-		s := tryToString(source)
+	case NE:
+		t := f.tryToString(target)
+		s := f.tryToString(source)
 		return !eq(t, s), true
-	case "$gt":
-		t := tryToNumeric(target)
-		s := tryToNumeric(source)
+	case GT:
+		t := f.tryToNumeric(target)
+		s := f.tryToNumeric(source)
 		return gt(t, s, false), true
-	case "$gte":
-		t := tryToNumeric(target)
-		s := tryToNumeric(source)
+	case GTE:
+		t := f.tryToNumeric(target)
+		s := f.tryToNumeric(source)
 		return gt(t, s, true), true
-	case "$lt":
-		t := tryToNumeric(target)
-		s := tryToNumeric(source)
+	case LT:
+		t := f.tryToNumeric(target)
+		s := f.tryToNumeric(source)
 		return lt(t, s, false), true
-	case "$lte":
-		t := tryToNumeric(target)
-		s := tryToNumeric(source)
+	case LTE:
+		t := f.tryToNumeric(target)
+		s := f.tryToNumeric(source)
 		return lt(t, s, true), true
-	case "$and":
+	case AND:
 		return and(target, source), true
-	case "$or":
+	case OR:
 		return or(target, source), true
 	}
 
@@ -243,8 +312,8 @@ func or(a, b any) bool {
 	return va.Bool() || vb.Bool()
 }
 
-func (f *factoryRequirement) moveCursor(cursor string, target any) (any, bool) {
-	re := regexp.MustCompile(`^\[([0-9]+)\]$`)
+func (f *swrEngine) moveCursor(cursor string, target any) (any, bool) {
+	re := regexp.MustCompile(REGEX_VECTOR_INDEX)
 	matches := re.FindStringSubmatch(cursor)
 	if len(matches) == 2 {
 		return f.moveCursorOnVector(matches[1], target)
@@ -253,46 +322,46 @@ func (f *factoryRequirement) moveCursor(cursor string, target any) (any, bool) {
 	return f.moveCursorOnMap(cursor, target)
 }
 
-func (f *factoryRequirement) moveCursorOnVector(cursor string, target any) (any, bool) {
+func (f *swrEngine) moveCursorOnVector(cursor string, target any) (any, bool) {
 	index, err := strconv.Atoi(cursor)
 	if err != nil {
-		//TODO: Add flag to log the error.
+		f.logger(err.Error())
 		return nil, false
 	}
 
 	v := reflect.ValueOf(target)
 	if v.Kind() != reflect.Slice && v.Kind() != reflect.Array {
-		//TODO: Add flag to log the error.
+		f.logger(fmt.Sprintf("the value '%v' is not a valid slice", target))
 		return nil, false
 	}
 
 	if index < 0 || index >= v.Len() {
-		//TODO: Add flag to log the error.
+		f.logger(fmt.Sprintf("the index %d is outside of the slice range %d", index, v.Len()))
 		return nil, false
 	}
 
 	return v.Index(index).Interface(), true
 }
 
-func (f *factoryRequirement) moveCursorOnMap(cursor string, target any) (any, bool) {
+func (f *swrEngine) moveCursorOnMap(cursor string, target any) (any, bool) {
 	v := reflect.ValueOf(target)
 	if v.Kind() != reflect.Map {
-		//TODO: Add flag to log the error.
+		f.logger(fmt.Sprintf("the value '%v' is not a valid map", target))
 		return nil, false
 	}
 
 	k := reflect.ValueOf(cursor)
 	val := v.MapIndex(k)
 	if !val.IsValid() {
-		//TODO: Add flag to log the error.
+		f.logger(fmt.Sprintf("the key '%s' is not valid for the map '%v'", cursor, target))
 		return nil, false
 	}
 
 	return val.Interface(), true
 }
 
-func (f *factoryRequirement) findRaw(cursor string) (any, bool) {
-	re := regexp.MustCompile(`^<(.+)>$`)
+func (f *swrEngine) findRaw(cursor string) (any, bool) {
+	re := regexp.MustCompile(REGEX_RAW_VALUE)
 	matches := re.FindStringSubmatch(cursor)
 	if len(matches) < 2 {
 		return nil, false
@@ -300,18 +369,23 @@ func (f *factoryRequirement) findRaw(cursor string) (any, bool) {
 	return matches[1], true
 }
 
-func (f *factoryRequirement) findRoot(cursor string, fragments *collection.Vector[string]) (any, bool) {
-	switch cursor {
-	case "header":
-		return f.headers, true
+func (f *swrEngine) findRoot(fragments *collection.Vector[string]) (any, bool) {
+	cursor, ok := fragments.Shift()
+	if !ok {
+		return nil, false
+	}
+
+	switch *cursor {
 	case "payload":
 		return f.findPayload(fragments)
+	case "arguments":
+		return f.arguments, true
 	default:
-		return nil, false
+		return f.findRaw(*cursor)
 	}
 }
 
-func (f *factoryRequirement) findPayload(fragments *collection.Vector[string]) (any, bool) {
+func (f *swrEngine) findPayload(fragments *collection.Vector[string]) (any, bool) {
 	content, ok := fragments.Shift()
 	if !ok {
 		return nil, false
@@ -347,40 +421,40 @@ func (f *factoryRequirement) findPayload(fragments *collection.Vector[string]) (
 	return result, ok
 }
 
-func (f *factoryRequirement) getJsonPayload(payload any) (any, bool) {
+func (f *swrEngine) getJsonPayload(payload any) (any, bool) {
 	err := json.Unmarshal([]byte(f.payload), &payload)
 	if err != nil {
-		//TODO: Add flag to log the error.
+		f.logger(err.Error())
 		return nil, false
 	}
 	return payload, true
 }
 
-func (f *factoryRequirement) getXmlPayload(payload any) (any, bool) {
+func (f *swrEngine) getXmlPayload(payload any) (any, bool) {
 	decoder := xml.NewDecoder(bytes.NewReader([]byte(f.payload)))
 	decoder.CharsetReader = charset.NewReaderLabel
 	if err := decoder.Decode(&payload); err != nil {
-		//TODO: Add flag to log the error.
+		f.logger(err.Error())
 		return nil, false
 	}
 	return payload, true
 }
 
-func tryToNumeric(item any) any {
+func (f *swrEngine) tryToNumeric(item any) any {
 	v := reflect.ValueOf(item)
 	if v.Kind() != reflect.String {
 		return item
 	}
 
-	f, err := strconv.ParseFloat(v.String(), 64)
+	r, err := strconv.ParseFloat(v.String(), 64)
 	if err != nil {
 		return item
 	}
 
-	return f
+	return r
 }
 
-func tryToString(item any) any {
+func (f *swrEngine) tryToString(item any) any {
 	v := reflect.ValueOf(item)
 
 	switch v.Kind() {
@@ -397,4 +471,16 @@ func tryToString(item any) any {
 	default:
 		return item
 	}
+}
+
+func (f *swrEngine) isLogical(cursor string) bool {
+	return strings.HasPrefix(cursor, "$")
+}
+
+func (f *swrEngine) isNextLogical(fragments *collection.Vector[string]) bool {
+	next, ok := fragments.First()
+	if !ok {
+		return false
+	}
+	return *next == AND || *next == OR
 }
