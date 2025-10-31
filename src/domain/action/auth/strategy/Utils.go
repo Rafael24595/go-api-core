@@ -5,6 +5,11 @@ import (
 	"github.com/Rafael24595/go-api-core/src/domain/action/auth"
 )
 
+func FindTypeAuth(a auth.Auths, typ auth.Type) (*auth.Auth, bool) {
+	basic, ok := a.Auths[typ.String()]
+	return &basic, ok
+}
+
 func ApplyAuth(req *action.Request) *action.Request {
 	if !req.Auth.Status {
 		return req

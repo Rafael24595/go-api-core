@@ -10,6 +10,24 @@ func NewHeaders() *Headers {
 	}
 }
 
+func (h *Headers) Find(key string) ([]Header, bool) {
+	headers, ok := h.Headers[key]
+	return headers, ok
+}
+
+func (h *Headers) FindIndex(key string, index int) (*Header, bool) {
+	header, ok := h.Find(key)
+	if !ok {
+		return nil, false
+	}
+
+	if index < 0 || index > len(header) {
+		return nil, false
+	}
+
+	return &header[index], true
+}
+
 func (h *Headers) Add(key, value string) *Headers {
 	return h.AddStatus(key, value, true)
 }

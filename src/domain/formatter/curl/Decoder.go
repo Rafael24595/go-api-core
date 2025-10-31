@@ -1,9 +1,10 @@
-package formatter
+package curl
 
 import (
 	"errors"
 	"fmt"
 	"net/url"
+	"path/filepath"
 	"strings"
 
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
@@ -16,6 +17,13 @@ import (
 	"github.com/Rafael24595/go-collections/collection"
 )
 
+const (
+	WINDOWS_NEW_LINE  = "\r\n"
+	UNIX_CONTINUATION = "\\\n"
+	PWSH_CONTINUATION = "`\n"
+	CMD_CONTINUATION  = "^\n"
+)
+
 type curlData struct {
 	uri    string
 	tuples []tuple
@@ -26,8 +34,8 @@ type tuple struct {
 	data string
 }
 
-func CurlToRequest(curl []byte) (*action.Request, error) {
-	data, err := unmarshal(curl)
+func Unmarshal(curl []byte) (*action.Request, error) {
+	data, err := decode(curl)
 	if err != nil {
 		return nil, err
 	}
@@ -44,14 +52,11 @@ func CurlToRequest(curl []byte) (*action.Request, error) {
 		case "-H", "--header":
 			request = processHeader(v.data, request)
 		case "-d", "--data", "--data-raw":
-			request.Body = *body_strategy.DocumentBody(true, body.Text, v.data)
-			if request.Method == domain.GET {
-				request.Method = domain.POST
-			}
+			request = processDocument(v.data, request)
 		case "--data-binary":
-			//TODO: Implement case.
+			request = processBinary(v.data, request)
 		case "-F", "--form":
-			//TODO: Implement case.
+			request = processFormData(v.data, request)
 		case "-u", "--user":
 			request = processBasicAuth(v.data, request)
 		case "-b", "--cookie":
@@ -84,12 +89,60 @@ func processUri(uri string) (string, *query.Queries) {
 	return fragments[0], queries
 }
 
+func processDocument(data string, request *action.Request) *action.Request {
+	request.Body = *body_strategy.DocumentBody(true, body.Text, data)
+	if request.Method == domain.GET {
+		request.Method = domain.POST
+	}
+
+	return request
+}
+
+func processFormData(data string, request *action.Request) *action.Request {
+	parts := strings.SplitN(data, "=", 2)
+	key := strings.TrimSpace(parts[0])
+
+	value := ""
+	if len(parts) > 1 {
+		value = strings.TrimSpace(parts[1])
+	}
+
+	var parameter *body.BodyParameter
+	if path, ok := strings.CutPrefix(value, "@"); ok {
+		ext := strings.TrimPrefix(filepath.Ext(path), ".")
+		parameter = body.NewFileParameterActive(ext, "", path)
+	} else {
+		parameter = body.NewParameterActive(value)
+	}
+
+	body := body_strategy.AddFormData(&request.Body, key, parameter)
+
+	request.Body = *body
+
+	if request.Method == domain.GET {
+		request.Method = domain.POST
+	}
+
+	return request
+}
+
+func processBinary(data string, request *action.Request) *action.Request {
+	value := strings.TrimSpace(data)
+	if path, ok := strings.CutPrefix(value, "@"); ok {
+		value = path
+	}
+
+	return processDocument(value, request)
+}
+
 func processHeader(data string, request *action.Request) *action.Request {
-	parts := strings.SplitN(data, ":", 2)
-	if len(parts) == 2 {
-		key := strings.TrimSpace(parts[0])
-		value := strings.TrimSpace(parts[1])
-		request.Header.Add(key, value)
+	for hs := range strings.SplitSeq(data, ";") {
+		parts := strings.SplitN(hs, ":", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+			request.Header.Add(key, value)
+		}
 	}
 	return request
 }
@@ -120,8 +173,10 @@ func processCookie(data string, request *action.Request) *action.Request {
 	return request
 }
 
-func unmarshal(curl []byte) (*curlData, error) {
-	args, err := utils.SplitCommand(string(curl))
+func decode(curl []byte) (*curlData, error) {
+	clean := clean(curl)
+
+	args, err := utils.SplitCommand(clean)
 	if err != nil {
 		return nil, err
 	}
@@ -129,19 +184,19 @@ func unmarshal(curl []byte) (*curlData, error) {
 	uri := ""
 	tuples := make([]tuple, 0)
 
-	fragmensts := collection.VectorFromList(args)
-	head, ok := fragmensts.Shift()
+	fragments := collection.VectorFromList(args)
+	head, ok := fragments.Shift()
 	if !ok || *head != "curl" {
 		return nil, errors.New("the command is not a valid curl sentence")
 	}
 
-	for fragmensts.Size() > 0 {
-		flag, ok := fragmensts.Shift()
+	for fragments.Size() > 0 {
+		flag, ok := fragments.Shift()
 		if !ok {
 			return nil, errors.New("the command flag could not be empty")
 		}
 
-		url, ok, err := findUri(*flag, fragmensts)
+		url, ok, err := cutUri(*flag, fragments)
 		if err != nil {
 			return nil, err
 		}
@@ -151,7 +206,7 @@ func unmarshal(curl []byte) (*curlData, error) {
 			continue
 		}
 
-		data, ok := fragmensts.Shift()
+		data, ok := fragments.Shift()
 		if !ok {
 			return nil, errors.New("the command flag data could not be empty")
 		}
@@ -168,7 +223,15 @@ func unmarshal(curl []byte) (*curlData, error) {
 	}, nil
 }
 
-func findUri(flag string, fragmensts *collection.Vector[string]) (string, bool, error) {
+func clean(curl []byte) string {
+	clean := strings.ReplaceAll(string(curl), WINDOWS_NEW_LINE, "\n")
+	clean = strings.ReplaceAll(clean, UNIX_CONTINUATION, " ")
+	clean = strings.ReplaceAll(clean, PWSH_CONTINUATION, " ")
+	clean = strings.ReplaceAll(clean, CMD_CONTINUATION, " ")
+	return strings.TrimSpace(clean)
+}
+
+func cutUri(flag string, fragmensts *collection.Vector[string]) (string, bool, error) {
 	if flag == "--uri" || flag == "--url" {
 		uri, ok := fragmensts.Shift()
 		if !ok {
@@ -176,9 +239,8 @@ func findUri(flag string, fragmensts *collection.Vector[string]) (string, bool, 
 		}
 
 		flag = *uri
-	} else if strings.HasPrefix(flag, "-") {
-		return "", false, nil
-	} else if !strings.Contains(flag, "://") && !strings.HasPrefix(flag, "/") {
+	} else if strings.HasPrefix(flag, "-") &&
+		(!strings.Contains(flag, "://") && !strings.HasPrefix(flag, "/")) {
 		return "", false, nil
 	}
 

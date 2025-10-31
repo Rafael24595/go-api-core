@@ -10,6 +10,24 @@ func NewQueries() *Queries {
 	}
 }
 
+func (h *Queries) Find(key string) ([]Query, bool) {
+	queries, ok := h.Queries[key]
+	return queries, ok
+}
+
+func (h *Queries) FindIndex(key string, index int) (*Query, bool) {
+	query, ok := h.Find(key)
+	if !ok {
+		return nil, false
+	}
+
+	if index < 0 || index > len(query) {
+		return nil, false
+	}
+
+	return &query[index], true
+}
+
 func (q *Queries) Add(key, value string) *Queries {
 	return q.AddStatus(key, value, true)
 }

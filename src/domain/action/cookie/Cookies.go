@@ -10,6 +10,12 @@ func NewCookiesClient() *CookiesClient {
 	}
 }
 
+func (h *CookiesClient) Find(key string) (*CookieClient, bool) {
+	cookie, ok := h.Cookies[key]
+	return &cookie, ok
+}
+
+
 func (h *CookiesClient) Put(key, value string) *CookiesClient {
 	return h.PutStatus(key, value, true)
 }

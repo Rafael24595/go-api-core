@@ -1,4 +1,4 @@
-package formatter
+package curl
 
 import (
 	"errors"
@@ -13,12 +13,12 @@ import (
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 )
 
-func ToCurlWithContext(ctx *context.Context, req *action.Request, inline bool) (string, error) {
+func MarshalContext(ctx *context.Context, req *action.Request, inline bool) (string, error) {
 	req = context.ProcessRequest(req, ctx)
-	return ToCurl(req, inline)
+	return Marshal(req, inline)
 }
 
-func ToCurl(req *action.Request, inline bool) (string, error) {
+func Marshal(req *action.Request, inline bool) (string, error) {
 	buffer := make([]string, 0)
 
 	method := strings.ToUpper(req.Method.String())

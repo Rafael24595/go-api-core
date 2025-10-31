@@ -54,8 +54,16 @@ func NewBodyDocument(order int64, status bool, value string) BodyParameter {
 	}
 }
 
+func NewParameterActive(value string) *BodyParameter {
+	return NewParameter(0, true, value)
+}
+
 func NewParameter(order int64, status bool, value string) *BodyParameter {
 	return NewBodyParameter(order, status, false, "", "", value)
+}
+
+func NewFileParameterActive(fileType, fileName, value string) *BodyParameter {
+	return NewFileParameter(0, true, fileType, fileName, value)
 }
 
 func NewFileParameter(order int64, status bool, fileType, fileName, value string) *BodyParameter {

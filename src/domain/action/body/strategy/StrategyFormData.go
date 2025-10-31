@@ -45,6 +45,52 @@ func (b *BuilderFormDataBody) Add(key string, parameter *body.BodyParameter) *Bu
 	return b
 }
 
+func FindFormDataParameterIndex(b *body.BodyRequest, key string, index int) (*body.BodyParameter, bool) {
+	if b.Parameters == nil {
+		return nil, false
+	}
+	
+	form, ok := b.Parameters[FORM_DATA_PARAM]
+	if !ok {
+		return nil, false
+	}
+
+	field, ok := form[key]
+	if !ok {
+		return nil, false
+	}
+
+	if index < 0 || index > len(field) {
+		return nil, false
+	}
+
+	return &field[index], true
+}
+
+func AddFormData(b *body.BodyRequest, key string, parameter *body.BodyParameter) *body.BodyRequest {
+	if b.Parameters == nil {
+		b.Parameters = make(map[string]map[string][]body.BodyParameter)
+	}
+	
+	form, ok := b.Parameters[FORM_DATA_PARAM]
+	if !ok {
+		form = make(map[string][]body.BodyParameter)
+	}
+
+	field, ok := form[key]
+	if !ok {
+		field = make([]body.BodyParameter, 0)
+	}
+
+	parameter.Order = int64(len(field) + 1)
+
+	form[key] = append(field, *parameter)
+	b.Parameters[FORM_DATA_PARAM] = form
+	b.ContentType = body.Form
+
+	return b
+}
+
 func applyFormData(b *body.BodyRequest, q *query.Queries) (*bytes.Buffer, *query.Queries) {
 	if !hasFiles(b) {
 		return applyFormEncode(b, q)

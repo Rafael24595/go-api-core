@@ -1,4 +1,4 @@
-package test_formatter
+package curl_test
 
 import (
 	"fmt"
@@ -11,31 +11,31 @@ import (
 	"github.com/Rafael24595/go-api-core/src/domain/action/body"
 	body_strategy "github.com/Rafael24595/go-api-core/src/domain/action/body/strategy"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
-	"github.com/Rafael24595/go-api-core/src/domain/formatter"
+	"github.com/Rafael24595/go-api-core/src/domain/formatter/curl"
 )
 
-func TestToCurlWithContext_InvalidInput(t *testing.T) {
+func TestMarshalContext_InvalidInput(t *testing.T) {
 	ctx := context.NewContext("tester")
 
 	req1 := action.NewRequest("_test_001", "", "http://example.com")
-	_, err := formatter.ToCurlWithContext(ctx, req1, false)
+	_, err := curl.MarshalContext(ctx, req1, false)
 	if err == nil {
 		t.Error("Error expected for invalid method")
 	}
 
 	req2 := action.NewRequest("_test_002", domain.GET, "")
-	_, err = formatter.ToCurlWithContext(ctx, req2, false)
+	_, err = curl.MarshalContext(ctx, req2, false)
 	if err == nil {
 		t.Error("Error expected for invalid URI")
 	}
 }
 
-func TestToCurlWithContext_NoQueries(t *testing.T) {
+func TestMarshalContext_NoQueries(t *testing.T) {
 	ctx := context.NewContext("tester")
 
 	req := action.NewRequest("_test_001", domain.GET, "http://example.com")
 
-	curl, err := formatter.ToCurlWithContext(ctx, req, false)
+	curl, err := curl.MarshalContext(ctx, req, false)
 
 	if err != nil {
 		t.Error(err)
@@ -47,7 +47,7 @@ func TestToCurlWithContext_NoQueries(t *testing.T) {
 	}
 }
 
-func TestToCurlWithContext_WithQueries(t *testing.T) {
+func TestMarshalContext_WithQueries(t *testing.T) {
 	ctx := context.NewContext("tester")
 
 	req := action.NewRequest("_test_004", domain.GET, "http://example.com")
@@ -55,7 +55,7 @@ func TestToCurlWithContext_WithQueries(t *testing.T) {
 	req.Query.AddStatus("id", "001", true)
 	req.Query.AddStatus("id", "002", false)
 
-	curl, err := formatter.ToCurlWithContext(ctx, req, false)
+	curl, err := curl.MarshalContext(ctx, req, false)
 
 	if err != nil {
 		t.Error(err)
@@ -68,14 +68,14 @@ func TestToCurlWithContext_WithQueries(t *testing.T) {
 	}
 }
 
-func TestToCurlWithContext_WithHeaders(t *testing.T) {
+func TestMarshalContext_WithHeaders(t *testing.T) {
 	ctx := context.NewContext("tester")
 
 	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer 123")
 
-	curl, err := formatter.ToCurlWithContext(ctx, req, true)
+	curl, err := curl.MarshalContext(ctx, req, true)
 
 	if err != nil {
 		t.Error(err)
@@ -92,13 +92,13 @@ func TestToCurlWithContext_WithHeaders(t *testing.T) {
 	}
 }
 
-func TestToCurlWithContext_HeadersDisabled(t *testing.T) {
+func TestMarshalContext_HeadersDisabled(t *testing.T) {
 	ctx := context.NewContext("tester")
 
 	req := action.NewRequest("_test_headers_002", domain.GET, "http://example.com")
 	req.Header.AddStatus("Authorization", "Bearer 123", false)
 
-	curl, err := formatter.ToCurlWithContext(ctx, req, true)
+	curl, err := curl.MarshalContext(ctx, req, true)
 
 	if err != nil {
 		t.Error(err)
@@ -110,14 +110,14 @@ func TestToCurlWithContext_HeadersDisabled(t *testing.T) {
 	}
 }
 
-func TestToCurlWithContext_WithCookies(t *testing.T) {
+func TestMarshalContext_WithCookies(t *testing.T) {
 	ctx := context.NewContext("tester")
 
 	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
 	req.Cookie.Put("sessionid", "123abc")
 	req.Cookie.Put("theme", "marinego")
 
-	curl, err := formatter.ToCurlWithContext(ctx, req, true)
+	curl, err := curl.MarshalContext(ctx, req, true)
 
 	if err != nil {
 		t.Error(err)
@@ -130,13 +130,13 @@ func TestToCurlWithContext_WithCookies(t *testing.T) {
 	}
 }
 
-func TestToCurlWithContext_WithDisabledCookies(t *testing.T) {
+func TestMarshalContext_WithDisabledCookies(t *testing.T) {
 	ctx := context.NewContext("tester")
 
 	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
 	req.Cookie.PutStatus("sessionid", "123abc", false)
 
-	curl, err := formatter.ToCurlWithContext(ctx, req, true)
+	curl, err := curl.MarshalContext(ctx, req, true)
 
 	if err != nil {
 		t.Error(err)
@@ -148,7 +148,7 @@ func TestToCurlWithContext_WithDisabledCookies(t *testing.T) {
 	}
 }
 
-func TestToCurlWithContext_WithBasicAuth(t *testing.T) {
+func TestMarshalContext_WithBasicAuth(t *testing.T) {
 	ctx := context.NewContext("tester")
 
 	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
@@ -156,7 +156,7 @@ func TestToCurlWithContext_WithBasicAuth(t *testing.T) {
 	req.Auth.Status = true
 	req.Auth.PutAuth(*auth_strategy.BasicAuth(true, "username", "123"))
 
-	curl, err := formatter.ToCurlWithContext(ctx, req, true)
+	curl, err := curl.MarshalContext(ctx, req, true)
 
 	if err != nil {
 		t.Error(err)
@@ -168,7 +168,7 @@ func TestToCurlWithContext_WithBasicAuth(t *testing.T) {
 	}
 }
 
-func TestToCurlWithContext_WithBearerAuth(t *testing.T) {
+func TestMarshalContext_WithBearerAuth(t *testing.T) {
 	ctx := context.NewContext("tester")
 
 	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
@@ -176,7 +176,7 @@ func TestToCurlWithContext_WithBearerAuth(t *testing.T) {
 	req.Auth.Status = true
 	req.Auth.PutAuth(*auth_strategy.BearerAuth(true, "Bearer", "123"))
 
-	curl, err := formatter.ToCurlWithContext(ctx, req, true)
+	curl, err := curl.MarshalContext(ctx, req, true)
 
 	if err != nil {
 		t.Error(err)
@@ -188,7 +188,7 @@ func TestToCurlWithContext_WithBearerAuth(t *testing.T) {
 	}
 }
 
-func TestToCurlWithContext_WithDisabledAuth(t *testing.T) {
+func TestMarshalContext_WithDisabledAuth(t *testing.T) {
 	ctx := context.NewContext("tester")
 
 	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
@@ -196,7 +196,7 @@ func TestToCurlWithContext_WithDisabledAuth(t *testing.T) {
 	req.Auth.Status = true
 	req.Auth.PutAuth(*auth_strategy.BearerAuth(false, "Bearer", "123"))
 
-	curl, err := formatter.ToCurlWithContext(ctx, req, true)
+	curl, err := curl.MarshalContext(ctx, req, true)
 
 	if err != nil {
 		t.Error(err)
@@ -208,7 +208,7 @@ func TestToCurlWithContext_WithDisabledAuth(t *testing.T) {
 	}
 }
 
-func TestToCurlWithContext_WithDocumentBody(t *testing.T) {
+func TestMarshalContext_WithDocumentBody(t *testing.T) {
 	ctx := context.NewContext("tester")
 
 	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
@@ -216,7 +216,7 @@ func TestToCurlWithContext_WithDocumentBody(t *testing.T) {
 	req.Body.Status = true
 	req.Body = *body_strategy.DocumentBody(true, body.Json, `{"id": 001, "user": "username"}`)
 
-	curl, err := formatter.ToCurlWithContext(ctx, req, true)
+	curl, err := curl.MarshalContext(ctx, req, true)
 
 	if err != nil {
 		t.Error(err)
@@ -228,7 +228,7 @@ func TestToCurlWithContext_WithDocumentBody(t *testing.T) {
 	}
 }
 
-func TestToCurlWithContext_WithDisabledDocumentBody(t *testing.T) {
+func TestMarshalContext_WithDisabledDocumentBody(t *testing.T) {
 	ctx := context.NewContext("tester")
 
 	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
@@ -236,7 +236,7 @@ func TestToCurlWithContext_WithDisabledDocumentBody(t *testing.T) {
 	req.Body.Status = true
 	req.Body = *body_strategy.DocumentBody(false, body.Json, `{"id": 001, "user": "username"}`)
 
-	curl, err := formatter.ToCurlWithContext(ctx, req, true)
+	curl, err := curl.MarshalContext(ctx, req, true)
 
 	if err != nil {
 		t.Error(err)
@@ -248,7 +248,7 @@ func TestToCurlWithContext_WithDisabledDocumentBody(t *testing.T) {
 	}
 }
 
-func TestToCurlWithContext_WithFormDataBody(t *testing.T) {
+func TestMarshalContext_WithFormDataBody(t *testing.T) {
 	ctx := context.NewContext("tester")
 
 	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
@@ -265,7 +265,7 @@ func TestToCurlWithContext_WithFormDataBody(t *testing.T) {
 	req.Body.Status = true
 	req.Body = *body_strategy.FormDataBody(true, body.Form, builder)
 
-	curl, err := formatter.ToCurlWithContext(ctx, req, true)
+	curl, err := curl.MarshalContext(ctx, req, true)
 
 	if err != nil {
 		t.Error(err)
@@ -287,7 +287,7 @@ func TestToCurlWithContext_WithFormDataBody(t *testing.T) {
 	}
 }
 
-func TestToCurlWithContext_WithDisabledFormDataBody(t *testing.T) {
+func TestMarshalContext_WithDisabledFormDataBody(t *testing.T) {
 	ctx := context.NewContext("tester")
 
 	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
@@ -298,7 +298,7 @@ func TestToCurlWithContext_WithDisabledFormDataBody(t *testing.T) {
 	req.Body.Status = true
 	req.Body = *body_strategy.FormDataBody(true, body.Form, builder)
 
-	curl, err := formatter.ToCurlWithContext(ctx, req, true)
+	curl, err := curl.MarshalContext(ctx, req, true)
 
 	if err != nil {
 		t.Error(err)
@@ -310,13 +310,13 @@ func TestToCurlWithContext_WithDisabledFormDataBody(t *testing.T) {
 	}
 }
 
-func TestToCurlWithContext_InlineVsMultiline(t *testing.T) {
+func TestMarshalContext_InlineVsMultiline(t *testing.T) {
 	ctx := context.NewContext("tester")
 
 	req := action.NewRequest("_test_005", domain.POST, "http://api.test")
 	req.Header.Add("Content-Type", "application/json")
 
-	curlMulti, err := formatter.ToCurlWithContext(ctx, req, false)
+	curlMulti, err := curl.MarshalContext(ctx, req, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -326,7 +326,7 @@ func TestToCurlWithContext_InlineVsMultiline(t *testing.T) {
 		t.Errorf("Expected '%s', but got '%s'", expectedMult, curlMulti)
 	}
 
-	curlInline, err := formatter.ToCurlWithContext(ctx, req, true)
+	curlInline, err := curl.MarshalContext(ctx, req, true)
 	if err != nil {
 		t.Error(err)
 	}
