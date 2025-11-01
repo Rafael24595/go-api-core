@@ -250,34 +250,34 @@ func (m *ManagerCollection) ImportDtoCollections(owner string, dtos ...dto.DtoCo
 	return collections, nil
 }
 
-func (m *ManagerCollection) ImportDtoRequestsById(owner string, id string, dtos ...dto.DtoRequest) *collection.Collection {
+func (m *ManagerCollection) ImportRequestsById(owner string, id string, reqs ...action.Request) *collection.Collection {
 	collection, exists := m.collection.Find(id)
 	if !exists {
 		return nil
 	}
-	return m.ImportDtoRequests(owner, collection, dtos)
+	return m.ImportRequests(owner, collection, reqs...)
 }
 
-func (m *ManagerCollection) ImportDtoRequests(owner string, coll *collection.Collection, dtos []dto.DtoRequest) *collection.Collection {
+func (m *ManagerCollection) ImportRequests(owner string, coll *collection.Collection, reqs ...action.Request) *collection.Collection {
 	if coll.Owner != owner {
 		return nil
 	}
 
 	m.mu.Lock()
 
-	if len(dtos) == 0 {
+	if len(reqs) == 0 {
 		return coll
 	}
 
 	requestStatus := collection.StatusCollectionToStatusRequest(&coll.Status)
-	requests := make([]action.Request, len(dtos))
-	for i, v := range dtos {
+	requests := make([]action.Request, len(reqs))
+	for i, v := range reqs {
 		v.Id = ""
 		v.Status = *requestStatus
-		requests[i] = *dto.ToRequest(&v)
+		requests[i] = v
 	}
 
-	requests = m.managerRequest.InsertManyRequest(owner, requests)
+	requests = m.managerRequest.InsertManyRequests(owner, requests)
 
 	len := len(coll.Nodes)
 	for i, v := range requests {
@@ -307,7 +307,7 @@ func (m *ManagerCollection) insertResources(owner string, coll *collection.Colle
 		requests[i].Status = *requestStatus
 	}
 
-	requests = m.managerRequest.InsertManyRequest(owner, requests)
+	requests = m.managerRequest.InsertManyRequests(owner, requests)
 	for i, v := range requests {
 		node := domain.NodeReference{
 			Order: i,
@@ -440,7 +440,7 @@ func (m *ManagerCollection) CloneCollection(owner, id, name string) *collection.
 		requests[i] = v
 	}
 
-	requests = m.managerRequest.InsertManyRequest(owner, requests)
+	requests = m.managerRequest.InsertManyRequests(owner, requests)
 	nodes := make([]domain.NodeReference, len(requests))
 	for i, v := range requests {
 		nodes = append(nodes, domain.NodeReference{

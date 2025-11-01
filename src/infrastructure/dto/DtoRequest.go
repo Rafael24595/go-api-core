@@ -27,6 +27,14 @@ type DtoRequest struct {
 	Status    action.StatusRequest `json:"status"`
 }
 
+func ToRequests(dtos ...DtoRequest) []action.Request {
+	reqs := make([]action.Request, len(dtos))
+	for _, v := range dtos {
+		reqs = append(reqs, *ToRequest(&v))
+	}
+	return reqs
+}
+
 func ToRequest(dto *DtoRequest) *action.Request {
 	return &action.Request{
 		Id:        dto.Id,

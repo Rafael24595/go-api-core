@@ -74,7 +74,7 @@ func (m *ManagerGroup) ImportOpenApi(owner string, group *domain.Group, file []b
 		return group, nil, err
 	}
 
-	return m.ResolveCollectionReferences(owner, group, *collection), collection, nil
+	return m.resolveCollectionReferences(owner, group, *collection), collection, nil
 }
 
 func (m *ManagerGroup) ImportDtoCollections(owner string, group *domain.Group, dtos ...dto.DtoCollection) (*domain.Group, []collection.Collection, error) {
@@ -86,7 +86,7 @@ func (m *ManagerGroup) ImportDtoCollections(owner string, group *domain.Group, d
 		return nil, collections, err
 	}
 
-	return m.ResolveCollectionReferences(owner, group, collections...), collections, nil
+	return m.resolveCollectionReferences(owner, group, collections...), collections, nil
 }
 
 func (m *ManagerGroup) ImportCollection(owner string, group *domain.Group, collection *collection.Collection) (*domain.Group, *collection.Collection) {
@@ -98,19 +98,19 @@ func (m *ManagerGroup) ImportCollection(owner string, group *domain.Group, colle
 		return group, nil
 	}
 
-	return m.ResolveCollectionReferences(owner, group, *collection), collection
+	return m.resolveCollectionReferences(owner, group, *collection), collection
 }
 
-func (m *ManagerGroup) ImportDtoRequestsById(owner string, group *domain.Group, id string, dtos []dto.DtoRequest) (*domain.Group, *collection.Collection) {
+func (m *ManagerGroup) ImportRequestsById(owner string, group *domain.Group, id string, reqs ...action.Request) (*domain.Group, *collection.Collection) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	collection := m.managerCollection.ImportDtoRequestsById(owner, id, dtos...)
+	collection := m.managerCollection.ImportRequestsById(owner, id, reqs...)
 	if collection == nil {
 		return group, nil
 	}
 
-	return m.ResolveCollectionReferences(owner, group, *collection), collection
+	return m.resolveCollectionReferences(owner, group, *collection), collection
 }
 
 func (m *ManagerGroup) CollectRequest(owner string, group *domain.Group, payload PayloadCollectRequest) (*domain.Group, *collection.Collection, *action.Request) {
@@ -122,10 +122,26 @@ func (m *ManagerGroup) CollectRequest(owner string, group *domain.Group, payload
 		return group, nil, nil
 	}
 
-	return m.ResolveCollectionReferences(owner, group, *collection), collection, request
+	return m.resolveCollectionReferences(owner, group, *collection), collection, request
 }
 
-func (m *ManagerGroup) ResolveCollectionReferences(owner string, group *domain.Group, collections ...collection.Collection) *domain.Group {
+func (m *ManagerGroup) CloneCollection(owner string, group *domain.Group, id, name string) (*domain.Group, *collection.Collection) {
+	if group.Owner != owner {
+		return nil, nil
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	collection := m.managerCollection.CloneCollection(owner, id, name)
+	if collection == nil {
+		return nil, nil
+	}
+
+	return m.resolveCollectionReferences(owner, group, *collection), collection
+}
+
+func (m *ManagerGroup) resolveCollectionReferences(owner string, group *domain.Group, collections ...collection.Collection) *domain.Group {
 	if group.Owner != owner {
 		return nil
 	}
@@ -143,22 +159,6 @@ func (m *ManagerGroup) ResolveCollectionReferences(owner string, group *domain.G
 	}
 
 	return m.Insert(owner, group)
-}
-
-func (m *ManagerGroup) CloneCollection(owner string, group *domain.Group, id, name string) (*domain.Group, *collection.Collection) {
-	if group.Owner != owner {
-		return nil, nil
-	}
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	collection := m.managerCollection.CloneCollection(owner, id, name)
-	if collection == nil {
-		return nil, nil
-	}
-
-	return m.ResolveCollectionReferences(owner, group, *collection), collection
 }
 
 func (m *ManagerGroup) SortCollections(owner string, group *domain.Group, payload PayloadSortNodes) *domain.Group {
