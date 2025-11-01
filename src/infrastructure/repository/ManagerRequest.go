@@ -125,29 +125,13 @@ func (m *ManagerRequest) InsertResponse(owner string, response *action.Response)
 	return m.response.Insert(owner, response)
 }
 
-func (m *ManagerRequest) InsertManyRequest(owner string, requests []action.Request) []action.Request {
+func (m *ManagerRequest) InsertManyRequests(owner string, requests []action.Request) []action.Request {
 	requests = collection.VectorFromList(requests).
 		Filter(func(r action.Request) bool {
 			return m.isOwner(owner, &r, nil)
 		}).
 		Collect()
 	return m.request.InsertMany(owner, requests)
-}
-
-func (m *ManagerRequest) ImportDtoRequests(owner string, dtos []dto.DtoRequest) []action.Request {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	requests := make([]action.Request, len(dtos))
-
-	for i, v := range dtos {
-		v.Id = ""
-		request := dto.ToRequest(&v)
-		request = m.request.Insert(owner, request)
-		requests[i] = *request
-	}
-
-	return requests
 }
 
 func (m *ManagerRequest) Update(owner string, request *action.Request) *action.Request {
@@ -163,7 +147,14 @@ func (m *ManagerRequest) Update(owner string, request *action.Request) *action.R
 	return m.request.Insert(owner, request)
 }
 
-func (m *ManagerRequest) DeleteById(owner, id string) (*action.Request, *action.Response) {
+func (m *ManagerRequest) Delete(owner string, request *action.Request) (*action.Request, *action.Response) {
+	if request.Owner != owner {
+		return nil, nil
+	}
+	return m.deleteById(owner, request.Id)
+}
+
+func (m *ManagerRequest) deleteById(owner, id string) (*action.Request, *action.Response) {
 	request, exists := m.request.Find(id)
 	if exists && request.Owner == owner {
 		request = m.request.Delete(request)
@@ -177,20 +168,13 @@ func (m *ManagerRequest) DeleteById(owner, id string) (*action.Request, *action.
 	return request, response
 }
 
-func (m *ManagerRequest) Delete(owner string, request *action.Request) (*action.Request, *action.Response) {
-	if request.Owner != owner {
-		return nil, nil
-	}
-	return m.DeleteById(owner, request.Id)
-}
-
 func (m *ManagerRequest) DeleteMany(owner string, ids ...string) ([]action.Request, []action.Response) {
-	requests := m.DeleteManyRequests(owner, ids...)
-	responses := m.DeleteManyResponses(owner, ids...)
+	requests := m.deleteManyRequests(owner, ids...)
+	responses := m.deleteManyResponses(owner, ids...)
 	return requests, responses
 }
 
-func (m *ManagerRequest) DeleteManyRequests(owner string, ids ...string) []action.Request {
+func (m *ManagerRequest) deleteManyRequests(owner string, ids ...string) []action.Request {
 	requests := m.request.FindMany(ids)
 	requests = collection.VectorFromList(requests).
 		Filter(func(r action.Request) bool {
@@ -200,7 +184,7 @@ func (m *ManagerRequest) DeleteManyRequests(owner string, ids ...string) []actio
 	return m.request.DeleteMany(requests...)
 }
 
-func (m *ManagerRequest) DeleteManyResponses(owner string, ids ...string) []action.Response {
+func (m *ManagerRequest) deleteManyResponses(owner string, ids ...string) []action.Response {
 	responses := m.response.FindMany(ids)
 	responses = collection.VectorFromList(responses).
 		Filter(func(r action.Response) bool {
