@@ -42,7 +42,8 @@ func Unmarshal(curl []byte) (*action.Request, error) {
 
 	uri, query := processUri(data.uri)
 
-	request := action.NewRequest("curl import", domain.GET, uri)
+	name := fmt.Sprintf("[cURL] %s", uri)
+	request := action.NewRequest(name, domain.GET, uri)
 	request.Query = *query
 
 	for _, v := range data.tuples {
@@ -158,6 +159,7 @@ func processBasicAuth(data string, request *action.Request) *action.Request {
 
 	auth := auth_strategy.BasicAuth(true, user, pass)
 	request.Auth.PutAuth(*auth)
+	request.Auth.Status = true
 	return request
 }
 
