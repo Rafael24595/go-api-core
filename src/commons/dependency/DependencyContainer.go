@@ -4,9 +4,10 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/action"
+	collection_domain "github.com/Rafael24595/go-api-core/src/domain/collection"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	mock_domain "github.com/Rafael24595/go-api-core/src/domain/mock"
-	collection_domain "github.com/Rafael24595/go-api-core/src/domain/collection"
+	token_domain "github.com/Rafael24595/go-api-core/src/domain/token"
 	"github.com/Rafael24595/go-api-core/src/infrastructure"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
@@ -16,6 +17,7 @@ import (
 	repository_mock "github.com/Rafael24595/go-api-core/src/infrastructure/repository/mock"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/request"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/response"
+	repository_token "github.com/Rafael24595/go-api-core/src/infrastructure/repository/token"
 	"github.com/Rafael24595/go-collections/collection"
 )
 
@@ -34,6 +36,7 @@ type DependencyContainer struct {
 	ManagerHistoric   *repository.ManagerHistoric
 	ManagerGroup      *repository.ManagerGroup
 	ManagerEndPoint   *repository.ManagerEndPoint
+	ManagerToken      *repository.ManagerToken
 }
 
 func Initialize() *DependencyContainer {
@@ -53,6 +56,7 @@ func Initialize() *DependencyContainer {
 	repositoryCollection := loadRepositoryCollection()
 	repositoryGroup := loadRepositoryGroup()
 	repositoryEndPoint := loadRepositoryEndPoint()
+	repositoryToken := loadRepositoryToken()
 
 	managerRequest := loadManagerRequest(repositoryRequest, repositoryResponse)
 	managerContext := loadManagerContext(repositoryContext)
@@ -60,6 +64,7 @@ func Initialize() *DependencyContainer {
 	managerHistoric := loadManagerHistoric(managerRequest, managerCollection)
 	managerGroup := loadManagerGroup(repositoryGroup, managerCollection)
 	managerEndPoint := loadManagerEndPoint(repositoryEndPoint)
+	managerToken := loadManagerToken(repositoryToken)
 
 	container := &DependencyContainer{
 		RepositoryContext: repositoryContext,
@@ -69,6 +74,7 @@ func Initialize() *DependencyContainer {
 		ManagerHistoric:   managerHistoric,
 		ManagerGroup:      managerGroup,
 		ManagerEndPoint:   managerEndPoint,
+		ManagerToken:      managerToken,
 	}
 
 	instance = container
@@ -142,6 +148,17 @@ func loadRepositoryEndPoint() repository.IRepositoryEndPoint {
 	return repository
 }
 
+func loadRepositoryToken() repository.IRepositoryToken {
+	file := repository.NewManagerCsvtFile[token_domain.Token](repository.CSVT_FILE_PATH_TOKEN)
+	impl := collection.DictionarySyncEmpty[string, token_domain.Token]()
+	repository, err := repository_token.InitializeRepositoryMemory(impl, file)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return repository
+}
+
 func loadManagerRequest(request repository.IRepositoryRequest, response repository.IRepositoryResponse) *repository.ManagerRequest {
 	return repository.NewManagerRequest(request, response)
 }
@@ -164,4 +181,8 @@ func loadManagerGroup(group repository.IRepositoryGroup, managerCollection *repo
 
 func loadManagerEndPoint(endPoint repository.IRepositoryEndPoint) *repository.ManagerEndPoint {
 	return repository.NewManagerEndPoint(endPoint)
+}
+
+func loadManagerToken(token repository.IRepositoryToken) *repository.ManagerToken {
+	return repository.NewManagerToken(token)
 }
