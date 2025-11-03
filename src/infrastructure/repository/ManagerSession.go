@@ -62,12 +62,14 @@ func InitializeManagerSession(file IFileManager[dto.DtoSession], managerCollecti
 func defineDefaultSessions(instance *ManagerSession) *ManagerSession {
 	conf := configuration.Instance()
 
-	err := instance.defineDefaultUser(conf.Admin(), string(conf.Secret()), true, true, 0)
+	rolesAdmin := []session.Role{session.ROLE_ADMIN, session.ROLE_PROTECTED}
+	err := instance.defineDefaultUser(conf.Admin(), string(conf.Secret()), rolesAdmin, 0)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	err = instance.defineDefaultUser("anonymous", "", true, false, 0)
+	rolesAnonymous := []session.Role{session.ROLE_ANONYMOUS, session.ROLE_PROTECTED}
+	err = instance.defineDefaultUser("anonymous", "", rolesAnonymous, 0)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -82,11 +84,21 @@ func InstanceManagerSession() *ManagerSession {
 	return manager
 }
 
-func (s *ManagerSession) defineDefaultUser(username, secret string, isProtected, isAdmin bool, count int) error {
-	if _, exists := s.sessions.Get(username); !exists {
-		log.Messagef("Defining default user %s with admin status: %v", username, isAdmin)
+func (s *ManagerSession) defineDefaultUser(username, secret string, roles []session.Role, count int) error {
+	user, exists := s.sessions.Get(username)
+	if exists && len(user.Roles) != len(roles) {
+		log.Messagef("Deleting outdated user %s.", username)
+		exists = false
+		_, err := s.Delete(user)
+		if err != nil {
+			return err
+		}
+	}
+
+	if !exists {
+		log.Messagef("Defining default user %s with roles: %v", username, roles)
 		collection, history, group := s.makeDependencies(username)
-		_, err := s.insert(username, string(secret), collection, history, group, isProtected, isAdmin, count)
+		_, err := s.insert(username, string(secret), collection, history, group, roles, count)
 		if err != nil {
 			return err
 		}
@@ -217,13 +229,13 @@ func (s *ManagerSession) Verify(username, oldPassword, newPassword1, newPassword
 	return session, nil
 }
 
-func (s *ManagerSession) Delete(session *session.Session) (*session.Session, error) {
-	if session.IsProtected {
+func (s *ManagerSession) Delete(sess *session.Session) (*session.Session, error) {
+	if sess.HasRole(session.ROLE_PROTECTED) {
 		return nil, errors.New("this user is protected, cannot be removed")
 	}
 
-	session, _ = s.sessions.Remove(session.Username)
-	return session, nil
+	sess, _ = s.sessions.Remove(sess.Username)
+	return sess, nil
 }
 
 func (s *ManagerSession) Visited(session *session.Session) *session.Session {
@@ -254,8 +266,8 @@ func (s *ManagerSession) Authorize(user, password string) (*session.Session, err
 	return session, nil
 }
 
-func (s *ManagerSession) Insert(session *session.Session, user, password string, isAdmin bool) (*session.Session, error) {
-	if !session.IsAdmin {
+func (s *ManagerSession) Insert(sess *session.Session, user, password string, roles []session.Role) (*session.Session, error) {
+	if !sess.HasRole(session.ROLE_ADMIN) {
 		return nil, errors.New("user has not have admin privilegies")
 	}
 
@@ -269,10 +281,11 @@ func (s *ManagerSession) Insert(session *session.Session, user, password string,
 	}
 
 	collection, history, group := s.makeDependencies(user)
-	return s.insert(user, password, collection, history, group, false, isAdmin, -1)
+
+	return s.insert(user, password, collection, history, group, roles, -1)
 }
 
-func (s *ManagerSession) insert(user, password string, collection *collection_domain.Collection, history *collection_domain.Collection, group *domain.Group, isProtected, isAdmin bool, count int) (*session.Session, error) {
+func (s *ManagerSession) insert(user, password string, collection *collection_domain.Collection, history *collection_domain.Collection, group *domain.Group, roles []session.Role, count int) (*session.Session, error) {
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
@@ -293,10 +306,9 @@ func (s *ManagerSession) insert(user, password string, collection *collection_do
 		Collection:  collection.Id,
 		History:     history.Id,
 		Group:       group.Id,
-		IsProtected: isProtected,
-		IsAdmin:     isAdmin,
 		Count:       count,
 		Refresh:     "",
+		Roles:       roles,
 	}
 
 	s.sessions.Put(user, session)
