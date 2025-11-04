@@ -85,14 +85,15 @@ func InstanceManagerSession() *ManagerSession {
 }
 
 func (s *ManagerSession) defineDefaultUser(username, secret string, roles []session.Role, count int) error {
-	user, exists := s.sessions.Get(username)
-	if exists && len(user.Roles) != len(roles) {
-		log.Messagef("Deleting outdated user %s.", username)
-		exists = false
-		_, err := s.Delete(user)
-		if err != nil {
-			return err
-		}
+	session, exists := s.sessions.Get(username)
+	if exists && len(session.Roles) != len(roles) {
+		log.Messagef("Updating user %s with roles: %v", username, roles)
+		session.Roles = roles
+		s.sessions.Put(session.Username, *session)
+
+		go s.write(s.sessions)
+
+		return nil
 	}
 
 	if !exists {
