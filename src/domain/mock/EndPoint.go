@@ -20,7 +20,7 @@ type EndPoint struct {
 	Method    domain.HttpMethod   `json:"method"`
 	Path      string              `json:"path"`
 	Responses map[string]Response `json:"responses"`
-	Safe      string              `json:"safe"`
+	Safe      bool                `json:"safe"`
 	Owner     string              `json:"owner"`
 }
 
