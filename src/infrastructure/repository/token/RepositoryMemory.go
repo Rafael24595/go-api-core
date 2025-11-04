@@ -64,6 +64,14 @@ func (r *RepositoryMemory) FindByToken(owner, token string) (*token_domain.Token
 	})
 }
 
+func (r *RepositoryMemory) FindGlobal(token string) (*token_domain.Token, bool) {
+	r.muMemory.RLock()
+	defer r.muMemory.RUnlock()
+	return r.collection.FindOne(func(s string, t token_domain.Token) bool {
+		return t.Token == token
+	})
+}
+
 func (r *RepositoryMemory) Insert(owner string, token *token_domain.Token) *token_domain.Token {
 	r.muMemory.Lock()
 	return r.resolve(owner, token)
