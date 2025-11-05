@@ -8,6 +8,8 @@ import (
 )
 
 func ReadText(t *testing.T, filename string) []byte {
+	t.Helper()
+	
 	file, err := os.Open(filename)
 	if err != nil {
 		t.Error(err)
@@ -26,6 +28,8 @@ func ReadText(t *testing.T, filename string) []byte {
 }
 
 func ReadJSON[T any](t *testing.T, filename string) T {
+	t.Helper()
+
 	file, err := os.Open(filename)
 	if err != nil {
 		t.Error(err)
