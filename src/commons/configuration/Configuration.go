@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/Rafael24595/go-api-core/src/commons/log"
+	"github.com/Rafael24595/go-api-core/src/commons/system"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 )
 
@@ -12,8 +13,15 @@ var (
 	once     sync.Once
 )
 
+type Snapshot struct {
+	Enable bool
+	Time   int64
+	Limit  int
+}
+
 type Configuration struct {
 	Signal    *signalHandler
+	EventHub  *system.SystemEventHub
 	Mod       Mod
 	Project   Project
 	dev       bool
@@ -21,25 +29,27 @@ type Configuration struct {
 	timestamp int64
 	admin     string
 	secret    []byte
+	snapshot  Snapshot
 	kargs     map[string]utils.Argument
 }
 
-func Initialize(session string, timestamp int64, kargs map[string]utils.Argument, mod *Mod, project *Project) Configuration {
+func Initialize(session string, timestamp int64, kargs map[string]utils.Argument, mod *Mod, project *Project, snapshot *Snapshot) Configuration {
 	once.Do(func() {
-		admin := kargs["GO_API_ADMIN_USER"].String()
+		admin := kargs["GAC_ADMIN_USER"].String()
 		if admin == "" {
 			log.Panics("Admin is not defined")
 		}
 
-		secret := kargs["GO_API_ADMIN_SECRET"].String()
+		secret := kargs["GAC_ADMIN_SECRET"].String()
 		if secret == "" {
 			log.Panics("Secret is not defined")
 		}
 
-		dev := kargs["GO_API_DEV"].Boold(false)
+		dev := kargs["GAC_DEV"].Boold(false)
 
 		instance = &Configuration{
 			Signal:    newSignalHandler(),
+			EventHub:  system.InitializeSystemEventHub(),
 			Mod:       *mod,
 			Project:   *project,
 			dev:       dev,
@@ -47,6 +57,7 @@ func Initialize(session string, timestamp int64, kargs map[string]utils.Argument
 			timestamp: timestamp,
 			admin:     admin,
 			secret:    []byte(secret),
+			snapshot:  *snapshot,
 			kargs:     kargs,
 		}
 	})
@@ -83,4 +94,8 @@ func (c Configuration) Admin() string {
 
 func (c Configuration) Secret() []byte {
 	return c.secret
+}
+
+func (c Configuration) Snapshot() Snapshot {
+	return c.snapshot
 }

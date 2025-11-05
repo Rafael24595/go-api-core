@@ -24,7 +24,8 @@ func Initialize(kargs map[string]utils.Argument) (*configuration.Configuration, 
 
 	mod := ReadGoMod()
 	pkg := ReadPackage()
-	config := configuration.Initialize(session, timestamp, kargs, mod, &pkg.Project)
+	snp := readSnapshot(kargs)
+	config := configuration.Initialize(session, timestamp, kargs, mod, &pkg.Project, snp)
 
 	log.Messagef("Session ID: %s", config.SessionId())
 	log.Messagef("Started at: %s", utils.FormatMilliseconds(config.Timestamp()))
@@ -123,4 +124,35 @@ func ReadPackage() *configuration.Package {
 	}
 
 	return &pkg
+}
+
+func readSnapshot(kargs map[string]utils.Argument) *configuration.Snapshot {
+	enable := kargs["GAC_ENABLE_SNAPSHOT"].Boold(false)
+	time := kargs["GAC_SNAPSHOT_TIME"].Int64d(0)
+	limit := kargs["GAC_SNAPSHOT_LIMIT"].Intd(1)
+
+	return &configuration.Snapshot{
+		Enable: enable,
+		Time:   time * int64(readSnapshotUnit(kargs)),
+		Limit:  limit,
+	}
+}
+
+func readSnapshotUnit(kargs map[string]utils.Argument) time.Duration {
+	switch kargs["GAC_SNAPSHOT_UNIT"].String() {
+	case "MILLISECOND":
+		return time.Millisecond
+	case "SECOND":
+		return time.Second
+	case "MINUTE":
+		return time.Minute
+	case "HOUR":
+		return time.Hour
+	case "DAY":
+		return time.Hour * 24
+	case "WEEK":
+		return time.Hour * 24 * 7
+	default:
+		return time.Hour
+	}
 }
