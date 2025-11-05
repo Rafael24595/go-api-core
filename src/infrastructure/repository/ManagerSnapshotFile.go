@@ -75,13 +75,13 @@ func (m *ManagerSnapshotFile[T]) watch(millis int64) {
 		for {
 			select {
 			case <-m.close:
-				log.Customf("SNAPSHOT", "Watcher stopped: local close signal received.")
+				log.Customf(snapshotCategory, "Watcher stopped: local close signal received.")
 				return
 			case e := <-hub:
 				//TODO: Implement.
 				fmt.Printf("TODO: Use: %q", e.Value.String())
 			case <-conf.Signal.Done():
-				log.Customf("SNAPSHOT", "Watcher stopped: global shutdown signal received.")
+				log.Customf(snapshotCategory, "Watcher stopped: global shutdown signal received.")
 				return
 			case <-ticker.C:
 				m.trySnapshot()
