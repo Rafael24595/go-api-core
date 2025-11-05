@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"github.com/Rafael24595/go-csvt/csvt"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/utils"
+	"github.com/Rafael24595/go-csvt/csvt"
 )
 
 type ManagerCsvtFile[T IStructure] struct {
@@ -40,10 +40,14 @@ func (m *ManagerCsvtFile[T]) Read() (map[string]T, error) {
 }
 
 func (m *ManagerCsvtFile[T]) Write(items []any) error {
-	result, err := csvt.Marshal(items...)
+	result, err := m.marshal(items)
 	if err != nil {
 		return err
 	}
 
 	return utils.WriteFile(m.path, string(result))
+}
+
+func (m *ManagerCsvtFile[T]) marshal(items []any) ([]byte, error) {
+	return csvt.Marshal(items...)
 }
