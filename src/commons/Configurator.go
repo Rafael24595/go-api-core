@@ -31,14 +31,31 @@ func Initialize(kargs map[string]utils.Argument) (*configuration.Configuration, 
 	log.Messagef("Started at: %s", utils.FormatMilliseconds(config.Timestamp()))
 	log.Messagef("Dev mode: %v", config.Dev())
 
-	container := dependency.Initialize()
-	initializeManagerSession(container)
+	container := dependency.Initialize(config)
+	initializeManagerSession(config, container)
 	return &config, container
 }
 
-func initializeManagerSession(container *dependency.DependencyContainer) *repository.ManagerSession {
-	file := repository.NewManagerCsvtFile[dto.DtoSession](repository.CSVT_FILE_PATH_SESSION)
+func initializeManagerSession(config configuration.Configuration, container *dependency.DependencyContainer) *repository.ManagerSession {
+	var file repository.IFileManager[dto.DtoSession]
+	file = repository.NewManagerCsvtFile[dto.DtoSession](repository.CSVT_FILE_PATH_SESSION)
+
+	snapshot := config.Snapshot()
+	if snapshot.Enable {
+		path := repository.CSVT_SNAPSHOT_PATH_SESSION
+		topic := repository.SNAPSHOT_TOPIC_SESSION
+		file = loadManagerSnapshotFile(path, topic, snapshot, file)
+	}
+
 	return repository.InitializeManagerSession(file, container.ManagerCollection, container.ManagerGroup)
+}
+
+func loadManagerSnapshotFile[T repository.IStructure](path, topic string, snapshot configuration.Snapshot, file repository.IFileManager[T]) repository.IFileManager[T] {
+	return repository.
+		BuilderManagerSnapshotFile(path, topic, file).
+		Limit(snapshot.Limit).
+		Time(snapshot.Time).
+		Make()
 }
 
 func ReadAllEnv(path string) map[string]utils.Argument {

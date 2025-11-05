@@ -20,7 +20,6 @@ import (
 const snapshotCategory = "SNAPSHOT"
 
 const snapshotListener = "snapshot"
-const snapshotTopic = "snapshot"
 
 const snpsh = "snpsh"
 const snpsh_timestamp = `^(snpsh_)(\d*)(\.csvt)$`
@@ -28,47 +27,76 @@ const snpsh_timestamp = `^(snpsh_)(\d*)(\.csvt)$`
 const snapshotRetries = 3
 const snapshotRetrySeconds = 30
 
-type ManagerSnapshotFile[T IStructure] struct {
+type builderManagerSnapshotFile[T IStructure] struct {
+	manager *managerSnapshotFile[T]
+}
+
+func BuilderManagerSnapshotFile[T IStructure](path, topic string, manager IFileManager[T]) *builderManagerSnapshotFile[T] {
+	instance := &managerSnapshotFile[T]{
+		limit:   1,
+		topic:   topic,
+		path:    path,
+		errors:  make([]error, 0),
+		time:    int64(time.Hour) * 24 * 7,
+		last:    0,
+		manager: manager,
+	}
+
+	return &builderManagerSnapshotFile[T]{
+		manager: instance,
+	}
+}
+
+func (b *builderManagerSnapshotFile[T]) Limit(limit int) *builderManagerSnapshotFile[T] {
+	if limit < 1 {
+		limit = 1
+	}
+
+	b.manager.limit = limit
+	return b
+}
+
+func (b *builderManagerSnapshotFile[T]) Time(time int64) *builderManagerSnapshotFile[T] {
+	if time < 0 {
+		return b
+	}
+	
+	b.manager.time = time
+	return b
+}
+
+func (b *builderManagerSnapshotFile[T]) Make() *managerSnapshotFile[T] {
+	b.manager.Initialize()
+	return b.manager
+}
+
+type managerSnapshotFile[T IStructure] struct {
 	once    sync.Once
 	close   chan bool
 	limit   int
 	path    string
+	topic   string
 	errors  []error
 	time    int64
 	last    int64
 	manager IFileManager[T]
 }
 
-func InitializeManagerSnapshotFile[T IStructure](path string, time int64, limit int, manager IFileManager[T]) *ManagerSnapshotFile[T] {
-	if limit < 1 {
-		limit = 1
-	}
-
-	instance := &ManagerSnapshotFile[T]{
-		limit:   limit,
-		path:    path,
-		errors:  make([]error, 0),
-		time:    time,
-		last:    0,
-		manager: manager,
-	}
-
-	go instance.watch(time)
-
-	return instance
+func (m *managerSnapshotFile[T]) Initialize() {
+	go m.watch()
 }
 
-func (m *ManagerSnapshotFile[T]) watch(millis int64) {
+func (m *managerSnapshotFile[T]) watch() {
 	m.once.Do(func() {
 		conf := configuration.Instance()
-		ticker := time.NewTicker(time.Duration(millis) * time.Millisecond)
+		ticker := time.NewTicker(time.Duration(m.time))
 		defer ticker.Stop()
 
 		hub := make(chan system.SystemEvent, 1)
 		defer close(hub)
 
-		conf.EventHub.Subcribe(snapshotListener, hub, snapshotTopic)
-		defer conf.EventHub.Unsubcribe(snapshotListener)
+		conf.EventHub.Subcribe(snapshotListener, hub, m.topic)
+		defer conf.EventHub.Unsubcribe(snapshotListener, m.topic)
 
 		m.trySnapshot()
 
@@ -90,11 +118,11 @@ func (m *ManagerSnapshotFile[T]) watch(millis int64) {
 	})
 }
 
-func (m *ManagerSnapshotFile[T]) unwatch() {
+func (m *managerSnapshotFile[T]) unwatch() {
 	m.close <- true
 }
 
-func (m *ManagerSnapshotFile[T]) trySnapshot() {
+func (m *managerSnapshotFile[T]) trySnapshot() {
 	ticker := time.NewTicker(snapshotRetrySeconds * time.Second)
 	defer ticker.Stop()
 
@@ -120,7 +148,7 @@ func (m *ManagerSnapshotFile[T]) trySnapshot() {
 	}
 }
 
-func (m *ManagerSnapshotFile[T]) snapshot() error {
+func (m *managerSnapshotFile[T]) snapshot() error {
 	snapshots, err := m.collect()
 	if err != nil {
 		return err
@@ -158,7 +186,7 @@ func (m *ManagerSnapshotFile[T]) snapshot() error {
 	return nil
 }
 
-func (m *ManagerSnapshotFile[T]) collect() (*collection.Vector[os.DirEntry], error) {
+func (m *managerSnapshotFile[T]) collect() (*collection.Vector[os.DirEntry], error) {
 	err := os.MkdirAll(m.path, os.ModePerm)
 	if err != nil {
 		return nil, err
@@ -186,7 +214,7 @@ func (m *ManagerSnapshotFile[T]) collect() (*collection.Vector[os.DirEntry], err
 		}), nil
 }
 
-func (m *ManagerSnapshotFile[T]) save(name string) error {
+func (m *managerSnapshotFile[T]) save(name string) error {
 	snapshot, err := m.manager.Read()
 	if err != nil {
 		return err
@@ -212,7 +240,7 @@ func (m *ManagerSnapshotFile[T]) save(name string) error {
 	return err
 }
 
-func (m *ManagerSnapshotFile[T]) clean(snapshots collection.Vector[os.DirEntry]) error {
+func (m *managerSnapshotFile[T]) clean(snapshots collection.Vector[os.DirEntry]) error {
 	size := snapshots.Size()
 	if size == 0 || size < m.limit {
 		return nil
@@ -236,14 +264,14 @@ func (m *ManagerSnapshotFile[T]) clean(snapshots collection.Vector[os.DirEntry])
 	return nil
 }
 
-func (m *ManagerSnapshotFile[T]) Read() (map[string]T, error) {
+func (m *managerSnapshotFile[T]) Read() (map[string]T, error) {
 	return m.manager.Read()
 }
 
-func (m *ManagerSnapshotFile[T]) Write(items []any) error {
+func (m *managerSnapshotFile[T]) Write(items []any) error {
 	return m.manager.Write(items)
 }
 
-func (m *ManagerSnapshotFile[T]) marshal(items []any) ([]byte, error) {
+func (m *managerSnapshotFile[T]) marshal(items []any) ([]byte, error) {
 	return m.manager.marshal(items)
 }

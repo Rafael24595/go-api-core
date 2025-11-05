@@ -1,6 +1,7 @@
 package dependency
 
 import (
+	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/action"
@@ -39,7 +40,7 @@ type DependencyContainer struct {
 	ManagerToken      *repository.ManagerToken
 }
 
-func Initialize() *DependencyContainer {
+func Initialize(config configuration.Configuration) *DependencyContainer {
 	if instance != nil {
 		log.Panics("The dependency container is alredy initialized")
 	}
@@ -49,14 +50,14 @@ func Initialize() *DependencyContainer {
 		log.Error(err)
 	}
 
-	repositoryRequest := loadRepositoryRequest()
-	repositoryResponse := loadRepositoryResponse()
+	repositoryRequest := loadRepositoryRequest(config)
+	repositoryResponse := loadRepositoryResponse(config)
 
-	repositoryContext := loadRepositoryContext()
-	repositoryCollection := loadRepositoryCollection()
-	repositoryGroup := loadRepositoryGroup()
-	repositoryEndPoint := loadRepositoryEndPoint()
-	repositoryToken := loadRepositoryToken()
+	repositoryContext := loadRepositoryContext(config)
+	repositoryCollection := loadRepositoryCollection(config)
+	repositoryGroup := loadRepositoryGroup(config)
+	repositoryEndPoint := loadRepositoryEndPoint(config)
+	repositoryToken := loadRepositoryToken(config)
 
 	managerRequest := loadManagerRequest(repositoryRequest, repositoryResponse)
 	managerContext := loadManagerContext(repositoryContext)
@@ -82,8 +83,17 @@ func Initialize() *DependencyContainer {
 	return instance
 }
 
-func loadRepositoryRequest() repository.IRepositoryRequest {
-	file := repository.NewManagerCsvtFile[action.Request](repository.CSVT_FILE_PATH_REQUEST)
+func loadRepositoryRequest(config configuration.Configuration) repository.IRepositoryRequest {
+	var file repository.IFileManager[action.Request]
+	file = repository.NewManagerCsvtFile[action.Request](repository.CSVT_FILE_PATH_REQUEST)
+
+	snapshot := config.Snapshot()
+	if snapshot.Enable {
+		path := repository.CSVT_SNAPSHOT_PATH_REQUEST
+		topic := repository.SNAPSHOT_TOPIC_REQUEST
+		file = loadManagerSnapshotFile(path, topic, snapshot, file)
+	}
+
 	impl := collection.DictionarySyncEmpty[string, action.Request]()
 	repository, err := request.InitializeRepositoryMemory(impl, file)
 	if err != nil {
@@ -93,8 +103,17 @@ func loadRepositoryRequest() repository.IRepositoryRequest {
 	return repository
 }
 
-func loadRepositoryResponse() repository.IRepositoryResponse {
-	file := repository.NewManagerCsvtFile[action.Response](repository.CSVT_FILE_PATH_RESPONSE)
+func loadRepositoryResponse(config configuration.Configuration) repository.IRepositoryResponse {
+	var file repository.IFileManager[action.Response]
+	file = repository.NewManagerCsvtFile[action.Response](repository.CSVT_FILE_PATH_RESPONSE)
+
+	snapshot := config.Snapshot()
+	if snapshot.Enable {
+		path := repository.CSVT_SNAPSHOT_PATH_RESPONSE
+		topic := repository.SNAPSHOT_TOPIC_RESPONSE
+		file = loadManagerSnapshotFile(path, topic, snapshot, file)
+	}
+
 	impl := collection.DictionarySyncEmpty[string, action.Response]()
 	repository, err := response.InitializeRepositoryMemory(impl, file)
 	if err != nil {
@@ -104,8 +123,17 @@ func loadRepositoryResponse() repository.IRepositoryResponse {
 	return repository
 }
 
-func loadRepositoryContext() repository.IRepositoryContext {
-	file := repository.NewManagerCsvtFile[dto.DtoContext](repository.CSVT_FILE_PATH_CONTEXT)
+func loadRepositoryContext(config configuration.Configuration) repository.IRepositoryContext {
+	var file repository.IFileManager[dto.DtoContext]
+	file = repository.NewManagerCsvtFile[dto.DtoContext](repository.CSVT_FILE_PATH_CONTEXT)
+
+	snapshot := config.Snapshot()
+	if snapshot.Enable {
+		path := repository.CSVT_SNAPSHOT_PATH_CONTEXT
+		topic := repository.SNAPSHOT_TOPIC_CONTEXT
+		file = loadManagerSnapshotFile(path, topic, snapshot, file)
+	}
+
 	impl := collection.DictionarySyncEmpty[string, context.Context]()
 	repository, err := repository_context.InitializeRepositoryMemory(impl, file)
 	if err != nil {
@@ -115,8 +143,17 @@ func loadRepositoryContext() repository.IRepositoryContext {
 	return repository
 }
 
-func loadRepositoryCollection() repository.IRepositoryCollection {
-	file := repository.NewManagerCsvtFile[collection_domain.Collection](repository.CSVT_FILE_PATH_COLLECTION)
+func loadRepositoryCollection(config configuration.Configuration) repository.IRepositoryCollection {
+	var file repository.IFileManager[collection_domain.Collection]
+	file = repository.NewManagerCsvtFile[collection_domain.Collection](repository.CSVT_FILE_PATH_COLLECTION)
+
+	snapshot := config.Snapshot()
+	if snapshot.Enable {
+		path := repository.CSVT_SNAPSHOT_PATH_COLLECTION
+		topic := repository.SNAPSHOT_TOPIC_COLLECTION
+		file = loadManagerSnapshotFile(path, topic, snapshot, file)
+	}
+
 	impl := collection.DictionarySyncEmpty[string, collection_domain.Collection]()
 	repository, err := repository_collection.InitializeRepositoryMemory(impl, file)
 	if err != nil {
@@ -126,8 +163,17 @@ func loadRepositoryCollection() repository.IRepositoryCollection {
 	return repository
 }
 
-func loadRepositoryGroup() repository.IRepositoryGroup {
-	file := repository.NewManagerCsvtFile[domain.Group](repository.CSVT_FILE_PATH_GROUP)
+func loadRepositoryGroup(config configuration.Configuration) repository.IRepositoryGroup {
+	var file repository.IFileManager[domain.Group]
+	file = repository.NewManagerCsvtFile[domain.Group](repository.CSVT_FILE_PATH_GROUP)
+
+	snapshot := config.Snapshot()
+	if snapshot.Enable {
+		path := repository.CSVT_SNAPSHOT_PATH_GROUP
+		topic := repository.SNAPSHOT_TOPIC_GROUP
+		file = loadManagerSnapshotFile(path, topic, snapshot, file)
+	}
+
 	impl := collection.DictionarySyncEmpty[string, domain.Group]()
 	repository, err := repository_group.InitializeRepositoryMemory(impl, file)
 	if err != nil {
@@ -137,8 +183,17 @@ func loadRepositoryGroup() repository.IRepositoryGroup {
 	return repository
 }
 
-func loadRepositoryEndPoint() repository.IRepositoryEndPoint {
-	file := repository.NewManagerCsvtFile[mock_domain.EndPoint](repository.CSVT_FILE_PATH_END_POINT)
+func loadRepositoryEndPoint(config configuration.Configuration) repository.IRepositoryEndPoint {
+	var file repository.IFileManager[mock_domain.EndPoint]
+	file = repository.NewManagerCsvtFile[mock_domain.EndPoint](repository.CSVT_FILE_PATH_END_POINT)
+
+	snapshot := config.Snapshot()
+	if snapshot.Enable {
+		path := repository.CSVT_SNAPSHOT_PATH_END_POINT
+		topic := repository.SNAPSHOT_TOPIC_END_POINT
+		file = loadManagerSnapshotFile(path, topic, snapshot, file)
+	}
+
 	impl := collection.DictionarySyncEmpty[string, mock_domain.EndPoint]()
 	repository, err := repository_mock.InitializeRepositoryMemory(impl, file)
 	if err != nil {
@@ -148,8 +203,17 @@ func loadRepositoryEndPoint() repository.IRepositoryEndPoint {
 	return repository
 }
 
-func loadRepositoryToken() repository.IRepositoryToken {
-	file := repository.NewManagerCsvtFile[token_domain.Token](repository.CSVT_FILE_PATH_TOKEN)
+func loadRepositoryToken(config configuration.Configuration) repository.IRepositoryToken {
+	var file repository.IFileManager[token_domain.Token]
+	file = repository.NewManagerCsvtFile[token_domain.Token](repository.CSVT_FILE_PATH_TOKEN)
+
+	snapshot := config.Snapshot()
+	if snapshot.Enable {
+		path := repository.CSVT_SNAPSHOT_PATH_TOKEN
+		topic := repository.SNAPSHOT_TOPIC_TOKEN
+		file = loadManagerSnapshotFile(path, topic, snapshot, file)
+	}
+
 	impl := collection.DictionarySyncEmpty[string, token_domain.Token]()
 	repository, err := repository_token.InitializeRepositoryMemory(impl, file)
 	if err != nil {
@@ -157,6 +221,14 @@ func loadRepositoryToken() repository.IRepositoryToken {
 	}
 
 	return repository
+}
+
+func loadManagerSnapshotFile[T repository.IStructure](path, topic string, snapshot configuration.Snapshot, file repository.IFileManager[T]) repository.IFileManager[T] {
+	return repository.
+		BuilderManagerSnapshotFile(path, topic, file).
+		Limit(snapshot.Limit).
+		Time(snapshot.Time).
+		Make()
 }
 
 func loadManagerRequest(request repository.IRepositoryRequest, response repository.IRepositoryResponse) *repository.ManagerRequest {
