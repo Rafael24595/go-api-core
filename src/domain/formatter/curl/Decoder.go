@@ -26,12 +26,7 @@ const (
 
 type curlData struct {
 	uri    string
-	tuples []tuple
-}
-
-type tuple struct {
-	flag string
-	data string
+	tuples []utils.CmdTuple
 }
 
 func Unmarshal(curl []byte) (*action.Request, error) {
@@ -47,21 +42,21 @@ func Unmarshal(curl []byte) (*action.Request, error) {
 	request.Query = *query
 
 	for _, v := range data.tuples {
-		switch v.flag {
+		switch v.Flag {
 		case "-X":
-			request.Method = domain.HttpMethod(v.data)
+			request.Method = domain.HttpMethod(v.Data)
 		case "-H", "--header":
-			request = processHeader(v.data, request)
+			request = processHeader(v.Data, request)
 		case "-d", "--data", "--data-raw":
-			request = processDocument(v.data, request)
+			request = processDocument(v.Data, request)
 		case "--data-binary":
-			request = processBinary(v.data, request)
+			request = processBinary(v.Data, request)
 		case "-F", "--form":
-			request = processFormData(v.data, request)
+			request = processFormData(v.Data, request)
 		case "-u", "--user":
-			request = processBasicAuth(v.data, request)
+			request = processBasicAuth(v.Data, request)
 		case "-b", "--cookie":
-			request = processCookie(v.data, request)
+			request = processCookie(v.Data, request)
 		}
 	}
 
@@ -184,7 +179,7 @@ func decode(curl []byte) (*curlData, error) {
 	}
 
 	uri := ""
-	tuples := make([]tuple, 0)
+	tuples := make([]utils.CmdTuple, 0)
 
 	fragments := collection.VectorFromList(args)
 	head, ok := fragments.Shift()
@@ -213,9 +208,9 @@ func decode(curl []byte) (*curlData, error) {
 			return nil, errors.New("the command flag data could not be empty")
 		}
 
-		tuples = append(tuples, tuple{
-			flag: *flag,
-			data: *data,
+		tuples = append(tuples, utils.CmdTuple{
+			Flag: *flag,
+			Data: *data,
 		})
 	}
 
