@@ -29,8 +29,8 @@ type DtoRequest struct {
 
 func ToRequests(dtos ...DtoRequest) []action.Request {
 	reqs := make([]action.Request, len(dtos))
-	for _, v := range dtos {
-		reqs = append(reqs, *ToRequest(&v))
+	for i, v := range dtos {
+		reqs[i] = *ToRequest(&v)
 	}
 	return reqs
 }
