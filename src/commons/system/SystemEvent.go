@@ -6,6 +6,7 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
+	"github.com/Rafael24595/go-collections/collection"
 )
 
 const SystemHubCategory = "SYSTEMHUB"
@@ -34,6 +35,15 @@ func InitializeSystemEventHub() *SystemEventHub {
 	return &SystemEventHub{
 		listeners: make(listeners),
 	}
+}
+
+func (h *SystemEventHub) Topics(code string) []string {
+	l, ok := h.listeners[code]
+	if !ok {
+		return make([]string, 0)
+	}
+
+	return collection.DictionaryFromMap(l).Keys()
 }
 
 func (h *SystemEventHub) Subcribe(code string, listener chan SystemEvent, topics ...string) {
