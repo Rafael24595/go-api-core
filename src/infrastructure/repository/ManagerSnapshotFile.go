@@ -2,7 +2,6 @@ package repository
 
 import (
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -60,7 +59,7 @@ func (b *builderManagerSnapshotFile[T]) Time(time int64) *builderManagerSnapshot
 	if time < 0 {
 		return b
 	}
-	
+
 	b.manager.time = time
 	return b
 }
@@ -220,13 +219,9 @@ func (m *managerSnapshotFile[T]) save(name string) error {
 		return err
 	}
 
-	items := make([]any, 0)
-	values := maps.Values(snapshot)
-	for v := range values {
-		items = append(items, v)
-	}
+	items := collection.DictionaryFromMap(snapshot)
 
-	result, err := m.manager.marshal(items)
+	result, err := m.manager.marshal(items.Values())
 	if err != nil {
 		return err
 	}
@@ -238,6 +233,31 @@ func (m *managerSnapshotFile[T]) save(name string) error {
 	}
 
 	return err
+}
+
+func (m *managerSnapshotFile[T]) apply(name string) error {
+	path := filepath.Join(m.path, fmt.Sprintf("%s.csvt", name))
+	buffer, err := utils.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	snapshot, err := m.manager.unmarshal(buffer)
+	if err != nil {
+		return err
+	}
+
+	items := collection.DictionaryFromMap(snapshot)
+
+	err = m.manager.Write(items.Values())
+	if err != nil {
+		return err
+	}
+
+	conf := configuration.Instance()
+	conf.EventHub.Publish("//TODO: Refresh repository.", "//TODO: Evalue any as payload.")
+
+	return nil
 }
 
 func (m *managerSnapshotFile[T]) clean(snapshots collection.Vector[os.DirEntry]) error {
@@ -268,10 +288,14 @@ func (m *managerSnapshotFile[T]) Read() (map[string]T, error) {
 	return m.manager.Read()
 }
 
-func (m *managerSnapshotFile[T]) Write(items []any) error {
+func (m *managerSnapshotFile[T]) Write(items []T) error {
 	return m.manager.Write(items)
 }
 
-func (m *managerSnapshotFile[T]) marshal(items []any) ([]byte, error) {
+func (m *managerSnapshotFile[T]) unmarshal(buffer []byte) (map[string]T, error) {
+	return m.manager.unmarshal(buffer)
+}
+
+func (m *managerSnapshotFile[T]) marshal(items []T) ([]byte, error) {
 	return m.manager.marshal(items)
 }
