@@ -3,6 +3,7 @@ package configuration
 import (
 	"sync"
 
+	"github.com/Rafael24595/go-api-core/src/commons/format"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
@@ -29,6 +30,7 @@ type Configuration struct {
 	timestamp int64
 	admin     string
 	secret    []byte
+	format    format.DataFormat
 	snapshot  Snapshot
 	kargs     map[string]utils.Argument
 }
@@ -52,6 +54,7 @@ func Initialize(session string, timestamp int64, kargs map[string]utils.Argument
 			EventHub:  system.InitializeSystemEventHub(),
 			Mod:       *mod,
 			Project:   *project,
+			format:    format.CSVT,
 			dev:       dev,
 			sessionId: session,
 			timestamp: timestamp,
@@ -94,6 +97,10 @@ func (c Configuration) Admin() string {
 
 func (c Configuration) Secret() []byte {
 	return c.secret
+}
+
+func (c Configuration) Format() format.DataFormat {
+	return c.format
 }
 
 func (c Configuration) Snapshot() Snapshot {
