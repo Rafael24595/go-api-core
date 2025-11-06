@@ -9,6 +9,7 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/dependency"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
+	"github.com/Rafael24595/go-api-core/src/commons/system"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
@@ -42,17 +43,16 @@ func initializeManagerSession(config configuration.Configuration, container *dep
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		path := repository.CSVT_SNAPSHOT_PATH_SESSION
-		topic := repository.SNAPSHOT_TOPIC_SESSION
-		file = loadManagerSnapshotFile(path, topic, snapshot, file)
+		topic := system.SNAPSHOT_TOPIC_SESSION
+		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
 	return repository.InitializeManagerSession(file, container.ManagerCollection, container.ManagerGroup)
 }
 
-func loadManagerSnapshotFile[T repository.IStructure](path, topic string, snapshot configuration.Snapshot, file repository.IFileManager[T]) repository.IFileManager[T] {
+func loadManagerSnapshotFile[T repository.IStructure](topic system.TopicSnapshot, snapshot configuration.Snapshot, file repository.IFileManager[T]) repository.IFileManager[T] {
 	return repository.
-		BuilderManagerSnapshotFile(path, topic, file).
+		BuilderManagerSnapshotFile(topic, file).
 		Limit(snapshot.Limit).
 		Time(snapshot.Time).
 		Make()

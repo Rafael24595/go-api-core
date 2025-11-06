@@ -3,6 +3,7 @@ package dependency
 import (
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
+	"github.com/Rafael24595/go-api-core/src/commons/system"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/action"
 	collection_domain "github.com/Rafael24595/go-api-core/src/domain/collection"
@@ -89,9 +90,8 @@ func loadRepositoryRequest(config configuration.Configuration) repository.IRepos
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		path := repository.CSVT_SNAPSHOT_PATH_REQUEST
-		topic := repository.SNAPSHOT_TOPIC_REQUEST
-		file = loadManagerSnapshotFile(path, topic, snapshot, file)
+		topic := system.SNAPSHOT_TOPIC_REQUEST
+		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
 	impl := collection.DictionarySyncEmpty[string, action.Request]()
@@ -109,9 +109,8 @@ func loadRepositoryResponse(config configuration.Configuration) repository.IRepo
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		path := repository.CSVT_SNAPSHOT_PATH_RESPONSE
-		topic := repository.SNAPSHOT_TOPIC_RESPONSE
-		file = loadManagerSnapshotFile(path, topic, snapshot, file)
+		topic := system.SNAPSHOT_TOPIC_RESPONSE
+		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
 	impl := collection.DictionarySyncEmpty[string, action.Response]()
@@ -129,9 +128,8 @@ func loadRepositoryContext(config configuration.Configuration) repository.IRepos
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		path := repository.CSVT_SNAPSHOT_PATH_CONTEXT
-		topic := repository.SNAPSHOT_TOPIC_CONTEXT
-		file = loadManagerSnapshotFile(path, topic, snapshot, file)
+		topic := system.SNAPSHOT_TOPIC_CONTEXT
+		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
 	impl := collection.DictionarySyncEmpty[string, context.Context]()
@@ -149,9 +147,8 @@ func loadRepositoryCollection(config configuration.Configuration) repository.IRe
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		path := repository.CSVT_SNAPSHOT_PATH_COLLECTION
-		topic := repository.SNAPSHOT_TOPIC_COLLECTION
-		file = loadManagerSnapshotFile(path, topic, snapshot, file)
+		topic := system.SNAPSHOT_TOPIC_COLLECTION
+		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
 	impl := collection.DictionarySyncEmpty[string, collection_domain.Collection]()
@@ -169,9 +166,8 @@ func loadRepositoryGroup(config configuration.Configuration) repository.IReposit
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		path := repository.CSVT_SNAPSHOT_PATH_GROUP
-		topic := repository.SNAPSHOT_TOPIC_GROUP
-		file = loadManagerSnapshotFile(path, topic, snapshot, file)
+		topic := system.SNAPSHOT_TOPIC_GROUP
+		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
 	impl := collection.DictionarySyncEmpty[string, domain.Group]()
@@ -189,9 +185,8 @@ func loadRepositoryEndPoint(config configuration.Configuration) repository.IRepo
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		path := repository.CSVT_SNAPSHOT_PATH_END_POINT
-		topic := repository.SNAPSHOT_TOPIC_END_POINT
-		file = loadManagerSnapshotFile(path, topic, snapshot, file)
+		topic := system.SNAPSHOT_TOPIC_END_POINT
+		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
 	impl := collection.DictionarySyncEmpty[string, mock_domain.EndPoint]()
@@ -209,9 +204,8 @@ func loadRepositoryToken(config configuration.Configuration) repository.IReposit
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		path := repository.CSVT_SNAPSHOT_PATH_TOKEN
-		topic := repository.SNAPSHOT_TOPIC_TOKEN
-		file = loadManagerSnapshotFile(path, topic, snapshot, file)
+		topic := system.SNAPSHOT_TOPIC_TOKEN
+		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
 	impl := collection.DictionarySyncEmpty[string, token_domain.Token]()
@@ -223,9 +217,9 @@ func loadRepositoryToken(config configuration.Configuration) repository.IReposit
 	return repository
 }
 
-func loadManagerSnapshotFile[T repository.IStructure](path, topic string, snapshot configuration.Snapshot, file repository.IFileManager[T]) repository.IFileManager[T] {
+func loadManagerSnapshotFile[T repository.IStructure](topic system.TopicSnapshot, snapshot configuration.Snapshot, file repository.IFileManager[T]) repository.IFileManager[T] {
 	return repository.
-		BuilderManagerSnapshotFile(path, topic, file).
+		BuilderManagerSnapshotFile(topic, file).
 		Limit(snapshot.Limit).
 		Time(snapshot.Time).
 		Make()
