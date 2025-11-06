@@ -365,11 +365,11 @@ func (s *ManagerSession) write(snapshot collection.IDictionary[string, session.S
 	s.mutFile.Lock()
 	defer s.mutFile.Unlock()
 
-	items := collection.DictionaryMap(snapshot, func(k string, v session.Session) any {
+	items := collection.DictionaryMap(snapshot, func(k string, v session.Session) dto.DtoSession {
 		return *dto.FromSession(v)
-	}).Values()
+	})
 
-	err := s.file.Write(items)
+	err := s.file.Write(items.Values())
 	if err != nil {
 		log.Error(err)
 	}

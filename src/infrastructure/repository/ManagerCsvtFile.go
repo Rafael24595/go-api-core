@@ -21,12 +21,25 @@ func (m *ManagerCsvtFile[T]) Read() (map[string]T, error) {
 		return nil, err
 	}
 
+	return m.unmarshal(buffer)
+}
+
+func (m *ManagerCsvtFile[T]) Write(items []T) error {
+	result, err := m.marshal(items)
+	if err != nil {
+		return err
+	}
+
+	return utils.WriteFile(m.path, string(result))
+}
+
+func (m *ManagerCsvtFile[T]) unmarshal(buffer []byte) (map[string]T, error) {
 	if len(buffer) == 0 {
 		return make(map[string]T), nil
 	}
 
 	var vector []T
-	err = csvt.Unmarshal(buffer, &vector)
+	err := csvt.Unmarshal(buffer, &vector)
 	if err != nil {
 		return nil, err
 	}
@@ -39,15 +52,11 @@ func (m *ManagerCsvtFile[T]) Read() (map[string]T, error) {
 	return items, nil
 }
 
-func (m *ManagerCsvtFile[T]) Write(items []any) error {
-	result, err := m.marshal(items)
-	if err != nil {
-		return err
+func (m *ManagerCsvtFile[T]) marshal(snapshot []T) ([]byte, error) {
+	items := make([]any, 0)
+	for v := range snapshot {
+		items = append(items, v)
 	}
 
-	return utils.WriteFile(m.path, string(result))
-}
-
-func (m *ManagerCsvtFile[T]) marshal(items []any) ([]byte, error) {
 	return csvt.Marshal(items...)
 }

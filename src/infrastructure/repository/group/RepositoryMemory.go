@@ -97,11 +97,7 @@ func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, domain.
 	r.muFile.Lock()
 	defer r.muFile.Unlock()
 
-	items := collection.DictionaryMap(snapshot, func(k string, v domain.Group) any {
-		return v
-	}).Values()
-
-	err := r.file.Write(items)
+	err := r.file.Write(snapshot.Values())
 	if err != nil {
 		log.Error(err)
 	}
