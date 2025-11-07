@@ -15,17 +15,76 @@ import (
 )
 
 const (
+	FLAG_SNAPSHOT_HELP      = "-h"
 	FLAG_SNAPSHOT_VERBOSE   = "-v"
 	FLAG_SNAPSHOT_SAVE      = "-s"
 	FLAG_SNAPSHOT_APPLY     = "-a"
+	FLAG_SNAPSHOT_REMOVE    = "-r"
 	FLAG_SNAPSHOT_LISTENERS = "-l"
 	FLAG_SNAPSHOT_DETAILS   = "-d"
 )
 
+var snapshotHelp = commandAction{
+	Flag:        FLAG_SNAPSHOT_HELP,
+	Name:        "Help",
+	Description: "Shows this help message.",
+	Example:     `snpsh -h`,
+}
+
+var snapshotSave = commandAction{
+	Flag:        FLAG_SNAPSHOT_SAVE,
+	Name:        "Save",
+	Description: "Saves the current data as snapshot for a given target and type.",
+	Example:     `snpsh -s snpsh_${target}=${type}`,
+}
+
+var snapshotApply = commandAction{
+	Flag:        FLAG_SNAPSHOT_APPLY,
+	Name:        "Apply",
+	Description: "Applies a previously saved input snapshot for a given target and type retrieved from the extension.",
+	Example:     `snpsh -a snpsh_${target}=${name}.${extension}`,
+}
+
+var snapshotRemove = commandAction{
+	Flag:        FLAG_SNAPSHOT_REMOVE,
+	Name:        "Remove",
+	Description: "Removes a previously saved snapshot for a given target and type retrieved from the extension.",
+	Example:     `snpsh -r snpsh_${target}=${name}.${extension}`,
+}
+
+var snapshotDetails = commandAction{
+	Flag:        FLAG_SNAPSHOT_DETAILS,
+	Name:        "Details",
+	Description: "Displays the list of snapshots data for a given target and type.",
+	Example:     `snpsh -d snpsh_${target}=${type}`,
+}
+
+var snapshotListeners = commandAction{
+	Flag:        FLAG_SNAPSHOT_LISTENERS,
+	Name:        "Listeners",
+	Description: "Lists all available snapshot listeners, use the verbose flag to expand the details.",
+	Example:     `snpsh -v -l`,
+}
+
+var snapshotActions = []commandAction{
+	snapshotHelp,
+	snapshotSave,
+	snapshotApply,
+	snapshotRemove,
+	snapshotDetails,
+	snapshotListeners,
+}
+
 func snapshot(cmd *collection.Vector[string]) (string, error) {
+	if cmd.Size() == 0 {
+		return runSnapshotHelp(), nil
+	}
+
 	verbose := false
+
 	saveData := make([]utils.CmdTuple, 0)
 	applyData := make([]utils.CmdTuple, 0)
+	removeData := make([]utils.CmdTuple, 0)
 
 	messages := make([]string, 0)
 
@@ -36,23 +95,36 @@ func snapshot(cmd *collection.Vector[string]) (string, error) {
 		}
 
 		switch *flag {
+		case FLAG_SNAPSHOT_HELP:
+			return runSnapshotHelp(), nil
 		case FLAG_SNAPSHOT_VERBOSE:
 			verbose = true
 		case FLAG_SNAPSHOT_SAVE:
-			data := runSnapshotSave(cmd)
-			if data != nil {
-				applyData = append(saveData, *data)
-			}
-
-		case FLAG_SNAPSHOT_APPLY:
-			data, err := runSnapshotApply(*flag, cmd)
+			topic, value, err := runSnapshotCursor(*flag, cmd)
 			if err != nil {
 				return "", err
 			}
 
-			if data != nil {
-				applyData = append(applyData, *data)
+			tuple := utils.NewCmdTuple(topic.TopicSnapshotSaveInput(), value)
+			removeData = append(removeData, *tuple)
+
+		case FLAG_SNAPSHOT_APPLY:
+			topic, value, err := runSnapshotCursor(*flag, cmd)
+			if err != nil {
+				return "", err
 			}
+
+			tuple := utils.NewCmdTuple(topic.TopicSnapshotAppyInput(), value)
+			removeData = append(removeData, *tuple)
+
+		case FLAG_SNAPSHOT_REMOVE:
+			topic, value, err := runSnapshotCursor(*flag, cmd)
+			if err != nil {
+				return "", err
+			}
+
+			tuple := utils.NewCmdTuple(topic.TopicSnapshotRemoveInput(), value)
+			removeData = append(removeData, *tuple)
 
 		case FLAG_SNAPSHOT_LISTENERS:
 			message := runSnapshotListeners(verbose)
@@ -69,7 +141,7 @@ func snapshot(cmd *collection.Vector[string]) (string, error) {
 	}
 
 	if len(saveData) > 0 {
-		message, err := snapshotSave(saveData)
+		message, err := publishEvent(saveData...)
 		if err != nil {
 			return "", err
 		}
@@ -77,7 +149,15 @@ func snapshot(cmd *collection.Vector[string]) (string, error) {
 	}
 
 	if len(applyData) > 0 {
-		message, err := snapshotApply(applyData)
+		message, err := publishEvent(applyData...)
+		if err != nil {
+			return "", err
+		}
+		messages = append(messages, message)
+	}
+
+	if len(removeData) > 0 {
+		message, err := publishEvent(removeData...)
 		if err != nil {
 			return "", err
 		}
@@ -87,43 +167,31 @@ func snapshot(cmd *collection.Vector[string]) (string, error) {
 	return strings.Join(messages, ", "), nil
 }
 
-func runSnapshotSave(cmd *collection.Vector[string]) *utils.CmdTuple {
+func runSnapshotHelp() string {
+	title := "Available snapshot actions:\n"
+	return runHelp(title, snapshotActions)
+}
+
+func runSnapshotCursor(flag string, cmd *collection.Vector[string]) (system.TopicSnapshot, string, error) {
 	value, ok := cmd.Shift()
 	if !ok {
-		return nil
+		return "", "", nil
 	}
 
-	topic, snpsh, ok := strings.Cut(*value, "=")
-	if ok {
-		return utils.NewCmdTuple(topic, snpsh)
-	}
-
-	return utils.NewCmdTuple(*value, "")
-}
-
-func snapshotSave(data []utils.CmdTuple) (string, error) {
-	config := configuration.Instance()
-	for _, cmd := range data {
-		config.EventHub.Publish(cmd.Flag, cmd.Data)
-	}
-	return "", nil
-}
-
-func runSnapshotApply(flag string, cmd *collection.Vector[string]) (*utils.CmdTuple, error) {
-	value, ok := cmd.Shift()
+	tpc, snpsh, ok := strings.Cut(*value, "=")
 	if !ok {
-		return nil, nil
+		return "", "", fmt.Errorf("invalid flag %q value %q", flag, *value)
 	}
 
-	topic, snpsh, ok := strings.Cut(*value, "=")
+	topic, ok := system.TopicSnapshotFromString(tpc)
 	if !ok {
-		return nil, fmt.Errorf("invalid flag %q value %q", flag, *value)
+		return "", "", fmt.Errorf("unknown topic: %s", *value)
 	}
 
-	return utils.NewCmdTuple(topic, snpsh), nil
+	return topic, snpsh, nil
 }
 
-func snapshotApply(data []utils.CmdTuple) (string, error) {
+func publishEvent(data ...utils.CmdTuple) (string, error) {
 	config := configuration.Instance()
 	for _, cmd := range data {
 		config.EventHub.Publish(cmd.Flag, cmd.Data)
