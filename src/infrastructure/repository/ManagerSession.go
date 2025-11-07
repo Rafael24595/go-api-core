@@ -9,6 +9,7 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/session"
+	"github.com/Rafael24595/go-api-core/src/commons/system"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	collection_domain "github.com/Rafael24595/go-api-core/src/domain/collection"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
@@ -22,12 +23,14 @@ var (
 )
 
 type ManagerSession struct {
+	once              sync.Once
 	mut               sync.RWMutex
 	mutFile           sync.RWMutex
 	file              IFileManager[dto.DtoSession]
 	managerCollection *ManagerCollection
 	managerGroup      *ManagerGroup
 	sessions          collection.IDictionary[string, session.Session]
+	close             chan bool
 }
 
 func InitializeManagerSession(file IFileManager[dto.DtoSession], managerCollection *ManagerCollection, managerGroup *ManagerGroup) *ManagerSession {
@@ -38,9 +41,11 @@ func InitializeManagerSession(file IFileManager[dto.DtoSession], managerCollecti
 			return
 		}
 
-		sessions := collection.DictionarySyncMap(collection.DictionarySyncFromMap(steps), func(k string, d dto.DtoSession) session.Session {
-			return *dto.ToSession(d)
-		})
+		sessions := collection.DictionarySyncMap(
+			collection.DictionarySyncFromMap(steps),
+			func(k string, d dto.DtoSession) session.Session {
+				return *dto.ToSession(d)
+			})
 
 		instance := &ManagerSession{
 			file:              file,
@@ -50,6 +55,8 @@ func InitializeManagerSession(file IFileManager[dto.DtoSession], managerCollecti
 		}
 
 		manager = defineDefaultSessions(instance)
+
+		go manager.watch()
 	})
 
 	if manager == nil {
@@ -82,6 +89,56 @@ func InstanceManagerSession() *ManagerSession {
 		log.Panics("The session manager is not initialized yet")
 	}
 	return manager
+}
+
+func (r *ManagerSession) watch() {
+	r.once.Do(func() {
+		conf := configuration.Instance()
+		if !conf.Snapshot().Enable {
+			return
+		}
+
+		hub := make(chan system.SystemEvent, 1)
+		defer close(hub)
+
+		topics := []string{
+			system.SNAPSHOT_TOPIC_SESSION.TopicSnapshotApplyOutput(),
+		}
+
+		conf.EventHub.Subcribe(RepositoryListener, hub, topics...)
+		defer conf.EventHub.Unsubcribe(RepositoryListener, topics...)
+
+		for {
+			select {
+			case <-r.close:
+				log.Customf(SnapshotCategory, "Watcher stopped: local close signal received.")
+				return
+			case <-hub:
+				if err := r.read(); err != nil {
+					log.Custome(SnapshotCategory, err)
+					return
+				}
+			case <-conf.Signal.Done():
+				log.Customf(SnapshotCategory, "Watcher stopped: global shutdown signal received.")
+				return
+			}
+		}
+	})
+}
+
+func (r *ManagerSession) read() error {
+	sessions, err := r.file.Read()
+	if err != nil {
+		return err
+	}
+
+	r.sessions = collection.DictionarySyncMap(
+		collection.DictionarySyncFromMap(sessions),
+		func(k string, d dto.DtoSession) session.Session {
+			return *dto.ToSession(d)
+		})
+
+	return nil
 }
 
 func (s *ManagerSession) defineDefaultUser(username, secret string, roles []session.Role, count int) error {
@@ -301,15 +358,15 @@ func (s *ManagerSession) insert(user, password string, collection *collection_do
 	}
 
 	session := session.Session{
-		Username:    user,
-		Secret:      secret,
-		Timestamp:   time.Now().UnixMilli(),
-		Collection:  collection.Id,
-		History:     history.Id,
-		Group:       group.Id,
-		Count:       count,
-		Refresh:     "",
-		Roles:       roles,
+		Username:   user,
+		Secret:     secret,
+		Timestamp:  time.Now().UnixMilli(),
+		Collection: collection.Id,
+		History:    history.Id,
+		Group:      group.Id,
+		Count:      count,
+		Refresh:    "",
+		Roles:      roles,
 	}
 
 	s.sessions.Put(user, session)

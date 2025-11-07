@@ -4,7 +4,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
+	"github.com/Rafael24595/go-api-core/src/commons/system"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	mock_domain "github.com/Rafael24595/go-api-core/src/domain/mock"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
@@ -13,10 +15,12 @@ import (
 )
 
 type RepositoryMemory struct {
+	once       sync.Once
 	muMemory   sync.RWMutex
 	muFile     sync.RWMutex
 	collection collection.IDictionary[string, mock_domain.EndPoint]
 	file       repository.IFileManager[mock_domain.EndPoint]
+	close      chan bool
 }
 
 func InitializeRepositoryMemory(impl collection.IDictionary[string, mock_domain.EndPoint], file repository.IFileManager[mock_domain.EndPoint]) (*RepositoryMemory, error) {
@@ -25,10 +29,59 @@ func InitializeRepositoryMemory(impl collection.IDictionary[string, mock_domain.
 		return nil, err
 	}
 
-	return &RepositoryMemory{
+	instance := &RepositoryMemory{
 		collection: impl.Merge(collection.DictionaryFromMap(requests)),
 		file:       file,
-	}, nil
+	}
+
+	go instance.watch()
+
+	return instance, nil
+}
+
+func (r *RepositoryMemory) watch() {
+	r.once.Do(func() {
+		conf := configuration.Instance()
+		if !conf.Snapshot().Enable {
+			return
+		}
+
+		hub := make(chan system.SystemEvent, 1)
+		defer close(hub)
+
+		topics := []string{
+			system.SNAPSHOT_TOPIC_END_POINT.TopicSnapshotApplyOutput(),
+		}
+
+		conf.EventHub.Subcribe(repository.RepositoryListener, hub, topics...)
+		defer conf.EventHub.Unsubcribe(repository.RepositoryListener, topics...)
+
+		for {
+			select {
+			case <-r.close:
+				log.Customf(repository.SnapshotCategory, "Watcher stopped: local close signal received.")
+				return
+			case <-hub:
+				if err := r.read(); err != nil {
+					log.Custome(repository.SnapshotCategory, err)
+					return
+				}
+			case <-conf.Signal.Done():
+				log.Customf(repository.SnapshotCategory, "Watcher stopped: global shutdown signal received.")
+				return
+			}
+		}
+	})
+}
+
+func (r *RepositoryMemory) read() error {
+	requests, err := r.file.Read()
+	if err != nil {
+		return err
+	}
+
+	r.collection = collection.DictionaryFromMap(requests)
+	return nil
 }
 
 func (r *RepositoryMemory) Find(id string) (*mock_domain.EndPoint, bool) {
