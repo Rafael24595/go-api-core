@@ -121,3 +121,7 @@ func (t TopicSnapshot) TopicSnapshotAppyInput() string {
 func (t TopicSnapshot) TopicSnapshotApplyOutput() string {
 	return fmt.Sprintf("%s_apl_out", string(t))
 }
+
+func (t TopicSnapshot) TopicSnapshotRemoveInput() string {
+	return fmt.Sprintf("%s_rmv_inp", string(t))
+}

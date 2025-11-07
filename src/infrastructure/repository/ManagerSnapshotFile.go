@@ -19,9 +19,10 @@ import (
 	"github.com/Rafael24595/go-collections/collection"
 )
 
-const snapshotCategory = "SNAPSHOT"
+const SnapshotCategory = "SNAPSHOT"
 
 const SnapshotListener = "snapshot"
+const RepositoryListener = "repository"
 
 const snpsh = "snpsh"
 
@@ -97,45 +98,88 @@ func (m *managerSnapshotFile[T]) watch() {
 		topics := []string{
 			m.topic.TopicSnapshotSaveInput(),
 			m.topic.TopicSnapshotAppyInput(),
+			m.topic.TopicSnapshotRemoveInput(),
 		}
 
 		conf.EventHub.Subcribe(SnapshotListener, hub, topics...)
 		defer conf.EventHub.Unsubcribe(SnapshotListener, topics...)
 
-		m.trySnapshot(false, conf.Format())
+		m.trySave(false, conf.Format())
 
 		for {
 			select {
 			case <-m.close:
-				log.Customf(snapshotCategory, "Watcher stopped: local close signal received.")
+				log.Customf(SnapshotCategory, "Watcher stopped: local close signal received.")
 				return
 			case e := <-hub:
-				switch e.Topic {
-				case m.topic.TopicSnapshotSaveInput():
-					m.trySave(e)
-				case m.topic.TopicSnapshotAppyInput():
-					m.tryApply(e)
-				}
+				m.tryExec(e)
 			case <-conf.Signal.Done():
-				log.Customf(snapshotCategory, "Watcher stopped: global shutdown signal received.")
+				log.Customf(SnapshotCategory, "Watcher stopped: global shutdown signal received.")
 				return
 			case <-ticker.C:
-				m.trySnapshot(false, conf.Format())
+				m.trySave(false, conf.Format())
 			}
 		}
 	})
 }
 
-func (m *managerSnapshotFile[T]) trySave(e system.SystemEvent) error {
+func (m *managerSnapshotFile[T]) unwatch() {
+	m.close <- true
+}
+
+func (m *managerSnapshotFile[T]) trySave(force bool, format format.DataFormat) {
+	ticker := time.NewTicker(snapshotRetrySeconds * time.Second)
+	defer ticker.Stop()
+
+	for {
+		err := m.save(force, format)
+		if err != nil {
+			log.Error(err)
+			m.errors = append(m.errors, err)
+
+			if len(m.errors) >= snapshotRetries {
+				log.Errors("The maximum error rate has been exceeded; snapshot generation will be discontinued.")
+				m.unwatch()
+				return
+			}
+
+			<-ticker.C
+			continue
+		}
+
+		m.errors = make([]error, 0)
+
+		return
+	}
+}
+
+func (m *managerSnapshotFile[T]) tryExec(e system.SystemEvent) {
+	switch e.Topic {
+	case m.topic.TopicSnapshotSaveInput():
+		if err := m.actionSave(e); err != nil {
+			log.Custome(SnapshotCategory, err)
+		}
+	case m.topic.TopicSnapshotAppyInput():
+		if err := m.actionApply(e); err != nil {
+			log.Custome(SnapshotCategory, err)
+		}
+	case m.topic.TopicSnapshotRemoveInput():
+		if err := m.actionRemove(e); err != nil {
+			log.Custome(SnapshotCategory, err)
+		}
+	}
+}
+
+func (m *managerSnapshotFile[T]) actionSave(e system.SystemEvent) error {
 	format, ok := format.DataFormatFromString(e.Value.String())
 	if !ok {
 		return fmt.Errorf("unsupported format extension %q", e.Value.String())
 	}
 
-	return m.snapshot(true, format)
+	return m.save(true, format)
 }
 
-func (m *managerSnapshotFile[T]) tryApply(e system.SystemEvent) error {
+func (m *managerSnapshotFile[T]) actionApply(e system.SystemEvent) error {
 	file := e.Value.String()
 
 	ext := filepath.Ext(file)
@@ -164,37 +208,23 @@ func (m *managerSnapshotFile[T]) tryApply(e system.SystemEvent) error {
 	return m.apply((*cursor).Name(), format)
 }
 
-func (m *managerSnapshotFile[T]) unwatch() {
-	m.close <- true
-}
+func (m *managerSnapshotFile[T]) actionRemove(e system.SystemEvent) error {
+	file := e.Value.String()
 
-func (m *managerSnapshotFile[T]) trySnapshot(force bool, format format.DataFormat) {
-	ticker := time.NewTicker(snapshotRetrySeconds * time.Second)
-	defer ticker.Stop()
-
-	for {
-		err := m.snapshot(force, format)
-		if err != nil {
-			log.Error(err)
-			m.errors = append(m.errors, err)
-
-			if len(m.errors) >= snapshotRetries {
-				log.Errors("The maximum error rate has been exceeded; snapshot generation will be discontinued.")
-				m.unwatch()
-				return
-			}
-
-			<-ticker.C
-			continue
-		}
-
-		m.errors = make([]error, 0)
-
-		return
+	ext := filepath.Ext(file)
+	if ext == "" {
+		return fmt.Errorf("undefined extension for snapshot %q", file)
 	}
+
+	format, ok := format.DataFormatFromExtension(ext)
+	if !ok {
+		return fmt.Errorf("unsupported format extension %q", ext)
+	}
+
+	return m.remove(file, format)
 }
 
-func (m *managerSnapshotFile[T]) snapshot(force bool, format format.DataFormat) error {
+func (m *managerSnapshotFile[T]) save(force bool, format format.DataFormat) error {
 	snapshots, err := m.collect(format)
 	if err != nil {
 		return err
@@ -217,7 +247,7 @@ func (m *managerSnapshotFile[T]) snapshot(force bool, format format.DataFormat) 
 	if force || now-m.last >= m.time {
 		extension := format.Extension()
 		code := fmt.Sprintf("%s_%d.%s", snpsh, now, extension)
-		m.save(code, format)
+		m.write(code, format)
 	}
 
 	snapshots, err = m.collect(format)
@@ -225,7 +255,7 @@ func (m *managerSnapshotFile[T]) snapshot(force bool, format format.DataFormat) 
 		return err
 	}
 
-	err = m.clean(*snapshots, format)
+	err = m.clean(false, format, snapshots.Collect()...)
 	if err != nil {
 		return err
 	}
@@ -233,48 +263,12 @@ func (m *managerSnapshotFile[T]) snapshot(force bool, format format.DataFormat) 
 	return nil
 }
 
-func (m *managerSnapshotFile[T]) collect(format format.DataFormat) (*collection.Vector[os.DirEntry], error) {
-	path, err := m.path(format)
-	if err != nil {
-		return nil, err
-	}
-
-	return command_helper.FindSnapshots(path)
-}
-
-func (m *managerSnapshotFile[T]) save(name string, format format.DataFormat) error {
-	snapshot, err := m.manager.Read()
-	if err != nil {
-		return err
-	}
-
-	items := collection.DictionaryFromMap(snapshot)
-
-	result, err := TryMarshal(format, items.Values())
-	if err != nil {
-		return err
-	}
-
-	path, err := m.path(format)
-	if err != nil {
-		return err
-	}
-
-	location := filepath.Join(path, name)
-	err = utils.WriteFile(location, string(result))
-	if err == nil {
-		log.Customf(snapshotCategory, "A new snapshot %q has been defined.", location)
-	}
-
-	return err
-}
-
 func (m *managerSnapshotFile[T]) apply(name string, format format.DataFormat) error {
 	path, err := m.path(format)
 	if err != nil {
 		return err
 	}
-	
+
 	location := filepath.Join(path, name)
 	buffer, err := utils.ReadFile(location)
 	if err != nil {
@@ -299,9 +293,64 @@ func (m *managerSnapshotFile[T]) apply(name string, format format.DataFormat) er
 	return nil
 }
 
-func (m *managerSnapshotFile[T]) clean(snapshots collection.Vector[os.DirEntry], format format.DataFormat) error {
-	size := snapshots.Size()
-	if size == 0 || size < m.limit {
+func (m *managerSnapshotFile[T]) write(name string, format format.DataFormat) error {
+	snapshot, err := m.manager.Read()
+	if err != nil {
+		return err
+	}
+
+	items := collection.DictionaryFromMap(snapshot)
+
+	result, err := TryMarshal(format, items.Values())
+	if err != nil {
+		return err
+	}
+
+	path, err := m.path(format)
+	if err != nil {
+		return err
+	}
+
+	location := filepath.Join(path, name)
+	err = utils.WriteFile(location, string(result))
+	if err == nil {
+		log.Customf(SnapshotCategory, "A new snapshot %q has been defined.", location)
+	}
+
+	return err
+}
+
+func (m *managerSnapshotFile[T]) remove(name string, format format.DataFormat) error {
+	snapshots, err := m.collect(format)
+	if err != nil {
+		return err
+	}
+
+	cursor, ok := snapshots.FindOne(func(f os.DirEntry) bool {
+		return f.Name() == name
+	})
+	if !ok {
+		return nil
+	}
+
+	if err := m.clean(true, format, *cursor); err != nil {
+		return err
+	}
+
+	re := regexp.MustCompile(command_helper.SnpshTimestamp)
+	raw := re.FindStringSubmatch((*cursor).Name())[2]
+	timestamp, _ := strconv.ParseInt(raw, 10, 64)
+
+	if m.last == timestamp {
+		m.last = 0
+	}
+
+	return nil
+}
+
+func (m *managerSnapshotFile[T]) clean(force bool, format format.DataFormat, snapshots ...os.DirEntry) error {
+	size := len(snapshots)
+	if size == 0 || !force && size < m.limit {
 		return nil
 	}
 
@@ -310,19 +359,17 @@ func (m *managerSnapshotFile[T]) clean(snapshots collection.Vector[os.DirEntry],
 		return err
 	}
 
-	for snapshots.Size() > m.limit {
-		cursor, ok := snapshots.Shift()
-		if !ok {
-			return nil
-		}
+	for len(snapshots) > 0 && force || len(snapshots) > m.limit {
+		cursor := snapshots[0]
+		snapshots = snapshots[1:]
 
-		path := filepath.Join(path, (*cursor).Name())
+		path := filepath.Join(path, cursor.Name())
 		err := os.RemoveAll(path)
 		if err != nil {
 			return err
 		}
 
-		log.Customf(snapshotCategory, "An old snapshot %q has been removed.", path)
+		log.Customf(SnapshotCategory, "An old snapshot %q has been removed.", path)
 	}
 
 	return nil
@@ -334,6 +381,15 @@ func (m *managerSnapshotFile[T]) path(format format.DataFormat) (string, error) 
 		return "", fmt.Errorf("unsupported format %q", format)
 	}
 	return path, nil
+}
+
+func (m *managerSnapshotFile[T]) collect(format format.DataFormat) (*collection.Vector[os.DirEntry], error) {
+	path, err := m.path(format)
+	if err != nil {
+		return nil, err
+	}
+
+	return command_helper.FindSnapshots(path)
 }
 
 func (m *managerSnapshotFile[T]) Read() (map[string]T, error) {
