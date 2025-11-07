@@ -24,6 +24,7 @@ func DataFormatFromString(s string) (DataFormat, bool) {
 
 func DataFormatFromExtension(s string) (DataFormat, bool) {
 	s = strings.ToLower(strings.TrimSpace(s))
+	s = strings.TrimPrefix(s, ".")
 	for _, t := range allDataFormat {
 		if t.Extension() == s {
 			return t, true
