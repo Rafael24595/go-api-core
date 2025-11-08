@@ -10,6 +10,7 @@ import (
 
 const (
 	CMD      = "cmd"
+	LOG      = "log"
 	SNAPSHOT = "snpsh"
 )
 
@@ -31,6 +32,13 @@ var cmdHelp = commandAction{
 	Example:     `cmd -h`,
 }
 
+var cmdLog = commandAction{
+	Flag:        LOG,
+	Name:        "Log",
+	Description: "Manages log records",
+	Example:     "log -h",
+}
+
 var cmdSnapshot = commandAction{
 	Flag:        SNAPSHOT,
 	Name:        "Snapshot",
@@ -40,6 +48,7 @@ var cmdSnapshot = commandAction{
 
 var cmdActions = []commandAction{
 	cmdHelp,
+	cmdLog,
 	cmdSnapshot,
 }
 
@@ -63,6 +72,8 @@ func run(head string, cmd *collection.Vector[string]) (string, error) {
 	switch head {
 	case CMD:
 		return root(cmd)
+	case LOG:
+		return logg(cmd)
 	case SNAPSHOT:
 		return snapshot(cmd)
 	}
