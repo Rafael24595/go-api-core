@@ -44,7 +44,7 @@ var logActions = []commandAction{
 
 func logg(cmd *collection.Vector[string]) (string, error) {
 	if cmd.Size() == 0 {
-		return runSnapshotHelp(), nil
+		return runLogHelp(), nil
 	}
 
 	pushData := make([]utils.CmdTuple, 0)
@@ -101,7 +101,12 @@ func runLogList(tuple *utils.CmdTuple) string {
 		}
 	}
 
-	return records.Join("\n")
+	formatter := log.Formatter{}
+
+	return collection.VectorMap(records,
+		func(r log.Record) string {
+			return formatter.Format(r)
+		}).Join("\n")
 }
 
 func runLogCursor(flag string, cmd *collection.Vector[string]) (*utils.CmdTuple, error) {
