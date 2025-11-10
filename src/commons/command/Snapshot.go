@@ -34,7 +34,7 @@ var snapshotHelp = commandAction{
 var snapshotSave = commandAction{
 	Flag:        FLAG_SNAPSHOT_SAVE,
 	Name:        "Save",
-	Description: "Saves the current data as snapshot for a given target and type.",
+	Description: "Saves the current data as snapshot for a given target and type, use all as topic to save all data.",
 	Example:     `snpsh -s snpsh_${target}=${type}`,
 }
 
@@ -100,13 +100,12 @@ func snapshot(cmd *collection.Vector[string]) (string, error) {
 		case FLAG_SNAPSHOT_VERBOSE:
 			verbose = true
 		case FLAG_SNAPSHOT_SAVE:
-			topic, value, err := runSnapshotCursor(*flag, cmd)
+			tuples, err := runSnapshotSave(*flag, cmd)
 			if err != nil {
 				return "", err
 			}
 
-			tuple := utils.NewCmdTuple(topic.TopicSnapshotSaveInput(), value)
-			removeData = append(removeData, *tuple)
+			saveData = append(saveData, tuples...)
 
 		case FLAG_SNAPSHOT_APPLY:
 			topic, value, err := runSnapshotCursor(*flag, cmd)
@@ -115,7 +114,7 @@ func snapshot(cmd *collection.Vector[string]) (string, error) {
 			}
 
 			tuple := utils.NewCmdTuple(topic.TopicSnapshotAppyInput(), value)
-			removeData = append(removeData, *tuple)
+			applyData = append(applyData, *tuple)
 
 		case FLAG_SNAPSHOT_REMOVE:
 			topic, value, err := runSnapshotCursor(*flag, cmd)
@@ -141,27 +140,15 @@ func snapshot(cmd *collection.Vector[string]) (string, error) {
 	}
 
 	if len(saveData) > 0 {
-		message, err := publishEvent(saveData...)
-		if err != nil {
-			return "", err
-		}
-		messages = append(messages, message)
+		messages = append(messages, publishEvent(saveData...))
 	}
 
 	if len(applyData) > 0 {
-		message, err := publishEvent(applyData...)
-		if err != nil {
-			return "", err
-		}
-		messages = append(messages, message)
+		messages = append(messages, publishEvent(applyData...))
 	}
 
 	if len(removeData) > 0 {
-		message, err := publishEvent(removeData...)
-		if err != nil {
-			return "", err
-		}
-		messages = append(messages, message)
+		messages = append(messages, publishEvent(removeData...))
 	}
 
 	return strings.Join(messages, ", "), nil
@@ -191,12 +178,46 @@ func runSnapshotCursor(flag string, cmd *collection.Vector[string]) (system.Topi
 	return topic, snpsh, nil
 }
 
-func publishEvent(data ...utils.CmdTuple) (string, error) {
+func runSnapshotSave(flag string, cmd *collection.Vector[string]) ([]utils.CmdTuple, error) {
+	cmds := make([]utils.CmdTuple, 0)
+
+	value, ok := cmd.Shift()
+	if !ok {
+		return cmds, nil
+	}
+
+	tpc, snpsh, ok := strings.Cut(*value, "=")
+	if !ok {
+		return cmds, fmt.Errorf("invalid flag %q value %q", flag, *value)
+	}
+
+	var topics []system.TopicSnapshot
+	if tpc == "all" {
+		config := configuration.Instance()
+		raw := config.EventHub.Topics(repository.SnapshotListener)
+		topics = system.FilterTopicSnapshot(raw)
+	} else {
+		topic, ok := system.TopicSnapshotFromString(tpc)
+		if !ok {
+			return cmds, fmt.Errorf("unknown topic: %s", *value)
+		}
+		topics = []system.TopicSnapshot{topic}
+	}
+
+	for _, v := range topics {
+		tuple := utils.NewCmdTuple(v.TopicSnapshotSaveInput(), snpsh)
+		cmds = append(cmds, *tuple)
+	}
+
+	return cmds, nil
+}
+
+func publishEvent(data ...utils.CmdTuple) string {
 	config := configuration.Instance()
 	for _, cmd := range data {
 		config.EventHub.Publish(cmd.Flag, cmd.Data)
 	}
-	return "", nil
+	return fmt.Sprintf("%d events pushed successfully, check the logs to see the result.", len(data))
 }
 
 func runSnapshotListeners(verbose bool) string {
@@ -207,9 +228,11 @@ func runSnapshotListeners(verbose bool) string {
 	result := make([]string, len(listeners))
 
 	for i, v := range listeners {
-		listener := string(v)
+		var listener string
 		if verbose {
 			listener = fmt.Sprintf(" - %s: %s", listener, v.Description())
+		} else {
+			listener = string(v)
 		}
 		result[i] = listener
 	}
