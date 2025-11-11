@@ -84,6 +84,19 @@ func (r *RepositoryMemory) read() error {
 	return nil
 }
 
+func (r *RepositoryMemory) FindAll(owner string) []mock_domain.EndPointLite {
+	r.muMemory.RLock()
+	defer r.muMemory.RUnlock()
+
+	filtered := r.collection.Filter(func(s string, e mock_domain.EndPoint) bool {
+		return e.Owner == owner
+	}).ValuesVector()
+
+	return collection.VectorMap(filtered, func(e mock_domain.EndPoint) mock_domain.EndPointLite {
+		return mock_domain.FromEndPoint(&e)
+	}).Collect()
+}
+
 func (r *RepositoryMemory) Find(id string) (*mock_domain.EndPoint, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()

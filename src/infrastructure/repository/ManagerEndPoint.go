@@ -3,6 +3,7 @@ package repository
 import (
 	"github.com/Rafael24595/go-api-core/src/domain"
 	mock_domain "github.com/Rafael24595/go-api-core/src/domain/mock"
+	"github.com/Rafael24595/go-collections/collection"
 )
 
 type ManagerEndPoint struct {
@@ -13,6 +14,15 @@ func NewManagerEndPoint(endPoint IRepositoryEndPoint) *ManagerEndPoint {
 	return &ManagerEndPoint{
 		endPoint: endPoint,
 	}
+}
+
+func (m *ManagerEndPoint) FindAll(owner string) []mock_domain.EndPointLite {
+	endPoints := m.endPoint.FindAll(owner)
+	return collection.VectorFromList(endPoints).
+		Filter(func(e mock_domain.EndPointLite) bool {
+			return e.Owner == owner
+		}).
+		Collect()
 }
 
 func (m *ManagerEndPoint) Find(owner, id string) (*mock_domain.EndPoint, bool) {
