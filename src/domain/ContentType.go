@@ -51,3 +51,18 @@ func ContentTypeFromHeader(contentType string) (ContentType, bool) {
 
 	return None, false
 }
+
+func (s ContentType) ToHeader() string {
+	switch s {
+	case Json:
+		return "application/json"
+	case Xml:
+		return "application/xml"
+	case Html:
+		return "text/html"
+	case Form:
+		return "multipart/form-data"
+	}
+
+	return "text/plain"
+}

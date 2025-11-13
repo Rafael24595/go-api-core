@@ -109,3 +109,29 @@ func FullFromEndPoint(endPoint *EndPoint) (*EndPointFull, []error) {
 		Owner:     endPoint.Owner,
 	}, make([]error, 0)
 }
+
+func ToEndPointFromFull(endPoint *EndPointFull) (*EndPoint, []error) {
+	responses := make([]Response, len(endPoint.Responses))
+
+	opts := swr.MarshalOpts{ Evalue: true }
+	for i, v := range endPoint.Responses {
+		result, errs := ToResponseWithOptions(v, opts)
+		if len(errs) > 0 {
+			return nil, errs
+		}
+
+		responses[i] = *result
+	}
+
+	return &EndPoint{
+		Id:        endPoint.Id,
+		Timestamp: endPoint.Timestamp,
+		Modified:  endPoint.Modified,
+		Name:      endPoint.Name,
+		Method:    endPoint.Method,
+		Path:      endPoint.Path,
+		Responses: responses,
+		Safe:      endPoint.Safe,
+		Owner:     endPoint.Owner,
+	}, make([]error, 0)
+}

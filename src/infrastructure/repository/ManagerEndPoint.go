@@ -25,24 +25,36 @@ func (m *ManagerEndPoint) FindAll(owner string) []mock_domain.EndPointLite {
 		Collect()
 }
 
-func (m *ManagerEndPoint) Find(owner, id string) (*mock_domain.EndPoint, bool) {
+func (m *ManagerEndPoint) Find(owner, id string) (*mock_domain.EndPointFull, bool) {
 	endPoint, ok := m.endPoint.Find(id)
-	if ok && endPoint.Owner != owner {
+	if !ok || endPoint.Owner != owner {
 		return nil, false
 	}
-	return endPoint, ok
+
+	full, _ := mock_domain.FullFromEndPoint(endPoint)
+	return full, true
 }
 
 func (m *ManagerEndPoint) FindByRequest(owner string, method domain.HttpMethod, path string) (*mock_domain.EndPoint, bool) {
-	return m.endPoint.FindByRequest(owner, method, path)
-}
-
-func (m *ManagerEndPoint) Insert(owner string, endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
-	if endPoint.Owner != owner {
-		return nil
+	endPoint, ok := m.endPoint.FindByRequest(owner, method, path)
+	if !ok || endPoint.Owner != owner {
+		return nil, false
 	}
 
-	return m.endPoint.Insert(owner, endPoint)
+	return endPoint, true
+}
+
+func (m *ManagerEndPoint) Insert(owner string, endPoint *mock_domain.EndPointFull) (*mock_domain.EndPoint, []error) {
+	if endPoint.Owner != owner {
+		return nil, make([]error, 0)
+	}
+
+	full, errs := mock_domain.ToEndPointFromFull(endPoint)
+	if len(errs) > 0 {
+		return nil, errs
+	}
+
+	return m.endPoint.Insert(owner, full), make([]error, 0)
 }
 
 func (m *ManagerEndPoint) Delete(owner string, endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {

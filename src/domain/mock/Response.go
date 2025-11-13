@@ -51,3 +51,23 @@ func FromResponseWithOptions(response Response, opts swr.UnmarshalOpts) (*Respon
 		Body:      response.Body,
 	}, make([]error, 0)
 }
+
+func ToResponse(response ResponseFull) *Response {
+	result, _ := ToResponseWithOptions(response, swr.DefaultMarshalOpts())
+	return result
+}
+
+func ToResponseWithOptions(response ResponseFull, opts swr.MarshalOpts) (*Response, []error) {
+	condition, errs := swr.MarshalWithOptions(response.Condition, opts)
+	if len(errs) > 0 {
+		return nil, errs
+	}
+
+	return &Response{
+		Status:    response.Status,
+		Condition: condition,
+		Name:      response.Name,
+		Headers:   response.Headers,
+		Body:      response.Body,
+	}, make([]error, 0)
+}
