@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
-	"github.com/Rafael24595/go-api-core/src/domain/mock"
 	"github.com/Rafael24595/go-collections/collection"
 	"golang.org/x/net/html/charset"
 )
@@ -148,33 +147,33 @@ func (f *swrEngine) operate(operation string, target any, fragments *collection.
 	}
 
 	switch operation {
-	case string(mock.StepOperatorEq):
+	case string(StepOperatorEq):
 		t := f.tryToString(target)
 		s := f.tryToString(source)
 		return eq(t, s), true
-	case string(mock.StepOperatorNe):
+	case string(StepOperatorNe):
 		t := f.tryToString(target)
 		s := f.tryToString(source)
 		return !eq(t, s), true
-	case string(mock.StepOperatorGt):
+	case string(StepOperatorGt):
 		t := f.tryToNumeric(target)
 		s := f.tryToNumeric(source)
 		return gt(t, s, false), true
-	case string(mock.StepOperatorGte):
+	case string(StepOperatorGte):
 		t := f.tryToNumeric(target)
 		s := f.tryToNumeric(source)
 		return gt(t, s, true), true
-	case string(mock.StepOperatorLt):
+	case string(StepOperatorLt):
 		t := f.tryToNumeric(target)
 		s := f.tryToNumeric(source)
 		return lt(t, s, false), true
-	case string(mock.StepOperatorLte):
+	case string(StepOperatorLte):
 		t := f.tryToNumeric(target)
 		s := f.tryToNumeric(source)
 		return lt(t, s, true), true
-	case string(mock.StepOperatorAnd):
+	case string(StepOperatorAnd):
 		return and(target, source), true
-	case string(mock.StepOperatorOr):
+	case string(StepOperatorOr):
 		return or(target, source), true
 	}
 
@@ -339,9 +338,9 @@ func (f *swrEngine) findRoot(fragments *collection.Vector[string]) (any, bool) {
 	}
 
 	switch *cursor {
-	case string(mock.StepInputPayload):
+	case string(StepInputPayload):
 		return f.findPayload(fragments)
-	case string(mock.StepInputArguments):
+	case string(StepInputArguments):
 		return f.arguments, true
 	default:
 		return findValue(*cursor)
@@ -361,18 +360,18 @@ func (f *swrEngine) findPayload(fragments *collection.Vector[string]) (any, bool
 	var result any
 	ok = false
 	switch *content {
-	case string(mock.StepFormatText):
+	case string(StepFormatText):
 		return f.payload, true
-	case string(mock.StepFormatJson):
+	case string(StepFormatJson):
 		var payload map[string]any
 		result, ok = f.getJsonPayload(payload)
-	case string(mock.StepFormatVecJson):
+	case string(StepFormatVecJson):
 		var payload []map[string]any
 		result, ok = f.getJsonPayload(payload)
-	case string(mock.StepFormatXml):
+	case string(StepFormatXml):
 		var payload map[string]any
 		result, ok = f.getXmlPayload(payload)
-	case string(mock.StepFormatVecXml):
+	case string(StepFormatVecXml):
 		var payload []map[string]any
 		result, ok = f.getXmlPayload(payload)
 	}
@@ -445,6 +444,6 @@ func (f *swrEngine) isNextLogical(fragments *collection.Vector[string]) bool {
 	if !ok {
 		return false
 	}
-	return *next == string(mock.StepOperatorAnd) ||
-		*next == string(mock.StepOperatorOr)
+	return *next == string(StepOperatorAnd) ||
+		*next == string(StepOperatorOr)
 }

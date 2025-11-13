@@ -1,10 +1,15 @@
 package mock
 
+import (
+	"github.com/Rafael24595/go-api-core/src/domain/mock/swr"
+)
+
 type Response struct {
-	Status  int      `json:"status"`
-	Name    string   `json:"name"`
-	Headers []Header `json:"headers"`
-	Body    string   `json:"body"`
+	Status    int      `json:"status"`
+	Condition string   `json:"condition"`
+	Name      string   `json:"name"`
+	Headers   []Header `json:"headers"`
+	Body      string   `json:"body"`
 }
 
 type Header struct {
@@ -14,23 +19,29 @@ type Header struct {
 }
 
 type ResponseFull struct {
-	Status    int             `json:"status"`
-	Condition []ConditionStep `json:"condition"`
-	Name      string          `json:"name"`
-	Headers   []Header        `json:"headers"`
-	Body      string          `json:"body"`
+	Status    int        `json:"status"`
+	Condition []swr.Step `json:"condition"`
+	Name      string     `json:"name"`
+	Headers   []Header   `json:"headers"`
+	Body      string     `json:"body"`
 }
 
-type ConditionStep struct {
-	Order int      `json:"order"`
-	Type  StepType `json:"type"`
-	Value string   `json:"value"`
+func FromResponse(response Response) *ResponseFull {
+	result, _ := FromResponseWithOptions(response, swr.DefaultUnmarshalOpts())
+	return result
 }
 
-func NewConditionStep(typ StepType, value string) *ConditionStep {
-	return &ConditionStep{
-		Order: 0,
-		Type:  typ,
-		Value: value,
+func FromResponseWithOptions(response Response, opts swr.UnmarshalOpts) (*ResponseFull, []error) {
+	steps, errs := swr.UnmarshalWithOptions(response.Condition, opts)
+	if len(errs) > 0 {
+		return nil, errs
 	}
+
+	return &ResponseFull{
+		Status: response.Status,
+		Condition: steps,
+		Name: response.Name,
+		Headers: response.Headers,
+		Body: response.Body,
+	}, make([]error, 0)
 }
