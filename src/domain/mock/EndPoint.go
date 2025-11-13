@@ -7,8 +7,13 @@ import (
 
 var defaultResponse = Response{
 	Status: 200,
-	Headers: map[string]string{
-		"content-type": "plain/text",
+	Name: "default",
+	Headers: []Header{
+		{
+			Status: true,
+			Key: "content-type",
+			Value: "plain/text",
+		},
 	},
 	Body: "Default response",
 }
