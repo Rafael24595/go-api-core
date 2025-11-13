@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/mock/swr"
 )
 
@@ -9,7 +10,12 @@ type Response struct {
 	Condition string   `json:"condition"`
 	Name      string   `json:"name"`
 	Headers   []Header `json:"headers"`
-	Body      string   `json:"body"`
+	Body      Body     `json:"body"`
+}
+
+type Body struct {
+	ContentType domain.ContentType `json:"content_type"`
+	Payload     string             `json:"string"`
 }
 
 type Header struct {
@@ -23,7 +29,7 @@ type ResponseFull struct {
 	Condition []swr.Step `json:"condition"`
 	Name      string     `json:"name"`
 	Headers   []Header   `json:"headers"`
-	Body      string     `json:"body"`
+	Body      Body       `json:"body"`
 }
 
 func FromResponse(response Response) *ResponseFull {
@@ -38,10 +44,10 @@ func FromResponseWithOptions(response Response, opts swr.UnmarshalOpts) (*Respon
 	}
 
 	return &ResponseFull{
-		Status: response.Status,
+		Status:    response.Status,
 		Condition: steps,
-		Name: response.Name,
-		Headers: response.Headers,
-		Body: response.Body,
+		Name:      response.Name,
+		Headers:   response.Headers,
+		Body:      response.Body,
 	}, make([]error, 0)
 }

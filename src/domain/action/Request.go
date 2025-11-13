@@ -50,7 +50,7 @@ func NewRequest(name string, method domain.HttpMethod, uri string) *Request {
 			Cookies: make(map[string]cookie.CookieClient),
 		},
 		Body: body.BodyRequest{
-			ContentType: body.None,
+			ContentType: domain.None,
 			Parameters:  make(map[string]map[string][]body.BodyParameter),
 		},
 		Auth: auth.Auths{

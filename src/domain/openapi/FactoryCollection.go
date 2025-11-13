@@ -148,13 +148,13 @@ func (b *FactoryCollection) MakeFromParameters(path string, parameters []Paramet
 
 func (b *FactoryCollection) MakeFromRequestBody(requestBody *RequestBody) *body.BodyRequest {
 	if requestBody == nil {
-		return body.EmptyBody(false, body.None)
+		return body.EmptyBody(false, domain.None)
 	}
 
 	if requestBody.Ref != "" {
 		reference, err := b.findRequestBodyReference(requestBody.Ref)
 		if reference == nil || err != nil {
-			return body.EmptyBody(false, body.None)
+			return body.EmptyBody(false, domain.None)
 		}
 		return b.MakeFromRequestBody(reference)
 	}
@@ -182,7 +182,7 @@ func (b *FactoryCollection) MakeFromRequestBody(requestBody *RequestBody) *body.
 		}
 	}
 
-	return body.EmptyBody(false, body.Text)
+	return body.EmptyBody(false, domain.Text)
 }
 
 func (b *FactoryCollection) fromExample(content string, schema *Schema) *body.BodyRequest {
@@ -191,19 +191,19 @@ func (b *FactoryCollection) fromExample(content string, schema *Schema) *body.Bo
 		fmt.Printf("%s", err.Error())
 	}
 
-	var bodyType body.ContentType
+	var bodyType domain.ContentType
 	switch content {
 	case "multipart/form-data":
-		bodyType = body.Form
+		bodyType = domain.Form
 	case "application/json":
-		bodyType = body.Json
+		bodyType = domain.Json
 	case "application/xml":
-		bodyType = body.Xml
+		bodyType = domain.Xml
 	default:
-		bodyType = body.Text
+		bodyType = domain.Text
 	}
 
-	if bodyType != body.Form {
+	if bodyType != domain.Form {
 		return body_strategy.DocumentBody(false, bodyType, string(example))
 	}
 
@@ -229,7 +229,7 @@ func (b *FactoryCollection) toFormData(parameters map[string]BuildParameter) *bo
 		count++
 	}
 
-	return body_strategy.FormDataBody(false, body.Form, builder)
+	return body_strategy.FormDataBody(false, domain.Form, builder)
 }
 
 func (b *FactoryCollection) toDocument(content string, schema *Schema, parameters map[string]BuildParameter) *body.BodyRequest {
@@ -237,16 +237,16 @@ func (b *FactoryCollection) toDocument(content string, schema *Schema, parameter
 	return body_strategy.DocumentBody(false, contenType, payload)
 }
 
-func (b *FactoryCollection) formatDocument(content string, schema *Schema, parameters map[string]BuildParameter) (string, body.ContentType) {
+func (b *FactoryCollection) formatDocument(content string, schema *Schema, parameters map[string]BuildParameter) (string, domain.ContentType) {
 	vector := schema.Type == "array"
 
 	switch content {
 	case "application/json":
-		return b.formatJson(parameters, vector), body.Json
+		return b.formatJson(parameters, vector), domain.Json
 	case "application/xml":
-		return b.formatXml(parameters), body.Xml
+		return b.formatXml(parameters), domain.Xml
 	default:
-		return b.formatJson(parameters, vector), body.Text
+		return b.formatJson(parameters, vector), domain.Text
 	}
 }
 

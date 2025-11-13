@@ -1,4 +1,4 @@
-package body
+package domain
 
 import (
 	"strings"

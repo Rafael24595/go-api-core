@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 
 	"github.com/Rafael24595/go-api-core/src/commons/log"
+	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/action/body"
 	"github.com/Rafael24595/go-api-core/src/domain/action/query"
 )
@@ -15,7 +16,7 @@ const (
 	FORM_DATA_PARAM = "form-data"
 )
 
-func FormDataBody(status bool, contentType body.ContentType, builder *BuilderFormDataBody) *body.BodyRequest {
+func FormDataBody(status bool, contentType domain.ContentType, builder *BuilderFormDataBody) *body.BodyRequest {
 	parameters := make(map[string]map[string][]body.BodyParameter)
 	parameters[FORM_DATA_PARAM] = builder.formData
 
@@ -49,7 +50,7 @@ func FindFormDataParameterIndex(b *body.BodyRequest, key string, index int) (*bo
 	if b.Parameters == nil {
 		return nil, false
 	}
-	
+
 	form, ok := b.Parameters[FORM_DATA_PARAM]
 	if !ok {
 		return nil, false
@@ -71,7 +72,7 @@ func AddFormData(b *body.BodyRequest, key string, parameter *body.BodyParameter)
 	if b.Parameters == nil {
 		b.Parameters = make(map[string]map[string][]body.BodyParameter)
 	}
-	
+
 	form, ok := b.Parameters[FORM_DATA_PARAM]
 	if !ok {
 		form = make(map[string][]body.BodyParameter)
@@ -86,7 +87,7 @@ func AddFormData(b *body.BodyRequest, key string, parameter *body.BodyParameter)
 
 	form[key] = append(field, *parameter)
 	b.Parameters[FORM_DATA_PARAM] = form
-	b.ContentType = body.Form
+	b.ContentType = domain.Form
 
 	return b
 }

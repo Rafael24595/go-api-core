@@ -16,7 +16,10 @@ var defaultResponse = Response{
 			Value:  "plain/text",
 		},
 	},
-	Body: "Default response",
+	Body: Body{
+		ContentType: domain.Text,
+		Payload: "Default response",
+	},
 }
 
 type EndPoint struct {

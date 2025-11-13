@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/action"
 	"github.com/Rafael24595/go-api-core/src/domain/action/auth"
 	"github.com/Rafael24595/go-api-core/src/domain/action/body"
@@ -213,7 +214,7 @@ func processBody(payload body.BodyRequest, context *Context) *body.BodyRequest {
 		}
 	}
 
-	payload.ContentType = body.ContentType(context.Apply("payload", string(payload.ContentType)))
+	payload.ContentType = domain.ContentType(context.Apply("payload", string(payload.ContentType)))
 
 	return &body.BodyRequest{
 		Status:      payload.Status,

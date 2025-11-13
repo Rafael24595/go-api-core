@@ -3,6 +3,7 @@ package body_strategy
 import (
 	"bytes"
 
+	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/action/body"
 	"github.com/Rafael24595/go-api-core/src/domain/action/query"
 )
@@ -12,7 +13,7 @@ const (
 	PAYLOAD_PARAM  = "payload"
 )
 
-func DocumentBody(status bool, contentType body.ContentType, document string) *body.BodyRequest {
+func DocumentBody(status bool, contentType domain.ContentType, document string) *body.BodyRequest {
 	parameters := make(map[string]map[string][]body.BodyParameter)
 
 	parameters[DOCUMENT_PARAM] = make(map[string][]body.BodyParameter)

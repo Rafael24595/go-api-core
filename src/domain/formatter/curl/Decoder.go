@@ -86,7 +86,7 @@ func processUri(uri string) (string, *query.Queries) {
 }
 
 func processDocument(data string, request *action.Request) *action.Request {
-	request.Body = *body_strategy.DocumentBody(true, body.Text, data)
+	request.Body = *body_strategy.DocumentBody(true, domain.Text, data)
 	if request.Method == domain.GET {
 		request.Method = domain.POST
 	}

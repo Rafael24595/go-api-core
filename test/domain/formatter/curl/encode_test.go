@@ -214,7 +214,7 @@ func TestMarshalContext_WithDocumentBody(t *testing.T) {
 	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
 
 	req.Body.Status = true
-	req.Body = *body_strategy.DocumentBody(true, body.Json, `{"id": 001, "user": "username"}`)
+	req.Body = *body_strategy.DocumentBody(true, domain.Json, `{"id": 001, "user": "username"}`)
 
 	curl, err := curl.MarshalContext(ctx, req, true)
 
@@ -234,7 +234,7 @@ func TestMarshalContext_WithDisabledDocumentBody(t *testing.T) {
 	req := action.NewRequest("_test_headers_001", domain.GET, "http://example.com")
 
 	req.Body.Status = true
-	req.Body = *body_strategy.DocumentBody(false, body.Json, `{"id": 001, "user": "username"}`)
+	req.Body = *body_strategy.DocumentBody(false, domain.Json, `{"id": 001, "user": "username"}`)
 
 	curl, err := curl.MarshalContext(ctx, req, true)
 
@@ -263,7 +263,7 @@ func TestMarshalContext_WithFormDataBody(t *testing.T) {
 	builder.Add(fileKey, body.NewFileParameter(0, true, "logs", fileName, base64))
 
 	req.Body.Status = true
-	req.Body = *body_strategy.FormDataBody(true, body.Form, builder)
+	req.Body = *body_strategy.FormDataBody(true, domain.Form, builder)
 
 	curl, err := curl.MarshalContext(ctx, req, true)
 
@@ -296,7 +296,7 @@ func TestMarshalContext_WithDisabledFormDataBody(t *testing.T) {
 	builder.Add("user", body.NewParameter(0, false, "username"))
 
 	req.Body.Status = true
-	req.Body = *body_strategy.FormDataBody(true, body.Form, builder)
+	req.Body = *body_strategy.FormDataBody(true, domain.Form, builder)
 
 	curl, err := curl.MarshalContext(ctx, req, true)
 

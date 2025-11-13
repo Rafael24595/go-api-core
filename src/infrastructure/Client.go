@@ -223,8 +223,8 @@ func (c *HttpClient) makeCookies(headers *header.Headers) (*cookie.CookiesServer
 func (c *HttpClient) makeBody(resp *http.Response) (*body.BodyResponse, int, error) {
 	contentTypeHeader := resp.Header.Get("Content-Type")
 
-	contentType := body.Text
-	if oContentType, ok := body.ContentTypeFromHeader(contentTypeHeader); ok {
+	contentType := domain.Text
+	if oContentType, ok := domain.ContentTypeFromHeader(contentTypeHeader); ok {
 		contentType = oContentType
 	}
 

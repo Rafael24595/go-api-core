@@ -1,10 +1,13 @@
 package dto
 
-import "github.com/Rafael24595/go-api-core/src/domain/action/body"
+import (
+	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/action/body"
+)
 
 type DtoBody struct {
 	Status      bool                                       `json:"status"`
-	ContentType body.ContentType                           `json:"content_type"`
+	ContentType domain.ContentType                         `json:"content_type"`
 	Parameters  map[string]map[string][]body.BodyParameter `json:"parameters"`
 }
 

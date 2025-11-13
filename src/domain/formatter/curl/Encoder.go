@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/action"
 	auth_strategy "github.com/Rafael24595/go-api-core/src/domain/action/auth/strategy"
 	"github.com/Rafael24595/go-api-core/src/domain/action/body"
@@ -122,11 +123,11 @@ func headersToCurl(req *action.Request) []string {
 }
 
 func bodyToCurl(req *action.Request) []string {
-	if !req.Body.Status || req.Body.ContentType == body.None {
+	if !req.Body.Status || req.Body.ContentType == domain.None {
 		return make([]string, 0)
 	}
 
-	if req.Body.ContentType == body.Form {
+	if req.Body.ContentType == domain.Form {
 		return formDataTocurl(req.Body)
 	}
 
