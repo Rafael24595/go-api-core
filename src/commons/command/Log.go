@@ -106,7 +106,7 @@ func runLogList(tuple *utils.CmdTuple) string {
 	return collection.VectorMap(records,
 		func(r log.Record) string {
 			return formatter.Format(r)
-		}).Join("\n")
+		}, collection.MakeVector).Join("\n")
 }
 
 func runLogCursor(flag string, cmd *collection.Vector[string]) (*utils.CmdTuple, error) {

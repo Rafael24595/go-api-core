@@ -3,7 +3,7 @@ module github.com/Rafael24595/go-api-core
 go 1.25.3
 
 require (
-	github.com/Rafael24595/go-collections v0.2.4
+	github.com/Rafael24595/go-collections v0.3.0
 	github.com/Rafael24595/go-csvt v0.2.1
 	github.com/google/uuid v1.6.0
 	golang.org/x/crypto v0.43.0

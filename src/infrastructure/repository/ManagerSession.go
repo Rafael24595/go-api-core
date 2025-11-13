@@ -424,7 +424,7 @@ func (s *ManagerSession) write(snapshot collection.IDictionary[string, session.S
 
 	items := collection.DictionaryMap(snapshot, func(k string, v session.Session) dto.DtoSession {
 		return *dto.FromSession(v)
-	})
+	}, collection.MakeDictionary)
 
 	err := s.file.Write(items.Values())
 	if err != nil {

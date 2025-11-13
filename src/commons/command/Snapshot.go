@@ -261,7 +261,7 @@ func runSnapshotDetails(flag string, cmd *collection.Vector[string]) (string, er
 
 	snapshots := collection.VectorMap(files, func(e os.DirEntry) string {
 		return e.Name()
-	})
+	}, collection.MakeVector)
 
 	return strings.Join(snapshots.Collect(), "\n"), nil
 }
