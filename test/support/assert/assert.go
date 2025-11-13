@@ -106,10 +106,10 @@ func Len[T any](t *testing.T, want int, have []T, message ...any) {
 	if len(message) > 0 {
 		if format, ok := message[0].(string); ok {
 			msg := fmt.Sprintf(format, message[1:]...)
-			t.Errorf("%s — expected: %v, got: %v", msg, want, have)
+			t.Fatalf("%s — expected: %v, got: %v", msg, want, len(have))
 			return
 		}
 	}
 
-	t.Errorf("Expected %v, but got %v", want, have)
+	t.Fatalf("Expected %v, but got %v", want, len(have))
 }
