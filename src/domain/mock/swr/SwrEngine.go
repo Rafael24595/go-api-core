@@ -6,11 +6,11 @@ import (
 	"encoding/xml"
 	"fmt"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
+	"github.com/Rafael24595/go-api-core/src/domain/mock"
 	"github.com/Rafael24595/go-collections/collection"
 	"golang.org/x/net/html/charset"
 )
@@ -19,32 +19,6 @@ import (
 *                     SWR – The Sequential Waggon Requirement language.                      *
 *   Because writing requirements should feel like driving a train through data structures.   *
 *********************************************************************************************/
-
-const (
-	// EQ represents the equality operator "$eq".
-	EQ  = "$eq"
-	// NE represents the inequality operator "$ne".
-	NE  = "$ne"
-	// GT represents the greater-than operator "$gt".
-	GT  = "$gt"
-	// GTE represents the greater-than-or-equal operator "$gte".
-	GTE = "$gte"
-	// LT represents the less-than operator "$lt".
-	LT  = "$lt"
-	// LTE represents the less-than-or-equal operator "$lte".
-	LTE = "$lte"
-	// AND represents the logical AND operator "$and".
-	AND = "$and"
-	// OR represents the logical OR operator "$or".
-	OR  = "$or"
-)
-
-const (
-	// REGEX_VECTOR_INDEX matches array/vector index expressions like [0], [1], etc.
-	REGEX_VECTOR_INDEX = `^\[([0-9]+)\]$`
-	// REGEX_RAW_VALUE matches raw literal values wrapped in angle brackets like <value>.
-	REGEX_RAW_VALUE    = `^<(.+)>$`
-)
 
 type logger func(string)
 
@@ -153,7 +127,7 @@ func (f *swrEngine) match(fragments *collection.Vector[string], isMain bool) (an
 			continue
 		}
 
-		if raw, ok := f.findRaw(*cursor); ok {
+		if raw, ok := findValue(*cursor); ok {
 			target = raw
 			continue
 		}
@@ -174,33 +148,33 @@ func (f *swrEngine) operate(operation string, target any, fragments *collection.
 	}
 
 	switch operation {
-	case EQ:
+	case string(mock.StepOperatorEq):
 		t := f.tryToString(target)
 		s := f.tryToString(source)
 		return eq(t, s), true
-	case NE:
+	case string(mock.StepOperatorNe):
 		t := f.tryToString(target)
 		s := f.tryToString(source)
 		return !eq(t, s), true
-	case GT:
+	case string(mock.StepOperatorGt):
 		t := f.tryToNumeric(target)
 		s := f.tryToNumeric(source)
 		return gt(t, s, false), true
-	case GTE:
+	case string(mock.StepOperatorGte):
 		t := f.tryToNumeric(target)
 		s := f.tryToNumeric(source)
 		return gt(t, s, true), true
-	case LT:
+	case string(mock.StepOperatorLt):
 		t := f.tryToNumeric(target)
 		s := f.tryToNumeric(source)
 		return lt(t, s, false), true
-	case LTE:
+	case string(mock.StepOperatorLte):
 		t := f.tryToNumeric(target)
 		s := f.tryToNumeric(source)
 		return lt(t, s, true), true
-	case AND:
+	case string(mock.StepOperatorAnd):
 		return and(target, source), true
-	case OR:
+	case string(mock.StepOperatorOr):
 		return or(target, source), true
 	}
 
@@ -313,10 +287,8 @@ func or(a, b any) bool {
 }
 
 func (f *swrEngine) moveCursor(cursor string, target any) (any, bool) {
-	re := regexp.MustCompile(REGEX_VECTOR_INDEX)
-	matches := re.FindStringSubmatch(cursor)
-	if len(matches) == 2 {
-		return f.moveCursorOnVector(matches[1], target)
+	if value, ok := findPosition(cursor); ok {
+		return f.moveCursorOnVector(value, target)
 	}
 
 	return f.moveCursorOnMap(cursor, target)
@@ -360,15 +332,6 @@ func (f *swrEngine) moveCursorOnMap(cursor string, target any) (any, bool) {
 	return val.Interface(), true
 }
 
-func (f *swrEngine) findRaw(cursor string) (any, bool) {
-	re := regexp.MustCompile(REGEX_RAW_VALUE)
-	matches := re.FindStringSubmatch(cursor)
-	if len(matches) < 2 {
-		return nil, false
-	}
-	return matches[1], true
-}
-
 func (f *swrEngine) findRoot(fragments *collection.Vector[string]) (any, bool) {
 	cursor, ok := fragments.Shift()
 	if !ok {
@@ -376,12 +339,12 @@ func (f *swrEngine) findRoot(fragments *collection.Vector[string]) (any, bool) {
 	}
 
 	switch *cursor {
-	case "payload":
+	case string(mock.StepInputPayload):
 		return f.findPayload(fragments)
-	case "arguments":
+	case string(mock.StepInputArguments):
 		return f.arguments, true
 	default:
-		return f.findRaw(*cursor)
+		return findValue(*cursor)
 	}
 }
 
@@ -398,18 +361,18 @@ func (f *swrEngine) findPayload(fragments *collection.Vector[string]) (any, bool
 	var result any
 	ok = false
 	switch *content {
-	case "text":
+	case string(mock.StepFormatText):
 		return f.payload, true
-	case "json":
+	case string(mock.StepFormatJson):
 		var payload map[string]any
 		result, ok = f.getJsonPayload(payload)
-	case "vec_json":
+	case string(mock.StepFormatVecJson):
 		var payload []map[string]any
 		result, ok = f.getJsonPayload(payload)
-	case "xml":
+	case string(mock.StepFormatXml):
 		var payload map[string]any
 		result, ok = f.getXmlPayload(payload)
-	case "vec_xml":
+	case string(mock.StepFormatVecXml):
 		var payload []map[string]any
 		result, ok = f.getXmlPayload(payload)
 	}
@@ -482,5 +445,6 @@ func (f *swrEngine) isNextLogical(fragments *collection.Vector[string]) bool {
 	if !ok {
 		return false
 	}
-	return *next == AND || *next == OR
+	return *next == string(mock.StepOperatorAnd) ||
+		*next == string(mock.StepOperatorOr)
 }
