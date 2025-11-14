@@ -84,7 +84,7 @@ func evalueStepPosition(cursor Step, parent *Step) error {
 		return fmt.Errorf(`a compare operation is required after operator, but %s found on %d position`, cursor.Type, cursor.Order)
 	}
 
-	if isFormatedInput(cursor) && cursor.Type == StepTypeFormat {
+	if isFormatedInput(*parent) && cursor.Type != StepTypeFormat {
 		return fmt.Errorf(`a formatted input requires a format specification, but %s found on %d position`, cursor.Type, cursor.Order)
 	}
 

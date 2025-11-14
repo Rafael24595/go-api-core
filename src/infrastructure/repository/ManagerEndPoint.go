@@ -31,6 +31,8 @@ func (m *ManagerEndPoint) Find(owner, id string) (*mock_domain.EndPointFull, boo
 		return nil, false
 	}
 
+	endPoint.Responses = mock_domain.FixResponses(endPoint.Responses)
+
 	full, _ := mock_domain.FullFromEndPoint(endPoint)
 	return full, true
 }
@@ -41,6 +43,8 @@ func (m *ManagerEndPoint) FindByRequest(owner string, method domain.HttpMethod, 
 		return nil, false
 	}
 
+	endPoint.Responses = mock_domain.FixResponses(endPoint.Responses)
+
 	return endPoint, true
 }
 
@@ -49,12 +53,14 @@ func (m *ManagerEndPoint) Insert(owner string, endPoint *mock_domain.EndPointFul
 		return nil, make([]error, 0)
 	}
 
-	full, errs := mock_domain.ToEndPointFromFull(endPoint)
+	result, errs := mock_domain.ToEndPointFromFull(endPoint)
 	if len(errs) > 0 {
 		return nil, errs
 	}
 
-	return m.endPoint.Insert(owner, full), make([]error, 0)
+	result.Responses = mock_domain.FixResponses(result.Responses)
+
+	return m.endPoint.Insert(owner, result), make([]error, 0)
 }
 
 func (m *ManagerEndPoint) Delete(owner string, endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
@@ -64,3 +70,4 @@ func (m *ManagerEndPoint) Delete(owner string, endPoint *mock_domain.EndPoint) *
 
 	return m.endPoint.Delete(endPoint)
 }
+

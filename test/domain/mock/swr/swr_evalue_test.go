@@ -43,11 +43,16 @@ func TestEvalueStepPosition_InputInMiddle(t *testing.T) {
 		},
 		{
 			Order: 1,
+			Type:  swr.StepTypeFormat,
+			Value: "json",
+		},
+		{
+			Order: 2,
 			Type:  swr.StepTypeField,
 			Value: "1",
 		},
 		{
-			Order: 0,
+			Order: 3,
 			Type:  swr.StepTypeInput,
 			Value: string(swr.StepInputPayload),
 		},
@@ -58,7 +63,7 @@ func TestEvalueStepPosition_InputInMiddle(t *testing.T) {
 	})
 
 	assert.Len(t, 1, errs)
-	assert.Equal(t, `an input operation cannot be applied in the middle of an operation, but input found on 1 position`, errs[0].Error())
+	assert.Equal(t, `an input operation cannot be applied in the middle of an operation, but input found on 3 position`, errs[0].Error())
 }
 
 func TestEvalueStepPosition_DoubleOperator(t *testing.T) {

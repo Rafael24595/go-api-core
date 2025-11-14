@@ -1,7 +1,7 @@
-github.com/Rafael24595/go-collections v0.3.0 h1:sKa5C29O/cFzBtik98DpvFNrmw8J4kdklXpBkNJanU4=
-github.com/Rafael24595/go-collections v0.3.0/go.mod h1:X9aAFvQP7Plo+Czy49reqNZSikoo0jggEG88dyhzAoE=
-github.com/Rafael24595/go-csvt v0.2.1 h1:AfBTiR9wEcMWAYd7c49WTVMQj5clr+GFrFwcGCIu2gc=
-github.com/Rafael24595/go-csvt v0.2.1/go.mod h1:E8AQN/mbH+LOvO794NTS2K8C7+jZnMnelS+kFuQAS44=
+github.com/Rafael24595/go-collections v0.4.0 h1:Afhd3VUtSuEKJZ3pjp/AIR+DKibgFITtwQNA8ZLMzSw=
+github.com/Rafael24595/go-collections v0.4.0/go.mod h1:X9aAFvQP7Plo+Czy49reqNZSikoo0jggEG88dyhzAoE=
+github.com/Rafael24595/go-csvt v0.2.2 h1:0XY3Lba0UdTEIGm20XHGMXjyhK9edcjHAvO++/JNTUs=
+github.com/Rafael24595/go-csvt v0.2.2/go.mod h1:ZeIdfs2cZnEDjLoTL0Hc8a63QTLjlhtpLp+7VqC050s=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 golang.org/x/crypto v0.43.0 h1:dduJYIi3A3KOfdGOHX8AVZ/jGiyPa3IbBozJ5kNuE04=

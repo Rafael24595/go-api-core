@@ -34,7 +34,7 @@ func InitializeRepositoryMemory(
 	ctx := collection.MapToDictionary(steps,
 		func(k string, d dto.DtoContext) context.Context {
 			return *dto.ToContext(&d)
-		}, collection.MakeDictionary)
+		})
 
 	instance := &RepositoryMemory{
 		collection: impl.Merge(ctx),
@@ -90,7 +90,7 @@ func (r *RepositoryMemory) read() error {
 	r.collection = collection.MapToDictionary(ctx,
 		func(k string, d dto.DtoContext) context.Context {
 			return *dto.ToContext(&d)
-		}, collection.MakeDictionary)
+		})
 
 	return nil
 }
@@ -163,7 +163,7 @@ func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, context
 
 	items := collection.DictionaryMap(snapshot, func(k string, v context.Context) dto.DtoContext {
 		return *dto.FromContext(&v)
-	}, collection.MakeDictionary)
+	})
 
 	err := r.file.Write(items.Values())
 	if err != nil {
