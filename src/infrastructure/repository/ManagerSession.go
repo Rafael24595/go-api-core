@@ -41,8 +41,7 @@ func InitializeManagerSession(file IFileManager[dto.DtoSession], managerCollecti
 			return
 		}
 
-		sessions := collection.DictionarySyncMap(
-			collection.DictionarySyncFromMap(steps),
+		sessions := collection.MapToDictionarySync(steps,
 			func(k string, d dto.DtoSession) session.Session {
 				return *dto.ToSession(d)
 			})
