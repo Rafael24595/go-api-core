@@ -66,6 +66,7 @@ func FixResponses(responses []Response) []Response {
 	index := coll.IndexOf(func(r Response) bool { return r.Name == DefaultResponse })
 	if index != -1 {
 		def, _ := coll.Remove(index)
+		def.Condition = ""
 		defRes = def
 	}
 
@@ -96,10 +97,6 @@ func FromResponse(response Response) *ResponseFull {
 
 func FromResponseWithOptions(response Response, opts swr.UnmarshalOpts) (*ResponseFull, []error) {
 	steps, errs := swr.UnmarshalWithOptions(response.Condition, opts)
-	if len(errs) > 0 {
-		return nil, errs
-	}
-
 	return &ResponseFull{
 		Order:     response.Order,
 		Status:    response.Status,
@@ -108,7 +105,7 @@ func FromResponseWithOptions(response Response, opts swr.UnmarshalOpts) (*Respon
 		Name:      response.Name,
 		Headers:   response.Headers,
 		Body:      response.Body,
-	}, make([]error, 0)
+	}, errs
 }
 
 func ToResponse(response ResponseFull) *Response {
@@ -118,10 +115,6 @@ func ToResponse(response ResponseFull) *Response {
 
 func ToResponseWithOptions(response ResponseFull, opts swr.MarshalOpts) (*Response, []error) {
 	condition, errs := swr.MarshalWithOptions(response.Condition, opts)
-	if len(errs) > 0 {
-		return nil, errs
-	}
-
 	return &Response{
 		Order:     response.Order,
 		Status:    response.Status,
@@ -130,5 +123,5 @@ func ToResponseWithOptions(response ResponseFull, opts swr.MarshalOpts) (*Respon
 		Name:      response.Name,
 		Headers:   response.Headers,
 		Body:      response.Body,
-	}, make([]error, 0)
+	}, errs
 }
