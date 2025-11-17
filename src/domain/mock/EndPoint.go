@@ -1,13 +1,16 @@
 package mock
 
 import (
+	"time"
+
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/mock/swr"
 	"github.com/Rafael24595/go-collections/collection"
 )
 
 type EndPoint struct {
-	Id        string            `json:"id"`
+	Id        string            `json:"_id"`
+	Order     int               `json:"order"`
 	Timestamp int64             `json:"timestamp"`
 	Modified  int64             `json:"modified"`
 	Name      string            `json:"name"`
@@ -27,7 +30,8 @@ func (r EndPoint) PersistenceId() string {
 }
 
 type EndPointLite struct {
-	Id        string            `json:"id"`
+	Id        string            `json:"_id"`
+	Order     int               `json:"order"`
 	Timestamp int64             `json:"timestamp"`
 	Modified  int64             `json:"modified"`
 	Name      string            `json:"name"`
@@ -45,6 +49,7 @@ func LiteFromEndPoint(endPoint *EndPoint) *EndPointLite {
 
 	return &EndPointLite{
 		Id:        endPoint.Id,
+		Order:     endPoint.Order,
 		Timestamp: endPoint.Timestamp,
 		Modified:  endPoint.Modified,
 		Name:      endPoint.Name,
@@ -57,7 +62,8 @@ func LiteFromEndPoint(endPoint *EndPoint) *EndPointLite {
 }
 
 type EndPointFull struct {
-	Id        string            `json:"id"`
+	Id        string            `json:"_id"`
+	Order     int               `json:"order"`
 	Timestamp int64             `json:"timestamp"`
 	Modified  int64             `json:"modified"`
 	Name      string            `json:"name"`
@@ -70,12 +76,13 @@ type EndPointFull struct {
 
 func FullFromEndPoint(endPoint *EndPoint) (*EndPointFull, []error) {
 	responses := make([]ResponseFull, len(endPoint.Responses))
+	errs := make([]error, 0)
 
 	opts := swr.UnmarshalOpts{Evalue: true}
 	for i, v := range endPoint.Responses {
-		result, errs := FromResponseWithOptions(v, opts)
+		result, resErrs := FromResponseWithOptions(v, opts)
 		if len(errs) > 0 {
-			return nil, errs
+			errs = append(errs, resErrs...)
 		}
 
 		responses[i] = *result
@@ -83,6 +90,7 @@ func FullFromEndPoint(endPoint *EndPoint) (*EndPointFull, []error) {
 
 	return &EndPointFull{
 		Id:        endPoint.Id,
+		Order:     endPoint.Order,
 		Timestamp: endPoint.Timestamp,
 		Modified:  endPoint.Modified,
 		Name:      endPoint.Name,
@@ -91,7 +99,7 @@ func FullFromEndPoint(endPoint *EndPoint) (*EndPointFull, []error) {
 		Responses: responses,
 		Safe:      endPoint.Safe,
 		Owner:     endPoint.Owner,
-	}, make([]error, 0)
+	}, errs
 }
 
 func ToEndPointFromFull(endPoint *EndPointFull) (*EndPoint, []error) {
@@ -109,6 +117,7 @@ func ToEndPointFromFull(endPoint *EndPointFull) (*EndPoint, []error) {
 
 	return &EndPoint{
 		Id:        endPoint.Id,
+		Order:     endPoint.Order,
 		Timestamp: endPoint.Timestamp,
 		Modified:  endPoint.Modified,
 		Name:      endPoint.Name,
@@ -118,4 +127,35 @@ func ToEndPointFromFull(endPoint *EndPointFull) (*EndPoint, []error) {
 		Safe:      endPoint.Safe,
 		Owner:     endPoint.Owner,
 	}, make([]error, 0)
+}
+
+func FixEndPoints(owner string, endPoints []EndPoint) []EndPoint {
+	coll := collection.VectorFromList(endPoints)
+
+	coll.Sort(func(i, j EndPoint) bool {
+		return i.Order < j.Order
+	})
+
+	coll.Map(func(i int, r EndPoint) EndPoint {
+		r.Order = i
+		return *FixEndPoint(owner, &r)
+	})
+
+	return coll.Collect()
+}
+
+func FixEndPoint(owner string, endPoint *EndPoint) *EndPoint {
+	endPoint.Owner = owner
+
+	if endPoint.Timestamp == 0 {
+		endPoint.Timestamp = time.Now().UnixMilli()
+	}
+
+	endPoint.Modified = time.Now().UnixMilli()
+
+	if endPoint.Name == "" {
+		endPoint.Name = endPoint.Path
+	}
+
+	return endPoint
 }
