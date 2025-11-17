@@ -84,7 +84,16 @@ func (r *RepositoryMemory) read() error {
 	return nil
 }
 
-func (r *RepositoryMemory) FindAll(owner string) []mock_domain.EndPointLite {
+func (r *RepositoryMemory) FindAll(owner string) []mock_domain.EndPoint {
+	r.muMemory.RLock()
+	defer r.muMemory.RUnlock()
+
+	return r.collection.Filter(func(s string, e mock_domain.EndPoint) bool {
+		return e.Owner == owner
+	}).Values()
+}
+
+func (r *RepositoryMemory) FindAllLite(owner string) []mock_domain.EndPointLite {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 
@@ -111,31 +120,42 @@ func (r *RepositoryMemory) FindByRequest(owner string, method domain.HttpMethod,
 	})
 }
 
-func (r *RepositoryMemory) Insert(owner string, endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
+func (r *RepositoryMemory) Insert(endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
 	r.muMemory.Lock()
-	return r.resolve(owner, endPoint)
+	defer r.muMemory.Unlock()
+
+	return r.resolve(endPoint)
 }
 
-func (r *RepositoryMemory) resolve(owner string, endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
+func (r *RepositoryMemory) InsertMany(endPoints ...mock_domain.EndPoint) []mock_domain.EndPoint {
+	r.muMemory.Lock()
+	defer r.muMemory.Unlock()
+	
+	result := make([]mock_domain.EndPoint, len(endPoints))
+	for i, v := range endPoints {
+		endPoint := r.resolve(&v)
+		result[i] = *endPoint
+	}
+
+	return result
+}
+
+func (r *RepositoryMemory) resolve(endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
 	if endPoint.Id != "" {
-		return r.insert(owner, endPoint)
+		return r.insert(endPoint)
 	}
 
 	key := uuid.New().String()
 	if r.collection.Exists(key) {
-		return r.resolve(owner, endPoint)
+		return r.resolve(endPoint)
 	}
 
 	endPoint.Id = key
 
-	return r.insert(owner, endPoint)
+	return r.insert(endPoint)
 }
 
-func (r *RepositoryMemory) insert(owner string, endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
-	defer r.muMemory.Unlock()
-
-	endPoint.Owner = owner
-
+func (r *RepositoryMemory) insert(endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
 	if endPoint.Timestamp == 0 {
 		endPoint.Timestamp = time.Now().UnixMilli()
 	}

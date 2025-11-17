@@ -6,9 +6,11 @@ import (
 )
 
 type IRepositoryEndPoint interface {
-	FindAll(owner string) []mock.EndPointLite
+	FindAllLite(owner string) []mock.EndPointLite
+	FindAll(owner string) []mock.EndPoint
 	Find(id string) (*mock.EndPoint, bool)
 	FindByRequest(owner string, method domain.HttpMethod, path string) (*mock.EndPoint, bool)
-	Insert(owner string, endPoint *mock.EndPoint) *mock.EndPoint
+	Insert(endPoint *mock.EndPoint) *mock.EndPoint
+	InsertMany(endPoint ...mock.EndPoint) []mock.EndPoint
 	Delete(endPoint *mock.EndPoint) *mock.EndPoint
 }

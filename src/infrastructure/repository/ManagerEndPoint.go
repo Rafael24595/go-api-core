@@ -17,7 +17,7 @@ func NewManagerEndPoint(endPoint IRepositoryEndPoint) *ManagerEndPoint {
 }
 
 func (m *ManagerEndPoint) FindAll(owner string) []mock_domain.EndPointLite {
-	endPoints := m.endPoint.FindAll(owner)
+	endPoints := m.endPoint.FindAllLite(owner)
 	return collection.VectorFromList(endPoints).
 		Filter(func(e mock_domain.EndPointLite) bool {
 			return e.Owner == owner
@@ -58,9 +58,10 @@ func (m *ManagerEndPoint) Insert(owner string, endPoint *mock_domain.EndPointFul
 		return nil, errs
 	}
 
+	result = mock_domain.FixEndPoint(owner, result)
 	result.Responses = mock_domain.FixResponses(result.Responses)
 
-	return m.endPoint.Insert(owner, result), make([]error, 0)
+	return m.endPoint.Insert(result), make([]error, 0)
 }
 
 func (m *ManagerEndPoint) Delete(owner string, endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
@@ -71,3 +72,24 @@ func (m *ManagerEndPoint) Delete(owner string, endPoint *mock_domain.EndPoint) *
 	return m.endPoint.Delete(endPoint)
 }
 
+func (m *ManagerEndPoint) Sort(owner string, references []domain.NodeReference) []mock_domain.EndPoint {
+	endPoints := collection.VectorFromList(m.endPoint.FindAll(owner))
+
+	sorted := make([]mock_domain.EndPoint, 0)
+	for i, v := range references {
+		endPoint, exists := endPoints.FindOne(func(e mock_domain.EndPoint) bool {
+			return e.Id == v.Item
+		})
+
+		if !exists || endPoint.Owner != owner {
+			continue
+		}
+
+		endPoint.Order = i
+		sorted = append(sorted, *endPoint)
+	}
+
+	sorted = mock_domain.FixEndPoints(owner, sorted)
+
+	return m.endPoint.InsertMany(sorted...)
+}
