@@ -10,6 +10,7 @@ import (
 
 type EndPoint struct {
 	Id        string            `json:"_id"`
+	Status    bool              `json:"status"`
 	Order     int               `json:"order"`
 	Timestamp int64             `json:"timestamp"`
 	Modified  int64             `json:"modified"`
@@ -31,6 +32,7 @@ func (r EndPoint) PersistenceId() string {
 
 type EndPointLite struct {
 	Id        string            `json:"_id"`
+	Status    bool              `json:"status"`
 	Order     int               `json:"order"`
 	Timestamp int64             `json:"timestamp"`
 	Modified  int64             `json:"modified"`
@@ -49,6 +51,7 @@ func LiteFromEndPoint(endPoint *EndPoint) *EndPointLite {
 
 	return &EndPointLite{
 		Id:        endPoint.Id,
+		Status:    endPoint.Status,
 		Order:     endPoint.Order,
 		Timestamp: endPoint.Timestamp,
 		Modified:  endPoint.Modified,
@@ -63,6 +66,7 @@ func LiteFromEndPoint(endPoint *EndPoint) *EndPointLite {
 
 type EndPointFull struct {
 	Id        string            `json:"_id"`
+	Status    bool              `json:"status"`
 	Order     int               `json:"order"`
 	Timestamp int64             `json:"timestamp"`
 	Modified  int64             `json:"modified"`
@@ -90,6 +94,7 @@ func FullFromEndPoint(endPoint *EndPoint) (*EndPointFull, []error) {
 
 	return &EndPointFull{
 		Id:        endPoint.Id,
+		Status:    endPoint.Status,
 		Order:     endPoint.Order,
 		Timestamp: endPoint.Timestamp,
 		Modified:  endPoint.Modified,
@@ -117,6 +122,7 @@ func ToEndPointFromFull(endPoint *EndPointFull) (*EndPoint, []error) {
 
 	return &EndPoint{
 		Id:        endPoint.Id,
+		Status:    endPoint.Status,
 		Order:     endPoint.Order,
 		Timestamp: endPoint.Timestamp,
 		Modified:  endPoint.Modified,

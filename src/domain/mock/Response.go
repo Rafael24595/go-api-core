@@ -11,7 +11,8 @@ const DefaultResponse = "default"
 func defaultResponse() *Response {
 	return &Response{
 		Order:  0,
-		Status: 200,
+		Status: true,
+		Code:   200,
 		Name:   DefaultResponse,
 		Headers: []Header{
 			{
@@ -29,7 +30,8 @@ func defaultResponse() *Response {
 
 type Response struct {
 	Order     int      `json:"order"`
-	Status    int      `json:"status"`
+	Status    bool     `json:"status"`
+	Code      int      `json:"code"`
 	Timestamp int64    `json:"timestamp"`
 	Condition string   `json:"condition"`
 	Name      string   `json:"name"`
@@ -50,7 +52,8 @@ type Header struct {
 
 type ResponseFull struct {
 	Order     int        `json:"order"`
-	Status    int        `json:"status"`
+	Status    bool       `json:"status"`
+	Code      int        `json:"code"`
 	Timestamp int64      `json:"timestamp"`
 	Condition []swr.Step `json:"condition"`
 	Name      string     `json:"name"`
@@ -62,7 +65,7 @@ func FixResponses(responses []Response) []Response {
 	var defRes *Response
 
 	coll := collection.VectorFromList(responses)
-	
+
 	index := coll.IndexOf(func(r Response) bool { return r.Name == DefaultResponse })
 	if index != -1 {
 		def, _ := coll.Remove(index)
@@ -100,6 +103,7 @@ func FromResponseWithOptions(response Response, opts swr.UnmarshalOpts) (*Respon
 	return &ResponseFull{
 		Order:     response.Order,
 		Status:    response.Status,
+		Code:      response.Code,
 		Timestamp: response.Timestamp,
 		Condition: steps,
 		Name:      response.Name,
@@ -118,6 +122,7 @@ func ToResponseWithOptions(response ResponseFull, opts swr.MarshalOpts) (*Respon
 	return &Response{
 		Order:     response.Order,
 		Status:    response.Status,
+		Code:      response.Code,
 		Timestamp: response.Timestamp,
 		Condition: condition,
 		Name:      response.Name,
