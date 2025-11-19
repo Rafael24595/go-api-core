@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"strings"
+
 	"github.com/Rafael24595/go-api-core/src/domain"
 	mock_domain "github.com/Rafael24595/go-api-core/src/domain/mock"
 	"github.com/Rafael24595/go-collections/collection"
@@ -38,6 +40,10 @@ func (m *ManagerEndPoint) Find(owner, id string) (*mock_domain.EndPointFull, boo
 }
 
 func (m *ManagerEndPoint) FindByRequest(owner string, method domain.HttpMethod, path string) (*mock_domain.EndPoint, bool) {
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+
 	endPoint, ok := m.endPoint.FindByRequest(owner, method, path)
 	if !ok || endPoint.Owner != owner {
 		return nil, false
@@ -60,6 +66,10 @@ func (m *ManagerEndPoint) Insert(owner string, endPoint *mock_domain.EndPointFul
 
 	result = mock_domain.FixEndPoint(owner, result)
 	result.Responses = mock_domain.FixResponses(result.Responses)
+
+	if !strings.HasPrefix(endPoint.Path, "/") {
+		endPoint.Path = "/" + endPoint.Path
+	}
 
 	return m.endPoint.Insert(result), make([]error, 0)
 }
