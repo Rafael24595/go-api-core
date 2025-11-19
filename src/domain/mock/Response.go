@@ -41,7 +41,7 @@ type Response struct {
 
 type Body struct {
 	ContentType domain.ContentType `json:"content_type"`
-	Payload     string             `json:"string"`
+	Payload     string             `json:"payload"`
 }
 
 type Header struct {
@@ -76,6 +76,9 @@ func FixResponses(responses []Response) []Response {
 	if defRes == nil {
 		defRes = defaultResponse()
 	}
+
+	defRes.Status = true
+	defRes.Order = 0
 
 	coll.FilterSelf(func(r Response) bool { return r.Name != DefaultResponse })
 
