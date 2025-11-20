@@ -11,14 +11,11 @@ const (
 )
 
 type Session struct {
-	Username   string   `json:"username"`
-	Secret     []byte   `json:"secret"`
-	Timestamp  int64    `json:"timestamp"`
-	History    string   `json:"history"`
-	Collection string   `json:"collection"`
-	Group      string   `json:"group"`
-	Count      int      `json:"count"`
-	Refresh    string   `json:"refresh"`
+	Username   string `json:"username"`
+	Secret     []byte `json:"secret"`
+	Timestamp  int64  `json:"timestamp"`
+	Count      int    `json:"count"`
+	Refresh    string `json:"refresh"`
 	Roles      []Role `json:"roles"`
 }
 

@@ -47,7 +47,7 @@ func initializeManagerSession(config configuration.Configuration, container *dep
 		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
-	return repository.InitializeManagerSession(file, container.ManagerCollection, container.ManagerGroup)
+	return repository.InitializeManagerSession(file, container.ManagerClientData)
 }
 
 func loadManagerSnapshotFile[T repository.IStructure](topic system.TopicSnapshot, snapshot configuration.Snapshot, file repository.IFileManager[T]) repository.IFileManager[T] {

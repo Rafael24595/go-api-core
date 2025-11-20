@@ -189,9 +189,17 @@ func (m *ManagerGroup) SortCollections(owner string, group *domain.Group, payloa
 	return group
 }
 
-func (m *ManagerGroup) Delete(owner string, group *domain.Group) *domain.Group {
-	if group.Owner != owner {
+func (m *ManagerGroup) Delete(owner string, id string) *domain.Group {
+	group, exists := m.group.Find(id)
+	if !exists || group.Owner != owner {
 		return nil
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for _, v := range group.Nodes {
+		m.managerCollection.Delete(owner, v.Item)
 	}
 
 	return m.group.Delete(group)

@@ -2,7 +2,6 @@ package repository
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -10,8 +9,6 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/session"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
-	"github.com/Rafael24595/go-api-core/src/domain"
-	collection_domain "github.com/Rafael24595/go-api-core/src/domain/collection"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-collections/collection"
 	"golang.org/x/crypto/bcrypt"
@@ -27,13 +24,12 @@ type ManagerSession struct {
 	mut               sync.RWMutex
 	mutFile           sync.RWMutex
 	file              IFileManager[dto.DtoSession]
-	managerCollection *ManagerCollection
-	managerGroup      *ManagerGroup
 	sessions          collection.IDictionary[string, session.Session]
+	managerClientData *ManagerClientData
 	close             chan bool
 }
 
-func InitializeManagerSession(file IFileManager[dto.DtoSession], managerCollection *ManagerCollection, managerGroup *ManagerGroup) *ManagerSession {
+func InitializeManagerSession(file IFileManager[dto.DtoSession], managerClientData *ManagerClientData) *ManagerSession {
 	once.Do(func() {
 		steps, err := file.Read()
 		if err != nil {
@@ -48,8 +44,7 @@ func InitializeManagerSession(file IFileManager[dto.DtoSession], managerCollecti
 
 		instance := &ManagerSession{
 			file:              file,
-			managerCollection: managerCollection,
-			managerGroup:      managerGroup,
+			managerClientData: managerClientData,
 			sessions:          sessions,
 		}
 
@@ -154,8 +149,13 @@ func (s *ManagerSession) defineDefaultUser(username, secret string, roles []sess
 
 	if !exists {
 		log.Messagef("Defining default user %s with roles: %v", username, roles)
-		collection, history, group := s.makeDependencies(username)
-		_, err := s.insert(username, string(secret), collection, history, group, roles, count)
+
+		data, exists := s.managerClientData.resolve(username)
+		if data == nil && !exists {
+			return errors.New("client data cannot be initialized")
+		}
+
+		_, err := s.insert(username, string(secret), roles, count)
 		if err != nil {
 			return err
 		}
@@ -167,96 +167,53 @@ func (s *ManagerSession) Find(user string) (*session.Session, bool) {
 	return s.sessions.Get(user)
 }
 
-func (s *ManagerSession) FindUserCollection(user string) (*collection_domain.Collection, error) {
-	s.mut.Lock()
-	defer s.mut.Unlock()
-
-	session, ok := s.sessions.Get(user)
-	if !ok {
-		return nil, errors.New("session not found")
+func (s *ManagerSession) Insert(sess *session.Session, user, password string, roles []session.Role) (*session.Session, error) {
+	if !sess.HasRole(session.ROLE_ADMIN) {
+		return nil, errors.New("user has not have admin privilegies")
 	}
 
-	collection, _ := s.managerCollection.Find(user, session.Collection)
-	if collection != nil && collection.Status == collection_domain.USER {
-		return collection, nil
+	if _, exists := s.Find(user); exists {
+		return nil, errors.New("user exists")
 	}
 
-	exists := collection != nil
-	if exists {
-		collection.Status = collection_domain.USER
-	} else {
-		collection = collection_domain.NewUserCollection(user)
+	err := s.valideData(user, password, nil)
+	if err != nil {
+		return nil, err
 	}
 
-	collection = s.managerCollection.Insert(user, collection)
-
-	if !exists {
-		log.Messagef("Defined global collection '%s' for %s user", collection.Id, user)
+	data, exists := s.managerClientData.resolve(user)
+	if data == nil && !exists {
+		return nil, errors.New("client data cannot be initialized")
 	}
 
-	session.Collection = collection.Id
-
-	s.update(session)
-
-	return collection, nil
+	return s.insert(user, password, roles, -1)
 }
 
-func (s *ManagerSession) FindUserHistoric(user string) (*collection_domain.Collection, error) {
+func (s *ManagerSession) Delete(sess *session.Session) (*session.Session, error) {
+	if sess.HasRole(session.ROLE_PROTECTED) {
+		return nil, errors.New("this user is protected, cannot be removed")
+	}
+
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	session, ok := s.sessions.Get(user)
-	if !ok {
-		return nil, errors.New("session not found")
-	}
+	s.managerClientData.delete(sess.Username)
 
-	collection, _ := s.managerCollection.Find(user, session.History)
-	if collection != nil && collection.Status == collection_domain.TALE {
-		return collection, nil
-	}
-
-	exists := collection != nil
-	if exists {
-		collection.Status = collection_domain.TALE
-	} else {
-		collection = collection_domain.NewUserCollection(user)
-	}
-
-	collection = s.managerCollection.Insert(user, collection)
-
-	if !exists {
-		log.Messagef("Defined historic collection '%s' for %s user", collection.Id, user)
-	}
-
-	session.History = collection.Id
-
-	s.update(session)
-
-	return collection, nil
+	sess, _ = s.sessions.Remove(sess.Username)
+	return sess, nil
 }
 
-func (s *ManagerSession) FindUserGroup(user string) (*domain.Group, error) {
-	s.mut.Lock()
-	defer s.mut.Unlock()
-
-	session, ok := s.sessions.Get(user)
-	if !ok {
+func (s *ManagerSession) Authorize(user, password string) (*session.Session, error) {
+	session, exists := s.sessions.Get(user)
+	if !exists {
 		return nil, errors.New("session not found")
 	}
 
-	group, _ := s.managerGroup.Find(user, session.Group)
-	if group != nil {
-		return group, nil
+	if !ValideSecret([]byte(password), session.Secret) {
+		return nil, errors.New("session not found")
 	}
 
-	group = domain.NewGroup(user)
-	group = s.managerGroup.Insert(user, group)
-
-	session.Group = group.Id
-
-	s.update(session)
-
-	return group, nil
+	return session, nil
 }
 
 func (s *ManagerSession) Verify(username, oldPassword, newPassword1, newPassword2 string) (*session.Session, error) {
@@ -286,63 +243,13 @@ func (s *ManagerSession) Verify(username, oldPassword, newPassword1, newPassword
 	return session, nil
 }
 
-func (s *ManagerSession) Delete(sess *session.Session) (*session.Session, error) {
-	if sess.HasRole(session.ROLE_PROTECTED) {
-		return nil, errors.New("this user is protected, cannot be removed")
-	}
-
-	sess, _ = s.sessions.Remove(sess.Username)
-	return sess, nil
-}
-
 func (s *ManagerSession) Visited(session *session.Session) *session.Session {
 	session.Count += 1
 	s.update(session)
 	return session
 }
 
-func (s *ManagerSession) update(session *session.Session) (*session.Session, bool) {
-	if _, ok := s.sessions.Get(session.Username); !ok {
-		return nil, false
-	}
-	old, exists := s.sessions.Put(session.Username, *session)
-	go s.write(s.sessions)
-	return old, exists
-}
-
-func (s *ManagerSession) Authorize(user, password string) (*session.Session, error) {
-	session, exists := s.sessions.Get(user)
-	if !exists {
-		return nil, errors.New("session not found")
-	}
-
-	if !ValideSecret([]byte(password), session.Secret) {
-		return nil, errors.New("session not found")
-	}
-
-	return session, nil
-}
-
-func (s *ManagerSession) Insert(sess *session.Session, user, password string, roles []session.Role) (*session.Session, error) {
-	if !sess.HasRole(session.ROLE_ADMIN) {
-		return nil, errors.New("user has not have admin privilegies")
-	}
-
-	if _, exists := s.Find(user); exists {
-		return nil, errors.New("user exists")
-	}
-
-	err := s.valideData(user, password, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	collection, history, group := s.makeDependencies(user)
-
-	return s.insert(user, password, collection, history, group, roles, -1)
-}
-
-func (s *ManagerSession) insert(user, password string, collection *collection_domain.Collection, history *collection_domain.Collection, group *domain.Group, roles []session.Role, count int) (*session.Session, error) {
+func (s *ManagerSession) insert(user, password string, roles []session.Role, count int) (*session.Session, error) {
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
@@ -357,15 +264,12 @@ func (s *ManagerSession) insert(user, password string, collection *collection_do
 	}
 
 	session := session.Session{
-		Username:   user,
-		Secret:     secret,
-		Timestamp:  time.Now().UnixMilli(),
-		Collection: collection.Id,
-		History:    history.Id,
-		Group:      group.Id,
-		Count:      count,
-		Refresh:    "",
-		Roles:      roles,
+		Username:  user,
+		Secret:    secret,
+		Timestamp: time.Now().UnixMilli(),
+		Count:     count,
+		Refresh:   "",
+		Roles:     roles,
 	}
 
 	s.sessions.Put(user, session)
@@ -375,26 +279,22 @@ func (s *ManagerSession) insert(user, password string, collection *collection_do
 	return &session, nil
 }
 
+func (s *ManagerSession) update(session *session.Session) (*session.Session, bool) {
+	if _, ok := s.sessions.Get(session.Username); !ok {
+		return nil, false
+	}
+
+	old, exists := s.sessions.Put(session.Username, *session)
+
+	go s.write(s.sessions)
+	
+	return old, exists
+}
+
 func (s *ManagerSession) Refresh(session *session.Session, refresh string) *session.Session {
 	session.Refresh = refresh
 	s.update(session)
 	return session
-}
-
-func (s *ManagerSession) makeDependencies(username string) (*collection_domain.Collection, *collection_domain.Collection, *domain.Group) {
-	collection := collection_domain.NewUserCollection(username)
-	collection.Name = fmt.Sprintf("%s's global collection", username)
-	collection = s.managerCollection.Insert(username, collection)
-
-	history := collection_domain.NewTaleCollection(username)
-	history.Name = fmt.Sprintf("%s's history collection", username)
-	history.Context = collection.Context
-	history = s.managerCollection.Insert(username, history)
-
-	group := domain.NewGroup(username)
-	group = s.managerGroup.Insert(username, group)
-
-	return collection, history, group
 }
 
 func (s *ManagerSession) valideData(username, password1 string, password2 *string) error {
