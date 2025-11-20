@@ -1,6 +1,8 @@
 package mock
 
 import (
+	"fmt"
+
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/mock/swr"
 	"github.com/Rafael24595/go-collections/collection"
@@ -93,7 +95,31 @@ func FixResponses(responses []Response) []Response {
 		return r
 	})
 
-	return coll.Collect()
+	return fixResponsesName(coll.Collect())
+}
+
+func fixResponsesName(responses []Response) []Response {
+	cache := make(map[string]bool, 0)
+
+	for i, v := range responses {
+		name := fixResponseName(v, cache)
+		responses[i].Name = name
+		cache[name] = true
+	}
+
+	return responses
+}
+
+func fixResponseName(response Response, cache map[string]bool) string {
+	name := response.Name
+	count := 1
+
+	for cache[name] {
+		name = fmt.Sprintf("%s-copy-%d", response.Name, count)
+		count++
+	}
+
+	return name
 }
 
 func FromResponse(response Response) *ResponseFull {
