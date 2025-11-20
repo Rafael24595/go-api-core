@@ -68,7 +68,7 @@ func (m *ManagerEndPoint) Insert(owner string, endPoint *mock_domain.EndPointFul
 	result.Responses = mock_domain.FixResponses(result.Responses)
 
 	if !strings.HasPrefix(endPoint.Path, "/") {
-		endPoint.Path = "/" + endPoint.Path
+		result.Path = "/" + endPoint.Path
 	}
 
 	return m.endPoint.Insert(result), make([]error, 0)
