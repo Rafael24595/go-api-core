@@ -17,6 +17,7 @@ const (
 	SNAPSHOT_TOPIC_COLLECTION  TopicSnapshot = "snpsh_coll"
 	SNAPSHOT_TOPIC_GROUP       TopicSnapshot = "snpsh_grp"
 	SNAPSHOT_TOPIC_END_POINT   TopicSnapshot = "snpsh_ept"
+	SNAPSHOT_TOPIC_METRICS     TopicSnapshot = "snpsh_epm"
 	SNAPSHOT_TOPIC_TOKEN       TopicSnapshot = "snpsh_tkn"
 	SNAPSHOT_TOPIC_SESSION     TopicSnapshot = "snpsh_ses"
 	SNAPSHOT_TOPIC_CLIENT_DATA TopicSnapshot = "snpsh_cld"
@@ -29,6 +30,7 @@ const (
 	CSVT_SNAPSHOT_PATH_COLLECTION  string = "./db/snapshot/collection"
 	CSVT_SNAPSHOT_PATH_GROUP       string = "./db/snapshot/group"
 	CSVT_SNAPSHOT_PATH_END_POINT   string = "./db/snapshot/end_point"
+	CSVT_SNAPSHOT_PATH_METRICS     string = "./db/snapshot/metrics"
 	CSVT_SNAPSHOT_PATH_TOKEN       string = "./db/snapshot/token"
 	CSVT_SNAPSHOT_PATH_SESSION     string = "./db/snapshot/session"
 	CSVT_SNAPSHOT_PATH_CLIENT_DATA string = "./db/snapshot/client_data"
@@ -42,6 +44,7 @@ var allTopicSnapshots = []TopicSnapshot{
 	SNAPSHOT_TOPIC_COLLECTION,
 	SNAPSHOT_TOPIC_GROUP,
 	SNAPSHOT_TOPIC_END_POINT,
+	SNAPSHOT_TOPIC_METRICS,
 	SNAPSHOT_TOPIC_TOKEN,
 	SNAPSHOT_TOPIC_SESSION,
 	SNAPSHOT_TOPIC_CLIENT_DATA,
@@ -54,6 +57,7 @@ var topicDescriptions = map[TopicSnapshot]string{
 	SNAPSHOT_TOPIC_COLLECTION:  "Represents a snapshot of collection data.",
 	SNAPSHOT_TOPIC_GROUP:       "Represents a snapshot of group data.",
 	SNAPSHOT_TOPIC_END_POINT:   "Represents a snapshot of mocked API endpoint data.",
+	SNAPSHOT_TOPIC_METRICS:     "Represents a snapshot of mocked API endpoint metrics.",
 	SNAPSHOT_TOPIC_TOKEN:       "Represents a snapshot of user token data.",
 	SNAPSHOT_TOPIC_SESSION:     "Represents a snapshot of user session data.",
 	SNAPSHOT_TOPIC_CLIENT_DATA: "Represents a snapshot of user client data.",
@@ -66,6 +70,7 @@ var topicCsvPath = map[TopicSnapshot]string{
 	SNAPSHOT_TOPIC_COLLECTION:  CSVT_SNAPSHOT_PATH_COLLECTION,
 	SNAPSHOT_TOPIC_GROUP:       CSVT_SNAPSHOT_PATH_GROUP,
 	SNAPSHOT_TOPIC_END_POINT:   CSVT_SNAPSHOT_PATH_END_POINT,
+	SNAPSHOT_TOPIC_METRICS:     CSVT_SNAPSHOT_PATH_METRICS,
 	SNAPSHOT_TOPIC_TOKEN:       CSVT_SNAPSHOT_PATH_TOKEN,
 	SNAPSHOT_TOPIC_SESSION:     CSVT_SNAPSHOT_PATH_SESSION,
 	SNAPSHOT_TOPIC_CLIENT_DATA: CSVT_SNAPSHOT_PATH_CLIENT_DATA,

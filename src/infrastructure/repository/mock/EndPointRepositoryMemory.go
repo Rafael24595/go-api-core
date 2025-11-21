@@ -14,7 +14,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type RepositoryMemory struct {
+type EndPointRepositoryMemory struct {
 	once       sync.Once
 	muMemory   sync.RWMutex
 	muFile     sync.RWMutex
@@ -23,13 +23,13 @@ type RepositoryMemory struct {
 	close      chan bool
 }
 
-func InitializeRepositoryMemory(impl collection.IDictionary[string, mock_domain.EndPoint], file repository.IFileManager[mock_domain.EndPoint]) (*RepositoryMemory, error) {
+func InitializeEndPointRepositoryMemory(impl collection.IDictionary[string, mock_domain.EndPoint], file repository.IFileManager[mock_domain.EndPoint]) (*EndPointRepositoryMemory, error) {
 	requests, err := file.Read()
 	if err != nil {
 		return nil, err
 	}
 
-	instance := &RepositoryMemory{
+	instance := &EndPointRepositoryMemory{
 		collection: impl.Merge(collection.DictionaryFromMap(requests)),
 		file:       file,
 	}
@@ -39,7 +39,7 @@ func InitializeRepositoryMemory(impl collection.IDictionary[string, mock_domain.
 	return instance, nil
 }
 
-func (r *RepositoryMemory) watch() {
+func (r *EndPointRepositoryMemory) watch() {
 	r.once.Do(func() {
 		conf := configuration.Instance()
 		if !conf.Snapshot().Enable {
@@ -74,7 +74,7 @@ func (r *RepositoryMemory) watch() {
 	})
 }
 
-func (r *RepositoryMemory) read() error {
+func (r *EndPointRepositoryMemory) read() error {
 	requests, err := r.file.Read()
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func (r *RepositoryMemory) read() error {
 	return nil
 }
 
-func (r *RepositoryMemory) FindAll(owner string) []mock_domain.EndPoint {
+func (r *EndPointRepositoryMemory) FindAll(owner string) []mock_domain.EndPoint {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 
@@ -93,7 +93,7 @@ func (r *RepositoryMemory) FindAll(owner string) []mock_domain.EndPoint {
 	}).Values()
 }
 
-func (r *RepositoryMemory) FindAllLite(owner string) []mock_domain.EndPointLite {
+func (r *EndPointRepositoryMemory) FindAllLite(owner string) []mock_domain.EndPointLite {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 
@@ -106,13 +106,13 @@ func (r *RepositoryMemory) FindAllLite(owner string) []mock_domain.EndPointLite 
 	}, collection.MakeVector).Collect()
 }
 
-func (r *RepositoryMemory) Find(id string) (*mock_domain.EndPoint, bool) {
+func (r *EndPointRepositoryMemory) Find(id string) (*mock_domain.EndPoint, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 	return r.collection.Get(id)
 }
 
-func (r *RepositoryMemory) FindByRequest(owner string, method domain.HttpMethod, path string) (*mock_domain.EndPoint, bool) {
+func (r *EndPointRepositoryMemory) FindByRequest(owner string, method domain.HttpMethod, path string) (*mock_domain.EndPoint, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 	return r.collection.FindOne(func(s string, ep mock_domain.EndPoint) bool {
@@ -120,14 +120,14 @@ func (r *RepositoryMemory) FindByRequest(owner string, method domain.HttpMethod,
 	})
 }
 
-func (r *RepositoryMemory) Insert(endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
+func (r *EndPointRepositoryMemory) Insert(endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
 	return r.resolve(endPoint)
 }
 
-func (r *RepositoryMemory) InsertMany(endPoints ...mock_domain.EndPoint) []mock_domain.EndPoint {
+func (r *EndPointRepositoryMemory) InsertMany(endPoints ...mock_domain.EndPoint) []mock_domain.EndPoint {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 	
@@ -140,7 +140,7 @@ func (r *RepositoryMemory) InsertMany(endPoints ...mock_domain.EndPoint) []mock_
 	return result
 }
 
-func (r *RepositoryMemory) resolve(endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
+func (r *EndPointRepositoryMemory) resolve(endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
 	if endPoint.Id != "" {
 		return r.insert(endPoint)
 	}
@@ -155,7 +155,7 @@ func (r *RepositoryMemory) resolve(endPoint *mock_domain.EndPoint) *mock_domain.
 	return r.insert(endPoint)
 }
 
-func (r *RepositoryMemory) insert(endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
+func (r *EndPointRepositoryMemory) insert(endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
 	if endPoint.Timestamp == 0 {
 		endPoint.Timestamp = time.Now().UnixMilli()
 	}
@@ -169,7 +169,7 @@ func (r *RepositoryMemory) insert(endPoint *mock_domain.EndPoint) *mock_domain.E
 	return endPoint
 }
 
-func (r *RepositoryMemory) Delete(endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
+func (r *EndPointRepositoryMemory) Delete(endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
@@ -179,7 +179,7 @@ func (r *RepositoryMemory) Delete(endPoint *mock_domain.EndPoint) *mock_domain.E
 	return cursor
 }
 
-func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, mock_domain.EndPoint]) {
+func (r *EndPointRepositoryMemory) write(snapshot collection.IDictionary[string, mock_domain.EndPoint]) {
 	r.muFile.Lock()
 	defer r.muFile.Unlock()
 

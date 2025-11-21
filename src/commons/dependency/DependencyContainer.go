@@ -25,11 +25,6 @@ import (
 	"github.com/Rafael24595/go-collections/collection"
 )
 
-const (
-	PRESIST_PREFIX = "sve"
-	HISTORY_PREFIX = "hst"
-)
-
 var instance *DependencyContainer
 
 type DependencyContainer struct {
@@ -40,6 +35,7 @@ type DependencyContainer struct {
 	ManagerHistoric   *repository.ManagerHistoric
 	ManagerGroup      *repository.ManagerGroup
 	ManagerEndPoint   *repository.ManagerEndPoint
+	ManagerMetrics    *repository.ManagerMetrics
 	ManagerToken      *repository.ManagerToken
 	ManagerClientData *repository.ManagerClientData
 }
@@ -61,6 +57,7 @@ func Initialize(config configuration.Configuration) *DependencyContainer {
 	repositoryCollection := loadRepositoryCollection(config)
 	repositoryGroup := loadRepositoryGroup(config)
 	repositoryEndPoint := loadRepositoryEndPoint(config)
+	repositoryMetrics := loadRepositoryMetrics(config)
 	repositoryToken := loadRepositoryToken(config)
 	repositoryClient := loadRepositoryClientData(config)
 
@@ -69,7 +66,8 @@ func Initialize(config configuration.Configuration) *DependencyContainer {
 	managerCollection := loadManagerCollection(repositoryCollection, managerContext, managerRequest)
 	managerHistoric := loadManagerHistoric(managerRequest, managerCollection)
 	managerGroup := loadManagerGroup(repositoryGroup, managerCollection)
-	managerEndPoint := loadManagerEndPoint(repositoryEndPoint)
+	managerMetrics := loadManagerMetrics(repositoryMetrics)
+	managerEndPoint := loadManagerEndPoint(repositoryEndPoint, managerMetrics)
 	managerToken := loadManagerToken(repositoryToken)
 	managerClientData := loadManagerClientData(repositoryClient, managerCollection, managerGroup)
 
@@ -81,6 +79,7 @@ func Initialize(config configuration.Configuration) *DependencyContainer {
 		ManagerHistoric:   managerHistoric,
 		ManagerGroup:      managerGroup,
 		ManagerEndPoint:   managerEndPoint,
+		ManagerMetrics:    managerMetrics,
 		ManagerToken:      managerToken,
 		ManagerClientData: managerClientData,
 	}
@@ -196,7 +195,26 @@ func loadRepositoryEndPoint(config configuration.Configuration) repository.IRepo
 	}
 
 	impl := collection.DictionarySyncEmpty[string, mock_domain.EndPoint]()
-	repository, err := repository_mock.InitializeRepositoryMemory(impl, file)
+	repository, err := repository_mock.InitializeEndPointRepositoryMemory(impl, file)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return repository
+}
+
+func loadRepositoryMetrics(config configuration.Configuration) repository.IRepositoryMetrics {
+	var file repository.IFileManager[mock_domain.Metrics]
+	file = repository.NewManagerCsvtFile[mock_domain.Metrics](repository.CSVT_FILE_PATH_METRICS)
+
+	snapshot := config.Snapshot()
+	if snapshot.Enable {
+		topic := system.SNAPSHOT_TOPIC_END_POINT
+		file = loadManagerSnapshotFile(topic, snapshot, file)
+	}
+
+	impl := collection.DictionarySyncEmpty[string, mock_domain.Metrics]()
+	repository, err := repository_mock.InitializeMetricsRepositoryMemory(impl, file)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -279,8 +297,12 @@ func loadManagerGroup(
 	return repository.NewManagerGroup(group, managerCollection)
 }
 
-func loadManagerEndPoint(endPoint repository.IRepositoryEndPoint) *repository.ManagerEndPoint {
-	return repository.NewManagerEndPoint(endPoint)
+func loadManagerEndPoint(endPoint repository.IRepositoryEndPoint, metrics *repository.ManagerMetrics) *repository.ManagerEndPoint {
+	return repository.NewManagerEndPoint(endPoint, metrics)
+}
+
+func loadManagerMetrics(endPoint repository.IRepositoryMetrics) *repository.ManagerMetrics {
+	return repository.NewManagerMetrics(endPoint)
 }
 
 func loadManagerToken(token repository.IRepositoryToken) *repository.ManagerToken {

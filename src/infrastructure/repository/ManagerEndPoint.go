@@ -9,12 +9,14 @@ import (
 )
 
 type ManagerEndPoint struct {
-	endPoint IRepositoryEndPoint
+	endPoint       IRepositoryEndPoint
+	managerMetrics *ManagerMetrics
 }
 
-func NewManagerEndPoint(endPoint IRepositoryEndPoint) *ManagerEndPoint {
+func NewManagerEndPoint(endPoint IRepositoryEndPoint, managerMetrics *ManagerMetrics) *ManagerEndPoint {
 	return &ManagerEndPoint{
-		endPoint: endPoint,
+		endPoint:       endPoint,
+		managerMetrics: managerMetrics,
 	}
 }
 
@@ -27,7 +29,18 @@ func (m *ManagerEndPoint) FindAll(owner string) []mock_domain.EndPointLite {
 		Collect()
 }
 
-func (m *ManagerEndPoint) Find(owner, id string) (*mock_domain.EndPointFull, bool) {
+func (m *ManagerEndPoint) Find(owner, id string) (*mock_domain.EndPoint, bool) {
+	endPoint, ok := m.endPoint.Find(id)
+	if !ok || endPoint.Owner != owner {
+		return nil, false
+	}
+
+	endPoint.Responses = mock_domain.FixResponses(endPoint.Responses)
+
+	return endPoint, true
+}
+
+func (m *ManagerEndPoint) FindFull(owner, id string) (*mock_domain.EndPointFull, bool) {
 	endPoint, ok := m.endPoint.Find(id)
 	if !ok || endPoint.Owner != owner {
 		return nil, false
@@ -79,7 +92,11 @@ func (m *ManagerEndPoint) Delete(owner string, endPoint *mock_domain.EndPoint) *
 		return nil
 	}
 
-	return m.endPoint.Delete(endPoint)
+	result := m.endPoint.Delete(endPoint)
+
+	go m.managerMetrics.Delete(owner, endPoint)
+
+	return result
 }
 
 func (m *ManagerEndPoint) Sort(owner string, references []domain.NodeReference) []mock_domain.EndPoint {
