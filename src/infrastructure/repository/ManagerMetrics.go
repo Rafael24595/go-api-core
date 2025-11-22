@@ -31,7 +31,6 @@ func (m *ManagerMetrics) Find(owner string, endPoint *mock_domain.EndPoint) (*mo
 
 	if metrics.LastStarted == 0 && endPoint.Status {
 		metrics.LastStarted = endPoint.Modified
-		metrics.TotalUptime = endPoint.Modified
 	}
 
 	if metrics.LastStarted != 0 {
@@ -92,8 +91,8 @@ func (m *ManagerMetrics) ResolveRequest(owner string, endPoint *mock_domain.EndP
 		metrics.MaxLatency = latency
 	}
 
-	if metrics.MinLatency > latency {
-		metrics.MinLatency = latency
+	if metrics.MinLatency == 0 || metrics.MinLatency > latency {
+		metrics.MinLatency = min(latency, metrics.MaxLatency)
 	}
 
 	metrics.AvgLatency = metrics.AvgLatency + (float64(latency)-metrics.AvgLatency)/float64(metrics.TotalRequests)
