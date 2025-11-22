@@ -39,7 +39,7 @@ func TestEvalueStepPosition_InputInMiddle(t *testing.T) {
 		{
 			Order: 0,
 			Type:  swr.StepTypeInput,
-			Value: string(swr.StepInputArguments),
+			Value: string(swr.StepInputPayload),
 		},
 		{
 			Order: 1,
@@ -109,4 +109,41 @@ func TestEvalueStepPosition_ValueExtraction(t *testing.T) {
 	assert.Len(t, 2, errs)
 	assert.Equal(t, `a defined value cannot be extracted from a structure type, but format found on 1 position`, errs[0].Error())
 	assert.Equal(t, `a value cannot be extracted from a flat value, but value found on 2 position`, errs[1].Error())
+}
+
+func TestEvalueStepPosition_FormatArgument(t *testing.T) {
+	steps := []swr.Step{
+		{
+			Order: 0,
+			Type:  swr.StepTypeInput,
+			Value: string(swr.StepInputArgument),
+		},
+		{
+			Order: 1,
+			Type:  swr.StepTypeFormat,
+			Value: "json",
+		},
+		{
+			Order: 2,
+			Type:  swr.StepTypeField,
+			Value: "1",
+		},
+		{
+			Order: 3,
+			Type:  swr.StepTypeOperator,
+			Value: string(swr.StepOperatorEq),
+		},
+		{
+			Order: 4,
+			Type:  swr.StepTypeValue,
+			Value: "zig",
+		},
+	}
+
+	_, errs := swr.MarshalWithOptions(steps, swr.MarshalOpts{
+		Evalue: true,
+	})
+
+	assert.Len(t, 1, errs)
+	assert.Equal(t, `an header input cannot be formatted, but format found on 1 position`, errs[0].Error())
 }

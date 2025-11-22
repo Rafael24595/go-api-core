@@ -340,7 +340,7 @@ func (f *swrEngine) findRoot(fragments *collection.Vector[string]) (any, bool) {
 	switch *cursor {
 	case string(StepInputPayload):
 		return f.findPayload(fragments)
-	case string(StepInputArguments):
+	case string(StepInputArgument):
 		return f.arguments, true
 	default:
 		return findValue(*cursor)

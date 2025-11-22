@@ -111,7 +111,7 @@ func TestUnmarshal_InputMissingFormat(t *testing.T) {
 	cond = "arguments.lang"
 	_, errs = swr.UnmarshalWithOptions(cond, opts)
 
-	assert.Len(t, 0, errs)
+	assert.Len(t, 1, errs)
 }
 
 func TestUnmarshal_InvalidFormat(t *testing.T) {

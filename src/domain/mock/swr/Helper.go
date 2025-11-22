@@ -76,6 +76,10 @@ func evalueStepPosition(cursor Step, parent *Step) error {
 		return nil
 	}
 
+	if isInputHeader(parent) && cursor.Type == StepTypeFormat {
+		return fmt.Errorf(`an header input cannot be formatted, but %s found on %d position`, cursor.Type, cursor.Order)
+	}
+
 	if parent.Type != StepTypeOperator && cursor.Type == StepTypeInput {
 		return fmt.Errorf(`an input operation cannot be applied in the middle of an operation, but %s found on %d position`, cursor.Type, cursor.Order)
 	}
@@ -181,4 +185,8 @@ func isComparableRight(step Step) bool {
 		return true
 	}
 	return false
+}
+
+func isInputHeader(step *Step) bool {
+	return step.Type == StepTypeInput && step.Value == string(StepInputArgument)
 }

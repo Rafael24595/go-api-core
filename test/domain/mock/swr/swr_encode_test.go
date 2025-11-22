@@ -64,7 +64,7 @@ func TestMarshal_InputMissingFormat(t *testing.T) {
 
 	_, errs = swr.MarshalWithOptions(steps, opts)
 
-	assert.Len(t, 0, errs)
+	assert.Len(t, 1, errs)
 }
 
 func TestMarshal_InvalidFormat(t *testing.T) {

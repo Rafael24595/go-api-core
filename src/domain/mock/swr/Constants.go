@@ -25,16 +25,16 @@ const (
 type StepInput string
 
 const (
-	StepInputPayload   StepInput = "payload"
-	StepInputArguments StepInput = "arguments"
+	StepInputPayload  StepInput = "payload"
+	StepInputArgument StepInput = "argument"
 )
 
 func StepInputFromString(s string) (StepInput, bool) {
 	switch s {
 	case string(StepInputPayload):
 		return StepInputPayload, true
-	case string(StepInputArguments):
-		return StepInputArguments, true
+	case string(StepInputArgument):
+		return StepInputArgument, true
 	default:
 		return "", false
 	}
