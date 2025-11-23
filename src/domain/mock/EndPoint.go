@@ -165,3 +165,34 @@ func FixEndPoint(owner string, endPoint *EndPoint) *EndPoint {
 
 	return endPoint
 }
+
+func FindResponse(payload string, arguments map[string]string, endPoint *EndPoint) (*Response, bool) {
+	vecResp := collection.VectorFromList(endPoint.Responses).
+		Sort(func(i, j Response) bool {
+			return i.Order < j.Order
+		})
+
+	keys := collection.VectorMap(vecResp, func(r Response) string {
+		return r.Condition
+	}).Collect()
+
+	if key, ok := swr.MatchRequirement(keys, payload, arguments); ok {
+		response, ok := vecResp.FindOne(func(r Response) bool {
+			return r.Condition == key
+		})
+		if ok && response.Status {
+			return response, true
+		}
+	}
+
+	response, ok := vecResp.FindOne(func(r Response) bool {
+		return r.Name == DefaultResponse
+	})
+
+	if !ok {
+		return nil, false
+	}
+
+	return response, true
+}
+
