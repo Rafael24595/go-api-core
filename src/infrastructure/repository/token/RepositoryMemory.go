@@ -92,7 +92,7 @@ func (r *RepositoryMemory) FindAll(owner string) []token_domain.LiteToken {
 		})
 	return collection.VectorMap(tokens, func(t token_domain.Token) token_domain.LiteToken {
 		return token_domain.ToLiteToken(t)
-	}, collection.MakeVector).Collect()
+	}).Collect()
 }
 
 func (r *RepositoryMemory) Find(id string) (*token_domain.Token, bool) {

@@ -103,7 +103,7 @@ func (r *EndPointRepositoryMemory) FindAllLite(owner string) []mock_domain.EndPo
 
 	return collection.VectorMap(filtered, func(e mock_domain.EndPoint) mock_domain.EndPointLite {
 		return *mock_domain.LiteFromEndPoint(&e)
-	}, collection.MakeVector).Collect()
+	}).Collect()
 }
 
 func (r *EndPointRepositoryMemory) Find(id string) (*mock_domain.EndPoint, bool) {
