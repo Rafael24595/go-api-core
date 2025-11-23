@@ -61,11 +61,11 @@ func (m *ManagerMetrics) ResolveStatus(owner string, oldEndPoint *mock_domain.En
 
 	now := time.Now().UnixMilli()
 
-	if !oldEndPoint.Status && newEndPoint.Status {
+	if !oldEndPoint.Status && newEndPoint.Status || newEndPoint.Status && metrics.LastStarted == 0 {
 		metrics.LastStarted = now
 	}
 
-	if oldEndPoint.Status && !newEndPoint.Status {
+	if oldEndPoint.Status && !newEndPoint.Status || !newEndPoint.Status && metrics.LastStarted != 0 {
 		if metrics.LastStarted > 0 {
 			metrics.TotalUptime += now - metrics.LastStarted
 		}
