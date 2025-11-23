@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	mock_domain "github.com/Rafael24595/go-api-core/src/domain/mock"
 )
 
@@ -35,6 +36,11 @@ func (m *ManagerMetrics) Find(owner string, endPoint *mock_domain.EndPoint) (*mo
 
 	if metrics.LastStarted != 0 {
 		metrics.TotalUptime += (time.Now().UnixMilli() - metrics.LastStarted)
+	}
+
+	conf := configuration.Instance()
+	if metrics.LastStarted < conf.Timestamp() {
+		metrics.LastStarted = conf.Timestamp()
 	}
 
 	return metrics, true
