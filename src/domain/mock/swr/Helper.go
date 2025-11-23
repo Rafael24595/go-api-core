@@ -25,6 +25,24 @@ func findPosition(cursor string) (string, bool) {
 	return matches[1], true
 }
 
+func findInput(cursor string, prevStep *Step) (string, bool) {
+	if prevStep == nil || !isLogicalOperator(prevStep) {
+		return cursor, false
+	}
+
+	_, ok := StepInputFromString(cursor)
+	return cursor, ok
+}
+
+func findFormat(cursor string, prevStep *Step) (string, bool) {
+	if prevStep == nil || prevStep.Type != StepTypeInput {
+		return cursor, false
+	}
+
+	_, ok := StepFormatFromString(cursor)
+	return cursor, ok
+}
+
 func evalueSteps(steps []Step) []error {
 	errors := make([]error, 0)
 
@@ -88,19 +106,19 @@ func evalueStepPosition(cursor Step, parent *Step) error {
 		return fmt.Errorf(`a compare operation is required after operator, but %s found on %d position`, cursor.Type, cursor.Order)
 	}
 
-	if isFormatedInput(*parent) && cursor.Type != StepTypeFormat {
+	if isFormatedInput(parent) && cursor.Type != StepTypeFormat {
 		return fmt.Errorf(`a formatted input requires a format specification, but %s found on %d position`, cursor.Type, cursor.Order)
 	}
 
-	if isLogicalOperator(*parent) && !isComparableRight(cursor) {
+	if isLogicalOperator(parent) && !isComparableRight(&cursor) {
 		return fmt.Errorf(`a compare operation is required after logical operator, but %s found on %d position`, cursor.Type, cursor.Order)
 	}
 
-	if isCompareOperator(*parent) && !isComparableRight(cursor) {
+	if isCompareOperator(parent) && !isComparableRight(&cursor) {
 		return fmt.Errorf(`a comparable value is required after compare operator, but %s found on %d position`, cursor.Type, cursor.Order)
 	}
 
-	if isCompareOperator(cursor) && !isComparableLeft(*parent) {
+	if isCompareOperator(&cursor) && !isComparableLeft(parent) {
 		return fmt.Errorf(`a comparable value is required before compare operator, but %s found on %d position`, parent.Type, parent.Order)
 	}
 
@@ -115,7 +133,7 @@ func evalueStepPosition(cursor Step, parent *Step) error {
 	return nil
 }
 
-func isFormatedInput(step Step) bool {
+func isFormatedInput(step *Step) bool {
 	if step.Type != StepTypeInput {
 		return false
 	}
@@ -128,7 +146,7 @@ func isFormatedInput(step Step) bool {
 	}
 }
 
-func isLogicalOperator(step Step) bool {
+func isLogicalOperator(step *Step) bool {
 	if step.Type != StepTypeOperator {
 		return false
 	}
@@ -146,7 +164,7 @@ func isLogicalOperator(step Step) bool {
 	return false
 }
 
-func isCompareOperator(step Step) bool {
+func isCompareOperator(step *Step) bool {
 	if step.Type != StepTypeOperator {
 		return false
 	}
@@ -168,7 +186,7 @@ func isCompareOperator(step Step) bool {
 	return false
 }
 
-func isComparableLeft(step Step) bool {
+func isComparableLeft(step *Step) bool {
 	switch step.Type {
 	case StepTypeArray,
 		StepTypeField,
@@ -178,7 +196,7 @@ func isComparableLeft(step Step) bool {
 	return false
 }
 
-func isComparableRight(step Step) bool {
+func isComparableRight(step *Step) bool {
 	switch step.Type {
 	case StepTypeInput,
 		StepTypeValue:

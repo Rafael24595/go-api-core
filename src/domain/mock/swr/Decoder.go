@@ -43,6 +43,7 @@ func unmarshal(cond string, opts UnmarshalOpts) ([]Step, []error) {
 
 	steps = append(steps, headers...)
 
+	var prevStep *Step
 	for fragments.Size() > 0 {
 		cursor, ok := fragments.Shift()
 		if !ok {
@@ -56,11 +57,17 @@ func unmarshal(cond string, opts UnmarshalOpts) ([]Step, []error) {
 			step = NewConditionStep(StepTypeArray, value)
 		} else if value, ok := findValue(*cursor); ok {
 			step = NewConditionStep(StepTypeValue, value)
+		} else if value, ok := findInput(*cursor, prevStep); ok {
+			step = NewConditionStep(StepTypeInput, value)
+		} else if value, ok := findFormat(*cursor, prevStep); ok {
+			step = NewConditionStep(StepTypeFormat, value)
 		} else {
 			step = NewConditionStep(StepTypeField, *cursor)
 		}
 
 		steps = append(steps, *step)
+
+		prevStep = step
 	}
 
 	steps = FixStepsOrder(steps)
