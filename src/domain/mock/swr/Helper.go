@@ -26,7 +26,7 @@ func findPosition(cursor string) (string, bool) {
 }
 
 func findInput(cursor string, prevStep *Step) (string, bool) {
-	if prevStep == nil || !isLogicalOperator(prevStep) {
+	if prevStep == nil || prevStep.Type != StepTypeOperator {
 		return cursor, false
 	}
 
@@ -99,35 +99,35 @@ func evalueStepPosition(cursor Step, parent *Step) error {
 	}
 
 	if parent.Type != StepTypeOperator && cursor.Type == StepTypeInput {
-		return fmt.Errorf(`an input operation cannot be applied in the middle of an operation, but %s found on %d position`, cursor.Type, cursor.Order)
+		return fmt.Errorf(`an input operation cannot be applied in the middle of an operation, but %s(%s) found on %d position`, cursor.Type, cursor.Value, cursor.Order)
 	}
 
 	if parent.Type == StepTypeOperator && cursor.Type == StepTypeOperator {
-		return fmt.Errorf(`a compare operation is required after operator, but %s found on %d position`, cursor.Type, cursor.Order)
+		return fmt.Errorf(`a compare operation %q is required after operator, but %s(%s) found on %d position`, parent.Value, cursor.Type, cursor.Value, cursor.Order)
 	}
 
 	if isFormatedInput(parent) && cursor.Type != StepTypeFormat {
-		return fmt.Errorf(`a formatted input requires a format specification, but %s found on %d position`, cursor.Type, cursor.Order)
+		return fmt.Errorf(`a formatted input %q requires a format specification, but %s(%s) found on %d position`, parent.Value, cursor.Type, cursor.Value, cursor.Order)
 	}
 
 	if isLogicalOperator(parent) && !isComparableRight(&cursor) {
-		return fmt.Errorf(`a compare operation is required after logical operator, but %s found on %d position`, cursor.Type, cursor.Order)
+		return fmt.Errorf(`a compare operation %q is required after logical operator, but %s(%s) found on %d position`, parent.Value, cursor.Type, cursor.Value, cursor.Order)
 	}
 
 	if isCompareOperator(parent) && !isComparableRight(&cursor) {
-		return fmt.Errorf(`a comparable value is required after compare operator, but %s found on %d position`, cursor.Type, cursor.Order)
+		return fmt.Errorf(`a comparable value is required after compare operator %q, but %s(%s) found on %d position`, parent.Value, cursor.Type, cursor.Value, cursor.Order)
 	}
 
 	if isCompareOperator(&cursor) && !isComparableLeft(parent) {
-		return fmt.Errorf(`a comparable value is required before compare operator, but %s found on %d position`, parent.Type, parent.Order)
+		return fmt.Errorf(`a comparable value is required before compare operator %q, but %s(%s) found on %d position`, cursor.Value, parent.Type, parent.Value, parent.Order)
 	}
 
 	if parent.Type == StepTypeValue && cursor.Type != StepTypeOperator {
-		return fmt.Errorf(`a value cannot be extracted from a flat value, but %s found on %d position`, parent.Type, parent.Order)
+		return fmt.Errorf(`a value cannot be extracted from a flat value, but %s(%s) found on %d position`, cursor.Type, cursor.Value, cursor.Order)
 	}
 
 	if cursor.Type == StepTypeValue && parent.Type != StepTypeOperator {
-		return fmt.Errorf(`a defined value cannot be extracted from a structure type, but %s found on %d position`, parent.Type, parent.Order)
+		return fmt.Errorf(`a defined value cannot be extracted from a structure type %q, but %s(%s) found on %d position`, parent.Type, cursor.Type, cursor.Value, cursor.Order)
 	}
 
 	return nil

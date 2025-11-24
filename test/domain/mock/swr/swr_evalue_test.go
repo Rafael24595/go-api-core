@@ -63,7 +63,7 @@ func TestEvalueStepPosition_InputInMiddle(t *testing.T) {
 	})
 
 	assert.Len(t, 1, errs)
-	assert.Equal(t, `an input operation cannot be applied in the middle of an operation, but input found on 3 position`, errs[0].Error())
+	assert.Equal(t, `an input operation cannot be applied in the middle of an operation, but input(payload) found on 3 position`, errs[0].Error())
 }
 
 func TestEvalueStepPosition_DoubleOperator(t *testing.T) {
@@ -74,7 +74,7 @@ func TestEvalueStepPosition_DoubleOperator(t *testing.T) {
 	})
 
 	assert.Len(t, 1, errs)
-	assert.Equal(t, `a compare operation is required after operator, but operator found on 4 position`, errs[0].Error())
+	assert.Equal(t, `a compare operation "ne" is required after operator, but operator(eq) found on 4 position`, errs[0].Error())
 }
 
 func TestEvalueStepPosition_CompareWithoutLeftOperand(t *testing.T) {
@@ -85,7 +85,7 @@ func TestEvalueStepPosition_CompareWithoutLeftOperand(t *testing.T) {
 	})
 
 	assert.Len(t, 1, errs)
-	assert.Equal(t, `a comparable value is required before compare operator, but format found on 1 position`, errs[0].Error())
+	assert.Equal(t, `a comparable value is required before compare operator "eq", but format(json) found on 1 position`, errs[0].Error())
 }
 
 func TestEvalueStepPosition_CompareWithoutRightOperand(t *testing.T) {
@@ -96,7 +96,7 @@ func TestEvalueStepPosition_CompareWithoutRightOperand(t *testing.T) {
 	})
 
 	assert.Len(t, 1, errs)
-	assert.Equal(t, `a comparable value is required after compare operator, but array found on 4 position`, errs[0].Error())
+	assert.Equal(t, `a comparable value is required after compare operator "eq", but array(0) found on 4 position`, errs[0].Error())
 }
 
 func TestEvalueStepPosition_ValueExtraction(t *testing.T) {
@@ -107,8 +107,8 @@ func TestEvalueStepPosition_ValueExtraction(t *testing.T) {
 	})
 
 	assert.Len(t, 2, errs)
-	assert.Equal(t, `a defined value cannot be extracted from a structure type, but format found on 1 position`, errs[0].Error())
-	assert.Equal(t, `a value cannot be extracted from a flat value, but value found on 2 position`, errs[1].Error())
+	assert.Equal(t, `a defined value cannot be extracted from a structure type "format", but value(0.11) found on 2 position`, errs[0].Error())
+	assert.Equal(t, `a value cannot be extracted from a flat value, but field(lang) found on 3 position`, errs[1].Error())
 }
 
 func TestEvalueStepPosition_FormatArgument(t *testing.T) {

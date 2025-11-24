@@ -158,3 +158,12 @@ func TestUnmarshal_InvalidArrayIndexNonNumeric(t *testing.T) {
 	assert.Equal(t, `non valid index value "abc"`, errs[0].Error())
 }
 
+func TestUnmarshal_ComparePayloadValues(t *testing.T) {
+	cond := "payload.json.items.[0].$eq.payload.json.items.[1]"
+
+	_, errs := swr.UnmarshalWithOptions(cond, swr.UnmarshalOpts{
+		Evalue: true,
+	})
+
+	assert.Len(t, 0, errs)
+}
