@@ -150,6 +150,11 @@ func FixEndPoints(owner string, endPoints []EndPoint) []EndPoint {
 	return coll.Collect()
 }
 
+func CleanEndPoint(owner string, endPoint *EndPoint) *EndPoint {
+	endPoint.Id = ""
+	return FixEndPoint(owner, endPoint)
+}
+
 func FixEndPoint(owner string, endPoint *EndPoint) *EndPoint {
 	endPoint.Owner = owner
 

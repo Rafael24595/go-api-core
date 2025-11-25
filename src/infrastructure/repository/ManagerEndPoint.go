@@ -20,13 +20,37 @@ func NewManagerEndPoint(endPoint IRepositoryEndPoint, managerMetrics *ManagerMet
 	}
 }
 
-func (m *ManagerEndPoint) FindAll(owner string) []mock_domain.EndPointLite {
-	endPoints := m.endPoint.FindAllLite(owner)
+func (m *ManagerEndPoint) Export(owner string) []mock_domain.EndPoint {
+	return m.endPoint.FindAll(owner)
+}
+
+func (m *ManagerEndPoint) ExportList(owner string, ids ...string) []mock_domain.EndPoint {
+	endPoints := m.endPoint.FindMany(ids...)
 	return collection.VectorFromList(endPoints).
-		Filter(func(e mock_domain.EndPointLite) bool {
+		Filter(func(e mock_domain.EndPoint) bool {
 			return e.Owner == owner
 		}).
 		Collect()
+}
+
+func (m *ManagerEndPoint) Import(owner string, endPoints []mock_domain.EndPoint) []string {
+	vec := collection.VectorFromList(endPoints).
+		Map(func(i int, e mock_domain.EndPoint) mock_domain.EndPoint {
+			return *mock_domain.CleanEndPoint(owner, &e)
+		})
+
+	result := m.endPoint.InsertMany(vec.Collect()...)
+
+	return collection.MapToVector(result, func(e mock_domain.EndPoint) string {
+		return e.Id
+	}).Collect()
+}
+
+func (m *ManagerEndPoint) FindAll(owner string) []mock_domain.EndPointLite {
+	endPoints := m.endPoint.FindAll(owner)
+	return collection.MapToVector(endPoints, func(e mock_domain.EndPoint) mock_domain.EndPointLite {
+		return *mock_domain.LiteFromEndPoint(&e)
+	}).Collect()
 }
 
 func (m *ManagerEndPoint) Find(owner, id string) (*mock_domain.EndPoint, bool) {
@@ -87,8 +111,9 @@ func (m *ManagerEndPoint) Insert(owner string, endPoint *mock_domain.EndPointFul
 	return m.endPoint.Insert(result), make([]error, 0)
 }
 
-func (m *ManagerEndPoint) Delete(owner string, endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
-	if endPoint.Owner != owner {
+func (m *ManagerEndPoint) Delete(owner string, id string) *mock_domain.EndPoint {
+	endPoint, ok := m.endPoint.Find(id)
+	if !ok || endPoint.Owner != owner {
 		return nil
 	}
 

@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"slices"
 	"sync"
 	"time"
 
@@ -106,6 +107,15 @@ func (r *EndPointRepositoryMemory) FindAllLite(owner string) []mock_domain.EndPo
 	}).Collect()
 }
 
+func (r *EndPointRepositoryMemory) FindMany(ids ...string) []mock_domain.EndPoint {
+	r.muMemory.RLock()
+	defer r.muMemory.RUnlock()
+
+	return r.collection.Filter(func(s string, e mock_domain.EndPoint) bool {
+		return slices.Contains(ids, e.Id)
+	}).Values()
+}
+
 func (r *EndPointRepositoryMemory) Find(id string) (*mock_domain.EndPoint, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
@@ -151,6 +161,7 @@ func (r *EndPointRepositoryMemory) resolve(endPoint *mock_domain.EndPoint) *mock
 	}
 
 	endPoint.Id = key
+	endPoint.Timestamp = time.Now().UnixMilli()
 
 	return r.insert(endPoint)
 }
