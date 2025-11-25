@@ -29,6 +29,6 @@ func StatusRequestFromString(value string) (*StatusRequest, error) {
 		status := GROUP
 		return &status, nil
 	default:
-		return nil, fmt.Errorf("unknown same-site value: '%s'", value)
+		return nil, fmt.Errorf("unknown request status value: '%s'", value)
 	}
 }
