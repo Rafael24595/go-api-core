@@ -53,6 +53,14 @@ func ToRequest(dto *DtoRequest) *action.Request {
 	}
 }
 
+func FromRequests(reqs ...action.Request) []DtoRequest {
+	dtos := make([]DtoRequest, len(reqs))
+	for i, v := range reqs {
+		dtos[i] = *FromRequest(&v)
+	}
+	return dtos
+}
+
 func FromRequest(request *action.Request) *DtoRequest {
 	return &DtoRequest{
 		Id:        request.Id,

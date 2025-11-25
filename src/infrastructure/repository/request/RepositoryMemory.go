@@ -92,7 +92,7 @@ func (r *RepositoryMemory) Find(key string) (*action.Request, bool) {
 	return r.collection.Get(key)
 }
 
-func (r *RepositoryMemory) FindMany(ids []string) []action.Request {
+func (r *RepositoryMemory) FindMany(ids ...string) []action.Request {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 

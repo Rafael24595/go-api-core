@@ -27,6 +27,22 @@ func NewManagerRequestLimited(request IRepositoryRequest, response IRepositoryRe
 	}
 }
 
+func (m *ManagerRequest) Export(owner string, nodes ...domain.NodeReference) []action.Request {
+	ids := collection.MapToVector(nodes, func(n domain.NodeReference) string {
+		return n.Item
+	}).Collect()
+	return m.ExportList(owner, ids...)
+}
+
+func (m *ManagerRequest) ExportList(owner string, ids ...string) []action.Request {
+	requests := m.request.FindMany(ids...)
+	return collection.VectorFromList(requests).
+		Filter(func(n action.Request) bool {
+			return n.Owner == owner
+		}).
+		Collect()
+}
+
 func (m *ManagerRequest) Find(owner string, key string) (*action.Request, *action.Response, bool) {
 	request, exits := m.request.Find(key)
 	if !exits || request.Owner != owner {
@@ -68,15 +84,6 @@ func (m *ManagerRequest) FindNodes(owner string, nodes []domain.NodeReference) [
 		Filter(func(n dto.DtoNodeRequest) bool {
 			return n.Request.Owner == owner
 		}).
-		Collect()
-}
-
-func (m *ManagerRequest) FindRequests(owner string, nodes []domain.NodeReference) []action.Request {
-	requests := m.request.FindRequests(nodes)
-	return collection.
-		VectorFromList(requests).Filter(func(n action.Request) bool {
-		return n.Owner == owner
-	}).
 		Collect()
 }
 
@@ -175,7 +182,7 @@ func (m *ManagerRequest) DeleteMany(owner string, ids ...string) ([]action.Reque
 }
 
 func (m *ManagerRequest) deleteManyRequests(owner string, ids ...string) []action.Request {
-	requests := m.request.FindMany(ids)
+	requests := m.request.FindMany(ids...)
 	requests = collection.VectorFromList(requests).
 		Filter(func(r action.Request) bool {
 			return r.Owner == owner

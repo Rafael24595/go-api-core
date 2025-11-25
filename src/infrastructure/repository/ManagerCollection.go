@@ -12,6 +12,7 @@ import (
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/domain/openapi"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
+	collection_utils "github.com/Rafael24595/go-collections/collection"
 )
 
 type ManagerCollection struct {
@@ -27,6 +28,26 @@ func NewManagerCollection(collection IRepositoryCollection, managerContext *Mana
 		managerContext: managerContext,
 		managerRequest: managerRequest,
 	}
+}
+
+func (m *ManagerCollection) Export(owner string, nodes ...domain.NodeReference) []dto.DtoCollection {
+	ids := collection_utils.MapToVector(nodes, func(n domain.NodeReference) string {
+		return n.Item
+	}).Collect()
+	return m.ExportList(owner, ids...)
+}
+
+func (m *ManagerCollection) ExportList(owner string, ids ...string) []dto.DtoCollection {
+	dtos := make([]dto.DtoCollection, 0)
+	for _, v := range ids {
+		dto, ok := m.FindDto(owner, v)
+		if !ok {
+			continue
+		}
+
+		dtos = append(dtos, *dto)
+	}
+	return dtos
 }
 
 func (m *ManagerCollection) Find(owner string, id string) (*collection.Collection, bool) {
@@ -432,7 +453,7 @@ func (m *ManagerCollection) CloneCollection(owner, id, name string) *collection.
 
 	requestStatus := *collection.StatusCollectionToStatusRequest(&coll.Status)
 
-	nodeRequests := m.managerRequest.FindRequests(owner, coll.Nodes)
+	nodeRequests := m.managerRequest.Export(owner, coll.Nodes...)
 	requests := make([]action.Request, len(nodeRequests))
 	for i, v := range nodeRequests {
 		v.Id = ""
