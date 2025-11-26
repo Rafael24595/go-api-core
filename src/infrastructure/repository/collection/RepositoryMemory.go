@@ -9,10 +9,9 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
 	"github.com/Rafael24595/go-api-core/src/domain"
-	"github.com/Rafael24595/go-api-core/src/domain/action"
-	collection_domain "github.com/Rafael24595/go-api-core/src/domain/collection"
+	"github.com/Rafael24595/go-api-core/src/domain/collection"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
-	"github.com/Rafael24595/go-collections/collection"
+	collection_utils "github.com/Rafael24595/go-collections/collection"
 	"github.com/google/uuid"
 )
 
@@ -20,20 +19,20 @@ type RepositoryMemory struct {
 	once       sync.Once
 	muMemory   sync.RWMutex
 	muFile     sync.RWMutex
-	collection collection.IDictionary[string, collection_domain.Collection]
-	file       repository.IFileManager[collection_domain.Collection]
+	collection collection_utils.IDictionary[string, collection.Collection]
+	file       repository.IFileManager[collection.Collection]
 	close      chan bool
 }
 
 func InitializeRepositoryMemory(
-	impl collection.IDictionary[string, collection_domain.Collection],
-	file repository.IFileManager[collection_domain.Collection]) (*RepositoryMemory, error) {
+	impl collection_utils.IDictionary[string, collection.Collection],
+	file repository.IFileManager[collection.Collection]) (*RepositoryMemory, error) {
 	collections, err := file.Read()
 	if err != nil {
 		return nil, err
 	}
 	instance := &RepositoryMemory{
-		collection: impl.Merge(collection.DictionaryFromMap(collections)),
+		collection: impl.Merge(collection_utils.DictionaryFromMap(collections)),
 		file:       file,
 	}
 
@@ -83,58 +82,42 @@ func (r *RepositoryMemory) read() error {
 		return err
 	}
 
-	r.collection = collection.DictionaryFromMap(collections)
+	r.collection = collection_utils.DictionaryFromMap(collections)
 	return nil
 }
 
-func (r *RepositoryMemory) Find(id string) (*collection_domain.Collection, bool) {
+func (r *RepositoryMemory) Find(id string) (*collection.Collection, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 	return r.collection.Get(id)
 }
 
-func (r *RepositoryMemory) FindOneBystatus(owner string, status collection_domain.StatusCollection) (*collection_domain.Collection, bool) {
-	r.muMemory.RLock()
-	defer r.muMemory.RUnlock()
-	return r.collection.ValuesVector().
-		FindOne(func(c collection_domain.Collection) bool {
-			return c.Owner == owner && c.Status == status
-		})
-}
-
-func (r *RepositoryMemory) FindAllBystatus(owner string, status collection_domain.StatusCollection) []collection_domain.Collection {
-	r.muMemory.RLock()
-	defer r.muMemory.RUnlock()
-	return r.collection.ValuesVector().
-		Filter(func(c collection_domain.Collection) bool {
-			return c.Owner == owner && c.Status == status
-		}).
-		Collect()
-}
-
-func (r *RepositoryMemory) FindCollections(references []domain.NodeReference) []collection_domain.NodeCollection {
+func (r *RepositoryMemory) FindNodes(references []domain.NodeReference) []collection.NodeCollection {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 
-	collections := make([]collection_domain.NodeCollection, 0)
+	colls := make([]collection.NodeCollection, 0)
 	for _, v := range references {
-		if collection, ok := r.collection.Get(v.Item); ok {
-			collections = append(collections, collection_domain.NodeCollection{
-				Order:      v.Order,
-				Collection: *collection,
-			})
+		coll, ok := r.collection.Get(v.Item)
+		if !ok {
+			continue
 		}
+
+		colls = append(colls, collection.NodeCollection{
+			Order:      v.Order,
+			Collection: *coll,
+		})
 	}
 
-	return collections
+	return colls
 }
 
-func (r *RepositoryMemory) Insert(owner string, collection *collection_domain.Collection) *collection_domain.Collection {
+func (r *RepositoryMemory) Insert(owner string, collection *collection.Collection) *collection.Collection {
 	r.muMemory.Lock()
 	return r.resolve(owner, collection)
 }
 
-func (r *RepositoryMemory) resolve(owner string, collection *collection_domain.Collection) *collection_domain.Collection {
+func (r *RepositoryMemory) resolve(owner string, collection *collection.Collection) *collection.Collection {
 	if collection.Id != "" {
 		return r.insert(owner, collection)
 	}
@@ -149,44 +132,31 @@ func (r *RepositoryMemory) resolve(owner string, collection *collection_domain.C
 	return r.insert(owner, collection)
 }
 
-func (r *RepositoryMemory) insert(owner string, collection *collection_domain.Collection) *collection_domain.Collection {
+func (r *RepositoryMemory) insert(owner string, coll *collection.Collection) *collection.Collection {
 	r.muMemory.Unlock()
 
-	collection.Owner = owner
+	coll.Owner = owner
 
-	if collection.Timestamp == 0 {
-		collection.Timestamp = time.Now().UnixMilli()
+	if coll.Timestamp == 0 {
+		coll.Timestamp = time.Now().UnixMilli()
 	}
 
-	collection.Modified = time.Now().UnixMilli()
+	coll.Modified = time.Now().UnixMilli()
 
-	if collection.Name == "" {
-		collection.Name = fmt.Sprintf("%s-%d", collection.Owner, collection.Timestamp)
+	if coll.Name == "" {
+		coll.Name = fmt.Sprintf("%s-%d", coll.Owner, coll.Timestamp)
 	}
 
-	if collection.Status == "" {
-		collection.Status = collection_domain.FREE
+	if coll.Status == "" {
+		coll.Status = collection.FREE
 	}
 
-	r.collection.Put(collection.Id, *collection)
+	r.collection.Put(coll.Id, *coll)
 	go r.write(r.collection)
-	return collection
+	return coll
 }
 
-func (r *RepositoryMemory) PushToCollection(owner string, collection *collection_domain.Collection, request *action.Request) (*collection_domain.Collection, *action.Request) {
-	r.muMemory.Lock()
-
-	if !collection.ExistsRequest(request.Id) {
-		collection.Nodes = append(collection.Nodes, domain.NodeReference{
-			Order: len(collection.Nodes),
-			Item:  request.Id,
-		})
-	}
-
-	return r.resolve(owner, collection), request
-}
-
-func (r *RepositoryMemory) Delete(collection *collection_domain.Collection) *collection_domain.Collection {
+func (r *RepositoryMemory) Delete(collection *collection.Collection) *collection.Collection {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
@@ -196,7 +166,7 @@ func (r *RepositoryMemory) Delete(collection *collection_domain.Collection) *col
 	return cursor
 }
 
-func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, collection_domain.Collection]) {
+func (r *RepositoryMemory) write(snapshot collection_utils.IDictionary[string, collection.Collection]) {
 	r.muFile.Lock()
 	defer r.muFile.Unlock()
 

@@ -77,7 +77,7 @@ func (m *ManagerCollection) FindDto(owner string, id string) (*dto.DtoCollection
 	return dtoCollection, dtoCollection != nil
 }
 
-func (m *ManagerCollection) FindDtoLite(owner string, id string) (*dto.DtoLiteCollection, bool) {
+func (m *ManagerCollection) FindLite(owner string, id string) (*collection.CollectionLite, bool) {
 	collection, exists := m.Find(owner, id)
 	if !exists {
 		return nil, false
@@ -85,9 +85,9 @@ func (m *ManagerCollection) FindDtoLite(owner string, id string) (*dto.DtoLiteCo
 	return m.makeLiteCollection(owner, *collection), false
 }
 
-func (m *ManagerCollection) FindLiteRequestNodes(owner string, collection *collection.Collection) []dto.DtoLiteNodeRequest {
+func (m *ManagerCollection) FindLiteRequestNodes(owner string, collection *collection.Collection) []action.NodeRequestLite {
 	if collection.Owner != owner {
-		return make([]dto.DtoLiteNodeRequest, 0)
+		return make([]action.NodeRequestLite, 0)
 	}
 
 	dtos := m.managerRequest.FindLiteNodes(owner, collection.Nodes)
@@ -110,39 +110,39 @@ func (m *ManagerCollection) FindLiteRequestNodes(owner string, collection *colle
 	return dtos
 }
 
-func (m *ManagerCollection) FindLiteCollectionNodes(owner string, nodes []domain.NodeReference) []dto.DtoLiteNodeCollection {
-	collections := m.collection.FindCollections(nodes)
+func (m *ManagerCollection) FindLiteCollectionNodes(owner string, nodes []domain.NodeReference) []collection.NodeCollectionLite {
+	cols := m.collection.FindNodes(nodes)
 
-	dtos := make([]dto.DtoLiteNodeCollection, 0)
-	for _, v := range collections {
-		collection := m.makeLiteCollection(owner, v.Collection)
-		if collection == nil {
+	lite := make([]collection.NodeCollectionLite, 0)
+	for _, v := range cols {
+		coll := m.makeLiteCollection(owner, v.Collection)
+		if coll == nil {
 			continue
 		}
 
-		dtos = append(dtos, dto.DtoLiteNodeCollection{
+		lite = append(lite, collection.NodeCollectionLite{
 			Order:      v.Order,
-			Collection: *collection,
+			Collection: *coll,
 		})
 	}
 
-	return dtos
+	return lite
 }
 
-func (m *ManagerCollection) makeLiteCollection(owner string, collection collection.Collection) *dto.DtoLiteCollection {
-	if collection.Owner != owner {
+func (m *ManagerCollection) makeLiteCollection(owner string, coll collection.Collection) *collection.CollectionLite {
+	if coll.Owner != owner {
 		return nil
 	}
 
-	requests := m.managerRequest.FindLiteNodes(owner, collection.Nodes)
-	context, _ := m.managerContext.Find(owner, collection.Context)
+	requests := m.managerRequest.FindLiteNodes(owner, coll.Nodes)
+	context, _ := m.managerContext.Find(owner, coll.Context)
 	if context == nil {
 		return nil
 	}
 
 	dtoContext := dto.FromContext(context)
 
-	return dto.ToLiteCollection(&collection, dtoContext, requests)
+	return collection.ToLiteCollection(&coll, dtoContext.Id, requests)
 }
 
 func (m *ManagerCollection) Insert(owner string, collection *collection.Collection) *collection.Collection {
@@ -198,7 +198,8 @@ func (m *ManagerCollection) CollectRequest(owner string, payload PayloadCollectR
 	request.Status = *collection.StatusCollectionToStatusRequest(&target.Status)
 	request = m.managerRequest.InsertRequest(owner, request)
 
-	return m.collection.PushToCollection(owner, target, request)
+	target, _ = m.pushToCollection(owner, target, request)
+	return target, request
 }
 
 func (m *ManagerCollection) moveRequest(owner string, payload PayloadCollectRequest, request *action.Request) (*action.Request, bool) {
@@ -403,7 +404,7 @@ func (m *ManagerCollection) MoveRequestBetweenCollections(owner string, source, 
 		request = m.managerRequest.InsertRequest(owner, request)
 	}
 
-	target, request = m.collection.PushToCollection(owner, target, request)
+	target, _ = m.pushToCollection(owner, target, request)
 	return source, target, request
 }
 
@@ -537,6 +538,19 @@ func (m *ManagerCollection) DeleteRequestFromCollection(owner string, collection
 	request, response := m.managerRequest.Delete(owner, request)
 
 	return collection, request, response
+}
+
+func (m *ManagerCollection) pushToCollection(owner string, collection *collection.Collection, request *action.Request) (*collection.Collection, bool) {
+	if collection.ExistsRequest(request.Id) {
+		return collection, false
+	}
+
+	collection.Nodes = append(collection.Nodes, domain.NodeReference{
+		Order: len(collection.Nodes),
+		Item:  request.Id,
+	})
+
+	return m.collection.Insert(owner, collection), true
 }
 
 func (m *ManagerCollection) dtoNodeRequestToRequest(dtos []dto.DtoNodeRequest) []action.Request {

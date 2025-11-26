@@ -6,7 +6,6 @@ import (
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/action"
 	"github.com/Rafael24595/go-api-core/src/domain/collection"
-	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 )
 
 type ManagerHistoric struct {
@@ -22,7 +21,7 @@ func NewManagerHistoric(managerRequest *ManagerRequest, managerCollection *Manag
 	}
 }
 
-func (m *ManagerHistoric) FindLite(owner string, collection *collection.Collection) []dto.DtoLiteNodeRequest {
+func (m *ManagerHistoric) FindLite(owner string, collection *collection.Collection) []action.NodeRequestLite {
 	return m.managerCollection.FindLiteRequestNodes(owner, collection)
 }
 

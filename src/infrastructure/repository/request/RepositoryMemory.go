@@ -10,7 +10,6 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/system"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/action"
-	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
 	"github.com/google/uuid"
@@ -106,35 +105,21 @@ func (r *RepositoryMemory) FindMany(ids ...string) []action.Request {
 	return requests
 }
 
-func (r *RepositoryMemory) FindLiteNodes(references []domain.NodeReference) []dto.DtoLiteNodeRequest {
+func (r *RepositoryMemory) FindNodes(references []domain.NodeReference) []action.NodeRequest {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 
-	requests := make([]dto.DtoLiteNodeRequest, 0)
+	requests := make([]action.NodeRequest, 0)
 	for _, v := range references {
-		if request, ok := r.collection.Get(v.Item); ok {
-			requests = append(requests, dto.DtoLiteNodeRequest{
-				Order:   v.Order,
-				Request: *dto.ToLiteRequest(request),
-			})
+		request, ok := r.collection.Get(v.Item)
+		if !ok {
+			continue
 		}
-	}
 
-	return requests
-}
-
-func (r *RepositoryMemory) FindNodes(references []domain.NodeReference) []dto.DtoNodeRequest {
-	r.muMemory.RLock()
-	defer r.muMemory.RUnlock()
-
-	requests := make([]dto.DtoNodeRequest, 0)
-	for _, v := range references {
-		if request, ok := r.collection.Get(v.Item); ok {
-			requests = append(requests, dto.DtoNodeRequest{
-				Order:   v.Order,
-				Request: *dto.FromRequest(request),
-			})
-		}
+		requests = append(requests, action.NodeRequest{
+			Order:   v.Order,
+			Request: *request,
+		})
 	}
 
 	return requests

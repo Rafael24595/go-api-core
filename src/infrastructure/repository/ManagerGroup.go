@@ -26,9 +26,9 @@ func (m *ManagerGroup) Find(owner, id string) (*domain.Group, bool) {
 	return m.group.Find(id)
 }
 
-func (m *ManagerGroup) FindLiteNodes(owner string, group *domain.Group) []dto.DtoLiteNodeCollection {
+func (m *ManagerGroup) FindLiteNodes(owner string, group *domain.Group) []collection.NodeCollectionLite {
 	if group.Owner != owner {
-		return make([]dto.DtoLiteNodeCollection, 0)
+		return make([]collection.NodeCollectionLite, 0)
 	}
 
 	dtos := m.managerCollection.FindLiteCollectionNodes(owner, group.Nodes)

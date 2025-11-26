@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
 )
 
 type Collection struct {
@@ -95,4 +96,27 @@ func (c *Collection) FixRequestsOrder() *Collection {
 
 func (c Collection) PersistenceId() string {
 	return c.Id
+}
+
+type CollectionLite struct {
+	Id        string                   `json:"_id"`
+	Name      string                   `json:"name"`
+	Timestamp int64                    `json:"timestamp"`
+	Context   string                   `json:"context"`
+	Nodes     []action.NodeRequestLite `json:"nodes"`
+	Owner     string                   `json:"owner"`
+	Modified  int64                    `json:"modified"`
+	Status    StatusCollection         `json:"status"`
+}
+
+func ToLiteCollection(collection *Collection, ctx string, nodes []action.NodeRequestLite) *CollectionLite {
+	return &CollectionLite{
+		Id:        collection.Id,
+		Name:      collection.Name,
+		Timestamp: collection.Timestamp,
+		Context:   ctx,
+		Nodes:     nodes,
+		Owner:     collection.Owner,
+		Modified:  collection.Modified,
+	}
 }

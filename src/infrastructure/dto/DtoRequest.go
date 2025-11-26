@@ -78,25 +78,3 @@ func FromRequest(request *action.Request) *DtoRequest {
 		Status:    request.Status,
 	}
 }
-
-type DtoLiteRequest struct {
-	Id        string            `json:"_id"`
-	Timestamp int64             `json:"timestamp"`
-	Name      string            `json:"name"`
-	Method    domain.HttpMethod `json:"method"`
-	Uri       string            `json:"uri"`
-	Owner     string            `json:"owner"`
-	Modified  int64             `json:"modified"`
-}
-
-func ToLiteRequest(request *action.Request) *DtoLiteRequest {
-	return &DtoLiteRequest{
-		Id:        request.Id,
-		Timestamp: request.Timestamp,
-		Name:      request.Name,
-		Method:    request.Method,
-		Uri:       request.Uri,
-		Owner:     request.Owner,
-		Modified:  request.Modified,
-	}
-}

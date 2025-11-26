@@ -6,7 +6,6 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/action"
-	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-collections/collection"
 )
 
@@ -69,19 +68,20 @@ func (m *ManagerRequest) FindResponse(owner string, key string) (*action.Respons
 	return response, exits
 }
 
-func (m *ManagerRequest) FindLiteNodes(owner string, nodes []domain.NodeReference) []dto.DtoLiteNodeRequest {
-	requests := m.request.FindLiteNodes(nodes)
-	return collection.VectorFromList(requests).
-		Filter(func(n dto.DtoLiteNodeRequest) bool {
+func (m *ManagerRequest) FindLiteNodes(owner string, references []domain.NodeReference) []action.NodeRequestLite {
+	nodes := m.request.FindNodes(references)
+	lite := action.ToNodeRequestLite(nodes)
+	return collection.VectorFromList(lite).
+		Filter(func(n action.NodeRequestLite) bool {
 			return n.Request.Owner == owner
 		}).
 		Collect()
 }
 
-func (m *ManagerRequest) FindNodes(owner string, nodes []domain.NodeReference) []dto.DtoNodeRequest {
+func (m *ManagerRequest) FindNodes(owner string, nodes []domain.NodeReference) []action.NodeRequest {
 	requests := m.request.FindNodes(nodes)
 	return collection.VectorFromList(requests).
-		Filter(func(n dto.DtoNodeRequest) bool {
+		Filter(func(n action.NodeRequest) bool {
 			return n.Request.Owner == owner
 		}).
 		Collect()
