@@ -125,9 +125,16 @@ func (r *EndPointRepositoryMemory) Find(id string) (*mock_domain.EndPoint, bool)
 func (r *EndPointRepositoryMemory) FindByRequest(owner string, method domain.HttpMethod, path string) (*mock_domain.EndPoint, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.FindOne(func(s string, ep mock_domain.EndPoint) bool {
-		return ep.Owner == owner && ep.Method == method && ep.Path == path
-	})
+
+	return r.collection.
+		Filter(func(s string, ep mock_domain.EndPoint) bool {
+			return ep.Owner == owner && ep.Method == method && ep.Path == path
+		}).
+		ValuesVector().
+		Sort(func(i, j mock_domain.EndPoint) bool {
+			return i.Order < j.Order
+		}).
+		First()
 }
 
 func (r *EndPointRepositoryMemory) Insert(endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
@@ -140,7 +147,7 @@ func (r *EndPointRepositoryMemory) Insert(endPoint *mock_domain.EndPoint) *mock_
 func (r *EndPointRepositoryMemory) InsertMany(endPoints ...mock_domain.EndPoint) []mock_domain.EndPoint {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
-	
+
 	result := make([]mock_domain.EndPoint, len(endPoints))
 	for i, v := range endPoints {
 		endPoint := r.resolve(&v)
@@ -162,6 +169,11 @@ func (r *EndPointRepositoryMemory) resolve(endPoint *mock_domain.EndPoint) *mock
 
 	endPoint.Id = key
 	endPoint.Timestamp = time.Now().UnixMilli()
+	endPoint.Order = r.collection.Size()
+
+	for i := range endPoint.Responses {
+		endPoint.Responses[i].Timestamp = endPoint.Timestamp
+	}
 
 	return r.insert(endPoint)
 }
