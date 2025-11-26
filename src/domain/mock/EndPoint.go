@@ -1,9 +1,16 @@
 package mock
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
+	"github.com/Rafael24595/go-api-core/src/domain/action/auth"
+	"github.com/Rafael24595/go-api-core/src/domain/action/body"
+	"github.com/Rafael24595/go-api-core/src/domain/action/cookie"
+	"github.com/Rafael24595/go-api-core/src/domain/action/header"
+	"github.com/Rafael24595/go-api-core/src/domain/action/query"
 	"github.com/Rafael24595/go-api-core/src/domain/mock/swr"
 	"github.com/Rafael24595/go-collections/collection"
 )
@@ -28,6 +35,24 @@ func (r EndPoint) DefaultResponse() Response {
 
 func (r EndPoint) PersistenceId() string {
 	return r.Id
+}
+
+func ToRequest(server string, endPoint *EndPoint) *action.Request {
+	return &action.Request{
+		Id: "",
+		Timestamp: endPoint.Timestamp,
+		Name: endPoint.Name,
+		Method: endPoint.Method,
+		Uri: fmt.Sprintf("%s%s", server, endPoint.Path),
+		Query: *query.NewQueries(),
+		Header: *header.NewHeaders(),
+		Cookie: *cookie.NewCookiesClient(),
+		Body: *body.EmptyBody(true, domain.None),
+		Auth: *auth.NewAuths(false),
+		Owner: endPoint.Owner,
+		Modified: endPoint.Modified,
+		Status: action.DRAFT,
+	}
 }
 
 type EndPointLite struct {
