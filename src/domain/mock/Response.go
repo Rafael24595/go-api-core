@@ -16,7 +16,7 @@ func defaultResponse() *Response {
 		Status: true,
 		Code:   200,
 		Name:   DefaultResponse,
-		Headers: []Header{
+		Arguments: []Argument{
 			{
 				Status: true,
 				Key:    "content-type",
@@ -31,14 +31,14 @@ func defaultResponse() *Response {
 }
 
 type Response struct {
-	Order     int      `json:"order"`
-	Status    bool     `json:"status"`
-	Code      int      `json:"code"`
-	Timestamp int64    `json:"timestamp"`
-	Condition string   `json:"condition"`
-	Name      string   `json:"name"`
-	Headers   []Header `json:"headers"`
-	Body      Body     `json:"body"`
+	Order     int        `json:"order"`
+	Status    bool       `json:"status"`
+	Code      int        `json:"code"`
+	Timestamp int64      `json:"timestamp"`
+	Condition string     `json:"condition"`
+	Name      string     `json:"name"`
+	Arguments []Argument `json:"arguments"`
+	Body      Body       `json:"body"`
 }
 
 type Body struct {
@@ -46,7 +46,7 @@ type Body struct {
 	Payload     string             `json:"payload"`
 }
 
-type Header struct {
+type Argument struct {
 	Status bool   `json:"status"`
 	Key    string `json:"key"`
 	Value  string `json:"value"`
@@ -59,7 +59,7 @@ type ResponseFull struct {
 	Timestamp int64      `json:"timestamp"`
 	Condition []swr.Step `json:"condition"`
 	Name      string     `json:"name"`
-	Headers   []Header   `json:"headers"`
+	Arguments []Argument `json:"arguments"`
 	Body      Body       `json:"body"`
 }
 
@@ -136,7 +136,7 @@ func FromResponseWithOptions(response Response, opts swr.UnmarshalOpts) (*Respon
 		Timestamp: response.Timestamp,
 		Condition: steps,
 		Name:      response.Name,
-		Headers:   response.Headers,
+		Arguments: response.Arguments,
 		Body:      response.Body,
 	}, errs
 }
@@ -155,7 +155,7 @@ func ToResponseWithOptions(response ResponseFull, opts swr.MarshalOpts) (*Respon
 		Timestamp: response.Timestamp,
 		Condition: condition,
 		Name:      response.Name,
-		Headers:   response.Headers,
+		Arguments: response.Arguments,
 		Body:      response.Body,
 	}, errs
 }
