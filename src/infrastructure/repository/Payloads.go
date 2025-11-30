@@ -3,7 +3,7 @@ package repository
 import (
 	"sort"
 
-	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
 )
 
 type Movement string
@@ -21,7 +21,7 @@ type PayloadCollectRequest struct {
 	SourceId    string         `json:"source_id"`
 	TargetId    string         `json:"target_id"`
 	TargetName  string         `json:"target_name"`
-	Request     domain.Request `json:"request"`
+	Request     action.Request `json:"request"`
 	RequestName string         `json:"request_name"`
 	Movement    Movement       `json:"move"`
 }

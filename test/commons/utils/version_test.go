@@ -16,7 +16,7 @@ type testCaseVersion struct {
 }
 
 func TestParseVersion(t *testing.T) {
-	file, err := os.Open("version_test_cases.json")
+	file, err := os.Open("../../support/version_test_cases.json")
 	if err != nil {
 		t.Fatalf("Failed to open test case file: %v", err)
 	}

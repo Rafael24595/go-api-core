@@ -1,18 +1,15 @@
 package repository
 
 import (
-	"github.com/Rafael24595/go-csvt/csvt"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/utils"
 )
 
 type ManagerCsvtFile[T IStructure] struct {
-	builder func() *T
 	path string
 }
 
-func NewManagerCsvtFile[T IStructure](builder func() *T, path string) *ManagerCsvtFile[T] {
+func NewManagerCsvtFile[T IStructure](path string) *ManagerCsvtFile[T] {
 	return &ManagerCsvtFile[T]{
-		builder: builder,
 		path: path,
 	}
 }
@@ -23,26 +20,11 @@ func (m *ManagerCsvtFile[T]) Read() (map[string]T, error) {
 		return nil, err
 	}
 
-	if len(buffer) == 0 {
-		return make(map[string]T), nil
-	}
-
-	var vector []T
-	err = csvt.Unmarshal(buffer, &vector)
-	if err != nil {
-		return nil, err
-	}
-
-	items := map[string]T{}
-	for _, v := range vector {
-		items[v.PersistenceId()] = v
-	}
-
-	return items, nil
+	return UnmarshalCsvt[T](buffer)
 }
 
-func (m *ManagerCsvtFile[T]) Write(items []any) error {
-	result, err := csvt.Marshal(items...)
+func (m *ManagerCsvtFile[T]) Write(items []T) error {
+	result, err := MarshalCsvt(items)
 	if err != nil {
 		return err
 	}

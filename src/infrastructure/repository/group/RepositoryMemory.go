@@ -4,7 +4,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
+	"github.com/Rafael24595/go-api-core/src/commons/system"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
@@ -12,19 +14,12 @@ import (
 )
 
 type RepositoryMemory struct {
+	once       sync.Once
 	muMemory   sync.RWMutex
 	muFile     sync.RWMutex
 	collection collection.IDictionary[string, domain.Group]
 	file       repository.IFileManager[domain.Group]
-}
-
-func NewRepositoryMemory(
-	impl collection.IDictionary[string, domain.Group],
-	file repository.IFileManager[domain.Group]) *RepositoryMemory {
-	return &RepositoryMemory{
-		collection: impl,
-		file:       file,
-	}
+	close      chan bool
 }
 
 func InitializeRepositoryMemory(
@@ -34,9 +29,60 @@ func InitializeRepositoryMemory(
 	if err != nil {
 		return nil, err
 	}
-	return NewRepositoryMemory(
-		impl.Merge(collection.DictionaryFromMap(groups)),
-		file), nil
+
+	instance := &RepositoryMemory{
+		collection: impl.Merge(collection.DictionaryFromMap(groups)),
+		file:       file,
+	}
+
+	go instance.watch()
+
+	return instance, nil
+}
+
+func (r *RepositoryMemory) watch() {
+	r.once.Do(func() {
+		conf := configuration.Instance()
+		if !conf.Snapshot().Enable {
+			return
+		}
+
+		hub := make(chan system.SystemEvent, 1)
+		defer close(hub)
+
+		topics := []string{
+			system.SNAPSHOT_TOPIC_GROUP.TopicSnapshotApplyOutput(),
+		}
+
+		conf.EventHub.Subcribe(repository.RepositoryListener, hub, topics...)
+		defer conf.EventHub.Unsubcribe(repository.RepositoryListener, topics...)
+
+		for {
+			select {
+			case <-r.close:
+				log.Customf(repository.SnapshotCategory, "Watcher stopped: local close signal received.")
+				return
+			case <-hub:
+				if err := r.read(); err != nil {
+					log.Custome(repository.SnapshotCategory, err)
+					return
+				}
+			case <-conf.Signal.Done():
+				log.Customf(repository.SnapshotCategory, "Watcher stopped: global shutdown signal received.")
+				return
+			}
+		}
+	})
+}
+
+func (r *RepositoryMemory) read() error {
+	groups, err := r.file.Read()
+	if err != nil {
+		return err
+	}
+
+	r.collection = collection.DictionaryFromMap(groups)
+	return nil
 }
 
 func (r *RepositoryMemory) Find(id string) (*domain.Group, bool) {
@@ -97,11 +143,7 @@ func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, domain.
 	r.muFile.Lock()
 	defer r.muFile.Unlock()
 
-	items := collection.DictionaryMap(snapshot, func(k string, v domain.Group) any {
-		return v
-	}).Values()
-
-	err := r.file.Write(items)
+	err := r.file.Write(snapshot.Values())
 	if err != nil {
 		log.Error(err)
 	}

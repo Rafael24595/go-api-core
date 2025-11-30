@@ -35,7 +35,7 @@ func defaultLog() Log {
 }
 
 func ConfigureLog(session string, timestamp int64, kargs map[string]utils.Argument) Log {
-	code, ok := kargs["GO_LOG_INSTANCE"]
+	code, ok := kargs["GAC_LOG_INSTANCE"]
 	if !ok {
 		return log
 	}
@@ -48,7 +48,7 @@ func ConfigureLog(session string, timestamp int64, kargs map[string]utils.Argume
 }
 
 func instanceModuleLogger(session string, timestamp int64, kargs map[string]utils.Argument) Log {
-	modulesInterface, ok := kargs["GO_LOG_MODULES"]
+	modulesInterface, ok := kargs["GAC_LOG_MODULES"]
 	if !ok {
 		return log
 	}

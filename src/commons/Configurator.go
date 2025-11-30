@@ -9,6 +9,7 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/dependency"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
+	"github.com/Rafael24595/go-api-core/src/commons/system"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
@@ -24,20 +25,37 @@ func Initialize(kargs map[string]utils.Argument) (*configuration.Configuration, 
 
 	mod := ReadGoMod()
 	pkg := ReadPackage()
-	config := configuration.Initialize(session, timestamp, kargs, mod, &pkg.Project)
+	snp := readSnapshot(kargs)
+	config := configuration.Initialize(session, timestamp, kargs, mod, &pkg.Project, snp)
 
 	log.Messagef("Session ID: %s", config.SessionId())
 	log.Messagef("Started at: %s", utils.FormatMilliseconds(config.Timestamp()))
 	log.Messagef("Dev mode: %v", config.Dev())
 
-	container := dependency.Initialize()
-	initializeManagerSession(container)
+	container := dependency.Initialize(config)
+	initializeManagerSession(config, container)
 	return &config, container
 }
 
-func initializeManagerSession(container *dependency.DependencyContainer) *repository.ManagerSession {
-	file := repository.NewManagerCsvtFile(dto.NewDtoSessionDefault, repository.CSVT_FILE_PATH_SESSION)
-	return repository.InitializeManagerSession(file, container.ManagerCollection, container.ManagerGroup)
+func initializeManagerSession(config configuration.Configuration, container *dependency.DependencyContainer) *repository.ManagerSession {
+	var file repository.IFileManager[dto.DtoSession]
+	file = repository.NewManagerCsvtFile[dto.DtoSession](repository.CSVT_FILE_PATH_SESSION)
+
+	snapshot := config.Snapshot()
+	if snapshot.Enable {
+		topic := system.SNAPSHOT_TOPIC_SESSION
+		file = loadManagerSnapshotFile(topic, snapshot, file)
+	}
+
+	return repository.InitializeManagerSession(file, container.ManagerClientData)
+}
+
+func loadManagerSnapshotFile[T repository.IStructure](topic system.TopicSnapshot, snapshot configuration.Snapshot, file repository.IFileManager[T]) repository.IFileManager[T] {
+	return repository.
+		BuilderManagerSnapshotFile(topic, file).
+		Limit(snapshot.Limit).
+		Time(snapshot.Time).
+		Make()
 }
 
 func ReadAllEnv(path string) map[string]utils.Argument {
@@ -123,4 +141,35 @@ func ReadPackage() *configuration.Package {
 	}
 
 	return &pkg
+}
+
+func readSnapshot(kargs map[string]utils.Argument) *configuration.Snapshot {
+	enable := kargs["GAC_ENABLE_SNAPSHOT"].Boold(false)
+	time := kargs["GAC_SNAPSHOT_TIME"].Int64d(0)
+	limit := kargs["GAC_SNAPSHOT_LIMIT"].Intd(1)
+
+	return &configuration.Snapshot{
+		Enable: enable,
+		Time:   time * int64(readSnapshotUnit(kargs)),
+		Limit:  limit,
+	}
+}
+
+func readSnapshotUnit(kargs map[string]utils.Argument) time.Duration {
+	switch kargs["GAC_SNAPSHOT_UNIT"].String() {
+	case "MILLISECOND":
+		return time.Millisecond
+	case "SECOND":
+		return time.Second
+	case "MINUTE":
+		return time.Minute
+	case "HOUR":
+		return time.Hour
+	case "DAY":
+		return time.Hour * 24
+	case "WEEK":
+		return time.Hour * 24 * 7
+	default:
+		return time.Hour
+	}
 }

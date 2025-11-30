@@ -14,10 +14,6 @@ type DtoContext struct {
 	Modified   int64                                `json:"modified"`
 }
 
-func NewDtoContextDefault() *DtoContext {
-	return &DtoContext{}
-}
-
 func (c DtoContext) PersistenceId() string {
 	return c.Id
 }

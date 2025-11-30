@@ -5,19 +5,19 @@ import (
 
 	"maps"
 
-	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/collection"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 )
 
 type ManagerContext struct {
-	mu       sync.Mutex
-	context  IRepositoryContext
+	mu      sync.Mutex
+	context IRepositoryContext
 }
 
 func NewManagerContext(context IRepositoryContext) *ManagerContext {
 	return &ManagerContext{
-		context:    context,
+		context: context,
 	}
 }
 
@@ -29,7 +29,7 @@ func (m *ManagerContext) Find(owner string, id string) (*context.Context, bool) 
 	return ctx, exists
 }
 
-func (m *ManagerContext) Insert(owner string, collection *domain.Collection, context *context.Context) *context.Context {
+func (m *ManagerContext) Insert(owner string, collection *collection.Collection, context *context.Context) *context.Context {
 	if m.isNotOwner(owner, context) {
 		return nil
 	}
@@ -43,7 +43,7 @@ func (m *ManagerContext) ImportMerge(owner string, target, source *dto.DtoContex
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	for c, cs := range source.Dictionary {
 		category, ok := target.Dictionary[c]
 		if !ok {
@@ -80,13 +80,13 @@ func (m *ManagerContext) isNotOwner(owner string, ctx *context.Context) bool {
 }
 
 func (m *ManagerContext) isOwner(owner string, ctx *context.Context) bool {
-	if (ctx == nil) {
+	if ctx == nil {
 		return false
 	}
 
-	if (ctx.Id != "" && ctx.Owner != owner) {
+	if ctx.Id != "" && ctx.Owner != owner {
 		return false
 	}
-	
+
 	return true
 }

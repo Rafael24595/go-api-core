@@ -3,48 +3,96 @@ package response
 import (
 	"sync"
 
+	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
-	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/commons/system"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
 	"github.com/google/uuid"
 )
 
 type RepositoryMemory struct {
+	once       sync.Once
 	muMemory   sync.RWMutex
 	muFile     sync.RWMutex
-	collection collection.IDictionary[string, domain.Response]
-	file       repository.IFileManager[domain.Response]
+	collection collection.IDictionary[string, action.Response]
+	file       repository.IFileManager[action.Response]
+	close      chan bool
 }
 
-func NewRepositoryMemory(impl collection.IDictionary[string, domain.Response], file repository.IFileManager[domain.Response]) *RepositoryMemory {
-	return &RepositoryMemory{
-		collection: impl,
-		file:       file,
-	}
-}
-
-func InitializeRepositoryMemory(impl collection.IDictionary[string, domain.Response], file repository.IFileManager[domain.Response]) (*RepositoryMemory, error) {
+func InitializeRepositoryMemory(impl collection.IDictionary[string, action.Response], file repository.IFileManager[action.Response]) (*RepositoryMemory, error) {
 	responses, err := file.Read()
 	if err != nil {
 		return nil, err
 	}
-	return NewRepositoryMemory(
-		impl.Merge(collection.DictionaryFromMap(responses)),
-		file), nil
+
+	instance := &RepositoryMemory{
+		collection: impl.Merge(collection.DictionaryFromMap(responses)),
+		file:       file,
+	}
+
+	go instance.watch()
+
+	return instance, nil
 }
 
-func (r *RepositoryMemory) Find(key string) (*domain.Response, bool) {
+func (r *RepositoryMemory) watch() {
+	r.once.Do(func() {
+		conf := configuration.Instance()
+		if !conf.Snapshot().Enable {
+			return
+		}
+
+		hub := make(chan system.SystemEvent, 1)
+		defer close(hub)
+
+		topics := []string{
+			system.SNAPSHOT_TOPIC_RESPONSE.TopicSnapshotApplyOutput(),
+		}
+
+		conf.EventHub.Subcribe(repository.RepositoryListener, hub, topics...)
+		defer conf.EventHub.Unsubcribe(repository.RepositoryListener, topics...)
+
+		for {
+			select {
+			case <-r.close:
+				log.Customf(repository.SnapshotCategory, "Watcher stopped: local close signal received.")
+				return
+			case <-hub:
+				if err := r.read(); err != nil {
+					log.Custome(repository.SnapshotCategory, err)
+					return
+				}
+			case <-conf.Signal.Done():
+				log.Customf(repository.SnapshotCategory, "Watcher stopped: global shutdown signal received.")
+				return
+			}
+		}
+	})
+}
+
+func (r *RepositoryMemory) read() error {
+	requests, err := r.file.Read()
+	if err != nil {
+		return err
+	}
+
+	r.collection = collection.DictionaryFromMap(requests)
+	return nil
+}
+
+func (r *RepositoryMemory) Find(key string) (*action.Response, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 	return r.collection.Get(key)
 }
 
-func (r *RepositoryMemory) FindMany(ids []string) []domain.Response {
+func (r *RepositoryMemory) FindMany(ids []string) []action.Response {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 
-	responses := make([]domain.Response, 0)
+	responses := make([]action.Response, 0)
 	for _, v := range ids {
 		if response, ok := r.collection.Get(v); ok {
 			responses = append(responses, *response)
@@ -54,7 +102,7 @@ func (r *RepositoryMemory) FindMany(ids []string) []domain.Response {
 	return responses
 }
 
-func (r *RepositoryMemory) Insert(owner string, response *domain.Response) *domain.Response {
+func (r *RepositoryMemory) Insert(owner string, response *action.Response) *action.Response {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
@@ -79,21 +127,21 @@ func (r *RepositoryMemory) Insert(owner string, response *domain.Response) *doma
 	return response
 }
 
-func (r *RepositoryMemory) Delete(response *domain.Response) *domain.Response {
+func (r *RepositoryMemory) Delete(response *action.Response) *action.Response {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
-	
+
 	cursor, _ := r.collection.Remove(response.Id)
 	go r.write(r.collection)
-	
+
 	return cursor
 }
 
-func (r *RepositoryMemory) DeleteMany(responses ...domain.Response) []domain.Response {
+func (r *RepositoryMemory) DeleteMany(responses ...action.Response) []action.Response {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
-	deleted := make([]domain.Response, 0)
+	deleted := make([]action.Response, 0)
 	for _, v := range responses {
 		cursor, _ := r.collection.Remove(v.Id)
 		deleted = append(deleted, *cursor)
@@ -104,15 +152,11 @@ func (r *RepositoryMemory) DeleteMany(responses ...domain.Response) []domain.Res
 	return deleted
 }
 
-func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, domain.Response]) {
+func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, action.Response]) {
 	r.muFile.Lock()
 	defer r.muFile.Unlock()
 
-	items := collection.DictionaryMap(snapshot, func(k string, v domain.Response) any {
-		return v
-	}).Values()
-
-	err := r.file.Write(items)
+	err := r.file.Write(snapshot.Values())
 	if err != nil {
 		log.Error(err)
 	}

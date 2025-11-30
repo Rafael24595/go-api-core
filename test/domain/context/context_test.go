@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/Rafael24595/go-api-core/src/commons/log"
-	"github.com/Rafael24595/go-api-core/src/domain/body"
+	body_strategy "github.com/Rafael24595/go-api-core/src/domain/action/body/strategy"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-collections/collection"
@@ -54,7 +54,7 @@ func TestContextApply(t *testing.T) {
 	source := "Lorem ${var_1} dolor ${global.var_2} amet, ${query.var_3} adipiscing ${var_4}. Morbi eleifend odio quis ${global.var_1} commodo ${query.var_5}."
 	ctx := context.NewContext("anonymous").
 		PutAll("global", map[string]context.ItemContext{
-			"var_1": context.NewItemContext(0,  false, true, "ipsum"),
+			"var_1": context.NewItemContext(0, false, true, "ipsum"),
 			"var_2": context.NewItemContext(1, false, true, "sit"),
 			"var_4": context.NewItemContext(2, false, true, "elit"),
 		}).
@@ -130,8 +130,8 @@ func TestProcessRequest(t *testing.T) {
 		t.Errorf("Found source %s but %s expected", foundType, expectedType)
 	}
 
-	found = string(request.Body.Parameters[body.DOCUMENT_PARAM][body.PAYLOAD_PARAM][0].Value)
-	expected = string(requestExpected.Body.Parameters[body.DOCUMENT_PARAM][body.PAYLOAD_PARAM][0].Value)
+	found = string(request.Body.Parameters[body_strategy.DOCUMENT_PARAM][body_strategy.PAYLOAD_PARAM][0].Value)
+	expected = string(requestExpected.Body.Parameters[body_strategy.DOCUMENT_PARAM][body_strategy.PAYLOAD_PARAM][0].Value)
 	if found != expected {
 		t.Errorf("Found source %s but %s expected", found, expected)
 	}

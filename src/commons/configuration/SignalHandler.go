@@ -10,13 +10,13 @@ import (
 
 type signalHandler struct {
 	sigChan chan os.Signal
-	done    chan bool
+	done    chan struct{}
 }
 
 func newSignalHandler() *signalHandler {
 	h := &signalHandler{
 		sigChan: make(chan os.Signal, 1),
-		done:    make(chan bool, 1),
+		done:    make(chan struct{}),
 	}
 
 	signal.Notify(h.sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -24,12 +24,12 @@ func newSignalHandler() *signalHandler {
 	go func() {
 		<-h.sigChan
 		log.Message("Shutdown signal received.")
-		h.done <- true
+		close(h.done)
 	}()
 
 	return h
 }
 
-func (h *signalHandler) Done() <-chan bool {
+func (h *signalHandler) Done() <-chan struct{} {
 	return h.done
 }

@@ -1,6 +1,9 @@
 package dto
 
-import "github.com/Rafael24595/go-api-core/src/domain"
+import (
+	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
+)
 
 type DtoNodeRequest struct {
 	Order   int        `json:"order"`
@@ -20,7 +23,15 @@ func ToRequestNodes(dto []DtoNodeRequest) []domain.NodeReference {
 	return nodes
 }
 
-type DtoLiteNodeRequest struct {
-	Order   int            `json:"order"`
-	Request DtoLiteRequest `json:"request"`
+func FromNodeRequest(nodes []action.NodeRequest) []DtoNodeRequest {
+	dtos := make([]DtoNodeRequest, len(nodes))
+
+	for i := range nodes {
+		dtos[i] = DtoNodeRequest{
+			Order: nodes[i].Order,
+			Request: *FromRequest(&nodes[i].Request),
+		}
+	}
+
+	return dtos
 }

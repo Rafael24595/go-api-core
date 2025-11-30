@@ -10,13 +10,14 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/domain"
-	auth_strategy "github.com/Rafael24595/go-api-core/src/domain/auth/strategy"
-	"github.com/Rafael24595/go-api-core/src/domain/body"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
+	auth_strategy "github.com/Rafael24595/go-api-core/src/domain/action/auth/strategy"
+	"github.com/Rafael24595/go-api-core/src/domain/action/body"
+	body_strategy "github.com/Rafael24595/go-api-core/src/domain/action/body/strategy"
+	"github.com/Rafael24595/go-api-core/src/domain/action/cookie"
+	"github.com/Rafael24595/go-api-core/src/domain/action/header"
+	"github.com/Rafael24595/go-api-core/src/domain/action/query"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
-	"github.com/Rafael24595/go-api-core/src/domain/cookie"
-	"github.com/Rafael24595/go-api-core/src/domain/header"
-	"github.com/Rafael24595/go-api-core/src/domain/query"
-
 	"golang.org/x/net/html/charset"
 )
 
@@ -27,11 +28,11 @@ func Client() *HttpClient {
 	return &HttpClient{}
 }
 
-func WarmUp() (*domain.Response, error) {
+func WarmUp() (*action.Response, error) {
 	log.Message("Warming up the HTTP client...")
 
 	start := time.Now().UnixMilli()
-	response, result := Client().Fetch(&domain.Request{
+	response, result := Client().Fetch(&action.Request{
 		Method: domain.GET,
 		Uri:    "https://www.google.es",
 	})
@@ -45,12 +46,12 @@ func WarmUp() (*domain.Response, error) {
 	return response, nil
 }
 
-func (c *HttpClient) FetchWithContext(ctx *context.Context, request *domain.Request) (*domain.Response, error) {
+func (c *HttpClient) FetchWithContext(ctx *context.Context, request *action.Request) (*action.Response, error) {
 	request = context.ProcessRequest(request, ctx)
 	return c.Fetch(request)
 }
 
-func (c *HttpClient) Fetch(request *domain.Request) (*domain.Response, error) {
+func (c *HttpClient) Fetch(request *action.Request) (*action.Response, error) {
 	req, err := c.makeRequest(request)
 	if err != nil {
 		return nil, err
@@ -73,13 +74,13 @@ func (c *HttpClient) Fetch(request *domain.Request) (*domain.Response, error) {
 	return response, nil
 }
 
-func (c *HttpClient) makeRequest(operation *domain.Request) (*http.Request, error) {
+func (c *HttpClient) makeRequest(operation *action.Request) (*http.Request, error) {
 	method := operation.Method.String()
 	uri := strings.TrimSpace(operation.Uri)
 
 	payload := new(bytes.Buffer)
 	if !operation.Body.Empty() && operation.Body.Status && method != "GET" && method != "HEAD" {
-		strategy := body.LoadStrategy(operation.Body.ContentType)
+		strategy := body_strategy.LoadStrategy(operation.Body.ContentType)
 
 		var queries *query.Queries
 		payload, queries = strategy(&operation.Body, &operation.Query)
@@ -101,7 +102,7 @@ func (c *HttpClient) makeRequest(operation *domain.Request) (*http.Request, erro
 	return req, nil
 }
 
-func (c *HttpClient) applyQuery(operation *domain.Request, req *http.Request) *http.Request {
+func (c *HttpClient) applyQuery(operation *action.Request, req *http.Request) *http.Request {
 	query := req.URL.Query()
 	for k, q := range operation.Query.Queries {
 		for _, v := range q {
@@ -115,7 +116,7 @@ func (c *HttpClient) applyQuery(operation *domain.Request, req *http.Request) *h
 	return req
 }
 
-func (c *HttpClient) applyHeader(operation *domain.Request, req *http.Request) *http.Request {
+func (c *HttpClient) applyHeader(operation *action.Request, req *http.Request) *http.Request {
 	headers := map[string][]string{}
 	for k, h := range operation.Header.Headers {
 		for _, v := range h {
@@ -134,7 +135,7 @@ func (c *HttpClient) applyHeader(operation *domain.Request, req *http.Request) *
 	return req
 }
 
-func (c *HttpClient) applyCookies(operation *domain.Request, req *http.Request) *http.Request {
+func (c *HttpClient) applyCookies(operation *action.Request, req *http.Request) *http.Request {
 	cookies := []string{}
 	for k, c := range operation.Cookie.Cookies {
 		if !c.Status {
@@ -150,7 +151,7 @@ func (c *HttpClient) applyCookies(operation *domain.Request, req *http.Request) 
 	return req
 }
 
-func (c *HttpClient) makeResponse(owner string, start int64, end int64, req *domain.Request, resp *http.Response) (*domain.Response, error) {
+func (c *HttpClient) makeResponse(owner string, start int64, end int64, req *action.Request, resp *http.Response) (*action.Response, error) {
 	headers := c.makeHeaders(resp)
 
 	cookies, err := c.makeCookies(headers)
@@ -163,7 +164,7 @@ func (c *HttpClient) makeResponse(owner string, start int64, end int64, req *dom
 		return nil, fmt.Errorf("failed to read the body: %s", err.Error())
 	}
 
-	return &domain.Response{
+	return &action.Response{
 		Id:        req.Id,
 		Timestamp: end,
 		Request:   req.Id,
@@ -222,8 +223,8 @@ func (c *HttpClient) makeCookies(headers *header.Headers) (*cookie.CookiesServer
 func (c *HttpClient) makeBody(resp *http.Response) (*body.BodyResponse, int, error) {
 	contentTypeHeader := resp.Header.Get("Content-Type")
 
-	contentType := body.Text
-	if oContentType, ok := body.ContentTypeFromHeader(contentTypeHeader); ok {
+	contentType := domain.Text
+	if oContentType, ok := domain.ContentTypeFromHeader(contentTypeHeader); ok {
 		contentType = oContentType
 	}
 

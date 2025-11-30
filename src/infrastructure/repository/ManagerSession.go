@@ -2,14 +2,13 @@ package repository
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/session"
-	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/commons/system"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-collections/collection"
 	"golang.org/x/crypto/bcrypt"
@@ -21,15 +20,16 @@ var (
 )
 
 type ManagerSession struct {
+	once              sync.Once
 	mut               sync.RWMutex
 	mutFile           sync.RWMutex
 	file              IFileManager[dto.DtoSession]
-	managerCollection *ManagerCollection
-	managerGroup      *ManagerGroup
 	sessions          collection.IDictionary[string, session.Session]
+	managerClientData *ManagerClientData
+	close             chan bool
 }
 
-func InitializeManagerSession(file IFileManager[dto.DtoSession], managerCollection *ManagerCollection, managerGroup *ManagerGroup) *ManagerSession {
+func InitializeManagerSession(file IFileManager[dto.DtoSession], managerClientData *ManagerClientData) *ManagerSession {
 	once.Do(func() {
 		steps, err := file.Read()
 		if err != nil {
@@ -37,18 +37,20 @@ func InitializeManagerSession(file IFileManager[dto.DtoSession], managerCollecti
 			return
 		}
 
-		sessions := collection.DictionarySyncMap(collection.DictionarySyncFromMap(steps), func(k string, d dto.DtoSession) session.Session {
-			return *dto.ToSession(d)
-		})
+		sessions := collection.MapToDictionarySync(steps,
+			func(k string, d dto.DtoSession) session.Session {
+				return *dto.ToSession(d)
+			})
 
 		instance := &ManagerSession{
 			file:              file,
-			managerCollection: managerCollection,
-			managerGroup:      managerGroup,
+			managerClientData: managerClientData,
 			sessions:          sessions,
 		}
 
 		manager = defineDefaultSessions(instance)
+
+		go manager.watch()
 	})
 
 	if manager == nil {
@@ -61,12 +63,14 @@ func InitializeManagerSession(file IFileManager[dto.DtoSession], managerCollecti
 func defineDefaultSessions(instance *ManagerSession) *ManagerSession {
 	conf := configuration.Instance()
 
-	err := instance.defineDefaultUser(conf.Admin(), string(conf.Secret()), true, true, 0)
+	rolesAdmin := []session.Role{session.ROLE_ADMIN, session.ROLE_PROTECTED}
+	err := instance.defineDefaultUser(conf.Admin(), string(conf.Secret()), rolesAdmin, 0)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	err = instance.defineDefaultUser("anonymous", "", true, false, 0)
+	rolesAnonymous := []session.Role{session.ROLE_ANONYMOUS, session.ROLE_PROTECTED}
+	err = instance.defineDefaultUser("anonymous", "", rolesAnonymous, 0)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -81,11 +85,77 @@ func InstanceManagerSession() *ManagerSession {
 	return manager
 }
 
-func (s *ManagerSession) defineDefaultUser(username, secret string, isProtected, isAdmin bool, count int) error {
-	if _, exists := s.sessions.Get(username); !exists {
-		log.Messagef("Defining default user %s with admin status: %v", username, isAdmin)
-		collection, history, group := s.makeDependencies(username)
-		_, err := s.insert(username, string(secret), collection, history, group, isProtected, isAdmin, count)
+func (r *ManagerSession) watch() {
+	r.once.Do(func() {
+		conf := configuration.Instance()
+		if !conf.Snapshot().Enable {
+			return
+		}
+
+		hub := make(chan system.SystemEvent, 1)
+		defer close(hub)
+
+		topics := []string{
+			system.SNAPSHOT_TOPIC_SESSION.TopicSnapshotApplyOutput(),
+		}
+
+		conf.EventHub.Subcribe(RepositoryListener, hub, topics...)
+		defer conf.EventHub.Unsubcribe(RepositoryListener, topics...)
+
+		for {
+			select {
+			case <-r.close:
+				log.Customf(SnapshotCategory, "Watcher stopped: local close signal received.")
+				return
+			case <-hub:
+				if err := r.read(); err != nil {
+					log.Custome(SnapshotCategory, err)
+					return
+				}
+			case <-conf.Signal.Done():
+				log.Customf(SnapshotCategory, "Watcher stopped: global shutdown signal received.")
+				return
+			}
+		}
+	})
+}
+
+func (r *ManagerSession) read() error {
+	sessions, err := r.file.Read()
+	if err != nil {
+		return err
+	}
+
+	r.sessions = collection.DictionarySyncMap(
+		collection.DictionarySyncFromMap(sessions),
+		func(k string, d dto.DtoSession) session.Session {
+			return *dto.ToSession(d)
+		})
+
+	return nil
+}
+
+func (s *ManagerSession) defineDefaultUser(username, secret string, roles []session.Role, count int) error {
+	session, exists := s.sessions.Get(username)
+	if exists && len(session.Roles) != len(roles) {
+		log.Messagef("Updating user %s with roles: %v", username, roles)
+		session.Roles = roles
+		s.sessions.Put(session.Username, *session)
+
+		go s.write(s.sessions)
+
+		return nil
+	}
+
+	if !exists {
+		log.Messagef("Defining default user %s with roles: %v", username, roles)
+
+		data, exists := s.managerClientData.resolve(username)
+		if data == nil && !exists {
+			return errors.New("client data cannot be initialized")
+		}
+
+		_, err := s.insert(username, string(secret), roles, count)
 		if err != nil {
 			return err
 		}
@@ -97,96 +167,53 @@ func (s *ManagerSession) Find(user string) (*session.Session, bool) {
 	return s.sessions.Get(user)
 }
 
-func (s *ManagerSession) FindUserCollection(user string) (*domain.Collection, error) {
-	s.mut.Lock()
-	defer s.mut.Unlock()
-
-	session, ok := s.sessions.Get(user)
-	if !ok {
-		return nil, errors.New("session not found")
+func (s *ManagerSession) Insert(sess *session.Session, user, password string, roles []session.Role) (*session.Session, error) {
+	if !sess.HasRole(session.ROLE_ADMIN) {
+		return nil, errors.New("user has not have admin privilegies")
 	}
 
-	collection, _ := s.managerCollection.Find(user, session.Collection)
-	if collection != nil && collection.Status == domain.USER {
-		return collection, nil
+	if _, exists := s.Find(user); exists {
+		return nil, errors.New("user exists")
 	}
 
-	exists := collection != nil
-	if exists {
-		collection.Status = domain.USER
-	} else {
-		collection = domain.NewUserCollection(user)
+	err := s.valideData(user, password, nil)
+	if err != nil {
+		return nil, err
 	}
 
-	collection = s.managerCollection.Insert(user, collection)
-
-	if !exists {
-		log.Messagef("Defined global collection '%s' for %s user", collection.Id, user)
+	data, exists := s.managerClientData.resolve(user)
+	if data == nil && !exists {
+		return nil, errors.New("client data cannot be initialized")
 	}
 
-	session.Collection = collection.Id
-
-	s.update(session)
-
-	return collection, nil
+	return s.insert(user, password, roles, -1)
 }
 
-func (s *ManagerSession) FindUserHistoric(user string) (*domain.Collection, error) {
+func (s *ManagerSession) Delete(sess *session.Session) (*session.Session, error) {
+	if sess.HasRole(session.ROLE_PROTECTED) {
+		return nil, errors.New("this user is protected, cannot be removed")
+	}
+
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
-	session, ok := s.sessions.Get(user)
-	if !ok {
-		return nil, errors.New("session not found")
-	}
+	s.managerClientData.delete(sess.Username)
 
-	collection, _ := s.managerCollection.Find(user, session.History)
-	if collection != nil && collection.Status == domain.TALE {
-		return collection, nil
-	}
-
-	exists := collection != nil
-	if exists {
-		collection.Status = domain.TALE
-	} else {
-		collection = domain.NewUserCollection(user)
-	}
-
-	collection = s.managerCollection.Insert(user, collection)
-
-	if !exists {
-		log.Messagef("Defined historic collection '%s' for %s user", collection.Id, user)
-	}
-
-	session.History = collection.Id
-
-	s.update(session)
-
-	return collection, nil
+	sess, _ = s.sessions.Remove(sess.Username)
+	return sess, nil
 }
 
-func (s *ManagerSession) FindUserGroup(user string) (*domain.Group, error) {
-	s.mut.Lock()
-	defer s.mut.Unlock()
-
-	session, ok := s.sessions.Get(user)
-	if !ok {
+func (s *ManagerSession) Authorize(user, password string) (*session.Session, error) {
+	session, exists := s.sessions.Get(user)
+	if !exists {
 		return nil, errors.New("session not found")
 	}
 
-	group, _ := s.managerGroup.Find(user, session.Group)
-	if group != nil {
-		return group, nil
+	if !ValideSecret([]byte(password), session.Secret) {
+		return nil, errors.New("session not found")
 	}
 
-	group = domain.NewGroup(user)
-	group = s.managerGroup.Insert(user, group)
-
-	session.Group = group.Id
-
-	s.update(session)
-
-	return group, nil
+	return session, nil
 }
 
 func (s *ManagerSession) Verify(username, oldPassword, newPassword1, newPassword2 string) (*session.Session, error) {
@@ -216,62 +243,13 @@ func (s *ManagerSession) Verify(username, oldPassword, newPassword1, newPassword
 	return session, nil
 }
 
-func (s *ManagerSession) Delete(session *session.Session) (*session.Session, error) {
-	if session.IsProtected {
-		return nil, errors.New("this user is protected, cannot be removed")
-	}
-
-	session, _ = s.sessions.Remove(session.Username)
-	return session, nil
-}
-
 func (s *ManagerSession) Visited(session *session.Session) *session.Session {
 	session.Count += 1
 	s.update(session)
 	return session
 }
 
-func (s *ManagerSession) update(session *session.Session) (*session.Session, bool) {
-	if _, ok := s.sessions.Get(session.Username); !ok {
-		return nil, false
-	}
-	old, exists := s.sessions.Put(session.Username, *session)
-	go s.write(s.sessions)
-	return old, exists
-}
-
-func (s *ManagerSession) Authorize(user, password string) (*session.Session, error) {
-	session, exists := s.sessions.Get(user)
-	if !exists {
-		return nil, errors.New("session not found")
-	}
-
-	if !ValideSecret([]byte(password), session.Secret) {
-		return nil, errors.New("session not found")
-	}
-
-	return session, nil
-}
-
-func (s *ManagerSession) Insert(session *session.Session, user, password string, isAdmin bool) (*session.Session, error) {
-	if !session.IsAdmin {
-		return nil, errors.New("user has not have admin privilegies")
-	}
-
-	if _, exists := s.Find(user); exists {
-		return nil, errors.New("user exists")
-	}
-
-	err := s.valideData(user, password, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	collection, history, group := s.makeDependencies(user)
-	return s.insert(user, password, collection, history, group, false, isAdmin, -1)
-}
-
-func (s *ManagerSession) insert(user, password string, collection *domain.Collection, history *domain.Collection, group *domain.Group, isProtected, isAdmin bool, count int) (*session.Session, error) {
+func (s *ManagerSession) insert(user, password string, roles []session.Role, count int) (*session.Session, error) {
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
@@ -286,16 +264,12 @@ func (s *ManagerSession) insert(user, password string, collection *domain.Collec
 	}
 
 	session := session.Session{
-		Username:    user,
-		Secret:      secret,
-		Timestamp:   time.Now().UnixMilli(),
-		Collection:  collection.Id,
-		History:     history.Id,
-		Group:       group.Id,
-		IsProtected: isProtected,
-		IsAdmin:     isAdmin,
-		Count:       count,
-		Refresh:     "",
+		Username:  user,
+		Secret:    secret,
+		Timestamp: time.Now().UnixMilli(),
+		Count:     count,
+		Refresh:   "",
+		Roles:     roles,
 	}
 
 	s.sessions.Put(user, session)
@@ -305,26 +279,22 @@ func (s *ManagerSession) insert(user, password string, collection *domain.Collec
 	return &session, nil
 }
 
+func (s *ManagerSession) update(session *session.Session) (*session.Session, bool) {
+	if _, ok := s.sessions.Get(session.Username); !ok {
+		return nil, false
+	}
+
+	old, exists := s.sessions.Put(session.Username, *session)
+
+	go s.write(s.sessions)
+	
+	return old, exists
+}
+
 func (s *ManagerSession) Refresh(session *session.Session, refresh string) *session.Session {
 	session.Refresh = refresh
 	s.update(session)
 	return session
-}
-
-func (s *ManagerSession) makeDependencies(username string) (*domain.Collection, *domain.Collection, *domain.Group) {
-	collection := domain.NewUserCollection(username)
-	collection.Name = fmt.Sprintf("%s's global collection", username)
-	collection = s.managerCollection.Insert(username, collection)
-
-	history := domain.NewTaleCollection(username)
-	history.Name = fmt.Sprintf("%s's history collection", username)
-	history.Context = collection.Context
-	history = s.managerCollection.Insert(username, history)
-
-	group := domain.NewGroup(username)
-	group = s.managerGroup.Insert(username, group)
-
-	return collection, history, group
 }
 
 func (s *ManagerSession) valideData(username, password1 string, password2 *string) error {
@@ -351,11 +321,11 @@ func (s *ManagerSession) write(snapshot collection.IDictionary[string, session.S
 	s.mutFile.Lock()
 	defer s.mutFile.Unlock()
 
-	items := collection.DictionaryMap(snapshot, func(k string, v session.Session) any {
+	items := collection.DictionaryMap(snapshot, func(k string, v session.Session) dto.DtoSession {
 		return *dto.FromSession(v)
-	}).Values()
+	})
 
-	err := s.file.Write(items)
+	err := s.file.Write(items.Values())
 	if err != nil {
 		log.Error(err)
 	}
