@@ -39,12 +39,12 @@ func Initialize(session string, timestamp int64, kargs map[string]utils.Argument
 	once.Do(func() {
 		admin := kargs["GAC_ADMIN_USER"].String()
 		if admin == "" {
-			log.Panics("Admin is not defined")
+			log.Panics("Admin username is not defined")
 		}
 
 		secret := kargs["GAC_ADMIN_SECRET"].String()
 		if secret == "" {
-			log.Panics("Secret is not defined")
+			log.Panics("Admin secret is not defined")
 		}
 
 		dev := kargs["GAC_DEV"].Boold(false)
