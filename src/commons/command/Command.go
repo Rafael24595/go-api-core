@@ -52,7 +52,7 @@ var cmdActions = []commandAction{
 	cmdSnapshot,
 }
 
-func Exec(command string) (string, error) {
+func Exec(user, command string) (string, error) {
 	raw, err := utils.SplitCommand(command)
 	if err != nil {
 		return "", err
@@ -65,15 +65,15 @@ func Exec(command string) (string, error) {
 		return "", nil
 	}
 
-	return run(*head, cmd)
+	return run(user, *head, cmd)
 }
 
-func run(head string, cmd *collection.Vector[string]) (string, error) {
+func run(user, head string, cmd *collection.Vector[string]) (string, error) {
 	switch head {
 	case CMD:
 		return root(cmd)
 	case LOG:
-		return logg(cmd)
+		return logg(user, cmd)
 	case SNAPSHOT:
 		return snapshot(cmd)
 	}
@@ -94,6 +94,8 @@ func root(cmd *collection.Vector[string]) (string, error) {
 		switch *flag {
 		case FLAG_CMD_HELP:
 			return runCmdHelp(), nil
+		default:
+			return fmt.Sprintf("Unrecognized command flag: %s", *flag), nil
 		}
 	}
 

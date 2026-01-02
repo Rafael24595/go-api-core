@@ -136,6 +136,8 @@ func snapshot(cmd *collection.Vector[string]) (string, error) {
 			}
 
 			messages = append(messages, message)
+		default:
+			return fmt.Sprintf("Unrecognized command flag: %s", *flag), nil
 		}
 	}
 

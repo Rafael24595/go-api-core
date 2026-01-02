@@ -42,7 +42,7 @@ var logActions = []commandAction{
 	logPush,
 }
 
-func logg(cmd *collection.Vector[string]) (string, error) {
+func logg(user string, cmd *collection.Vector[string]) (string, error) {
 	if cmd.Size() == 0 {
 		return runLogHelp(), nil
 	}
@@ -74,11 +74,13 @@ func logg(cmd *collection.Vector[string]) (string, error) {
 			}
 
 			pushData = append(pushData, *tuple)
+		default:
+			return fmt.Sprintf("Unrecognized command flag: %s", *flag), nil
 		}
 	}
 
 	if len(pushData) > 0 {
-		publishLog(pushData...)
+		publishLog(user, pushData...)
 	}
 
 	return strings.Join(messages, ", "), nil
@@ -123,8 +125,9 @@ func runLogCursor(flag string, cmd *collection.Vector[string]) (*utils.CmdTuple,
 	return utils.NewCmdTuple(cat, mes), nil
 }
 
-func publishLog(data ...utils.CmdTuple) {
+func publishLog(user string, data ...utils.CmdTuple) {
 	for _, l := range data {
-		log.Custom(l.Flag, l.Data)
+		message := fmt.Sprintf("(%s) - %s", user, l.Data)
+		log.Custom(l.Flag, message)
 	}
 }
