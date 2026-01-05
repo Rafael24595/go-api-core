@@ -24,49 +24,49 @@ const (
 	FLAG_SNAPSHOT_DETAILS   = "-d"
 )
 
-var snapshotHelp = commandAction{
+var snapshotHelp = commandReference{
 	Flag:        FLAG_SNAPSHOT_HELP,
 	Name:        "Help",
 	Description: "Shows this help message.",
 	Example:     `snpsh -h`,
 }
 
-var snapshotSave = commandAction{
+var snapshotSave = commandReference{
 	Flag:        FLAG_SNAPSHOT_SAVE,
 	Name:        "Save",
 	Description: "Saves the current data as snapshot for a given target and type, use all as topic to save all data.",
 	Example:     `snpsh -s snpsh_${target}=${type}`,
 }
 
-var snapshotApply = commandAction{
+var snapshotApply = commandReference{
 	Flag:        FLAG_SNAPSHOT_APPLY,
 	Name:        "Apply",
 	Description: "Applies a previously saved input snapshot for a given target and type retrieved from the extension.",
 	Example:     `snpsh -a snpsh_${target}=${name}.${extension}`,
 }
 
-var snapshotRemove = commandAction{
+var snapshotRemove = commandReference{
 	Flag:        FLAG_SNAPSHOT_REMOVE,
 	Name:        "Remove",
 	Description: "Removes a previously saved snapshot for a given target and type retrieved from the extension.",
 	Example:     `snpsh -r snpsh_${target}=${name}.${extension}`,
 }
 
-var snapshotDetails = commandAction{
+var snapshotDetails = commandReference{
 	Flag:        FLAG_SNAPSHOT_DETAILS,
 	Name:        "Details",
 	Description: "Displays the list of snapshots data for a given target and type.",
 	Example:     `snpsh -d snpsh_${target}=${type}`,
 }
 
-var snapshotListeners = commandAction{
+var snapshotListeners = commandReference{
 	Flag:        FLAG_SNAPSHOT_LISTENERS,
 	Name:        "Listeners",
 	Description: "Lists all available snapshot listeners, use the verbose flag to expand the details.",
 	Example:     `snpsh -v -l`,
 }
 
-var snapshotActions = []commandAction{
+var snapshotActions = []commandReference{
 	snapshotHelp,
 	snapshotSave,
 	snapshotApply,
@@ -75,7 +75,7 @@ var snapshotActions = []commandAction{
 	snapshotListeners,
 }
 
-func snapshot(cmd *collection.Vector[string]) (string, error) {
+func snapshot(_ string, cmd *collection.Vector[string]) (string, error) {
 	if cmd.Size() == 0 {
 		return runSnapshotHelp(), nil
 	}

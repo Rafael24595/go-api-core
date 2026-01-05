@@ -15,28 +15,28 @@ const (
 	FLAG_LOG_PUSH = "-p"
 )
 
-var logHelp = commandAction{
+var logHelp = commandReference{
 	Flag:        FLAG_LOG_HELP,
 	Name:        "Help",
 	Description: "Shows this help message.",
 	Example:     `log -h`,
 }
 
-var logList = commandAction{
+var logList = commandReference{
 	Flag:        FLAG_LOG_LIST,
 	Name:        "List",
 	Description: "Displays the list of log records.",
 	Example:     `log -l`,
 }
 
-var logPush = commandAction{
+var logPush = commandReference{
 	Flag:        FLAG_LOG_PUSH,
 	Name:        "Push",
 	Description: "Insert a new log record.",
 	Example:     `log -p ${category}=${message}`,
 }
 
-var logActions = []commandAction{
+var logActions = []commandReference{
 	logHelp,
 	logList,
 	logPush,

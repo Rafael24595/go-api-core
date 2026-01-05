@@ -6,6 +6,22 @@ import (
 	"testing"
 )
 
+func NotNil[T any](t *testing.T, item *T, message ...any) {
+	t.Helper()
+
+	if item == nil {
+		t.Error("Unexpected nil value")
+	}
+}
+
+func Nil[T any](t *testing.T, item *T, message ...any) {
+	t.Helper()
+
+	if item != nil {
+		t.Error("Expected nil value")
+	}
+}
+
 func Equal[T comparable](t *testing.T, want, have T, message ...any) {
 	t.Helper()
 
@@ -78,7 +94,7 @@ func Error(t *testing.T, err error, message ...any) {
 	t.Error("Expected error found but nothing found")
 }
 
-func NoError(t *testing.T, err error, message ...any) {
+func NotError(t *testing.T, err error, message ...any) {
 	t.Helper()
 
 	if err == nil {
