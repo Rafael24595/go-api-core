@@ -1,6 +1,8 @@
 package dependency
 
 import (
+	"sync"
+
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
@@ -25,7 +27,10 @@ import (
 	"github.com/Rafael24595/go-collections/collection"
 )
 
-var instance *DependencyContainer
+var (
+	instance *DependencyContainer
+	once     sync.Once
+)
 
 type DependencyContainer struct {
 	RepositoryContext repository.IRepositoryContext
@@ -41,50 +46,48 @@ type DependencyContainer struct {
 }
 
 func Initialize(config configuration.Configuration) *DependencyContainer {
-	if instance != nil {
-		log.Panics("The dependency container is alredy initialized")
-	}
-
-	_, err := infrastructure.WarmUp()
-	if err != nil {
-		log.Error(err)
-	}
-
-	repositoryRequest := loadRepositoryRequest(config)
-	repositoryResponse := loadRepositoryResponse(config)
-
-	repositoryContext := loadRepositoryContext(config)
-	repositoryCollection := loadRepositoryCollection(config)
-	repositoryGroup := loadRepositoryGroup(config)
-	repositoryEndPoint := loadRepositoryEndPoint(config)
-	repositoryMetrics := loadRepositoryMetrics(config)
-	repositoryToken := loadRepositoryToken(config)
-	repositoryClient := loadRepositoryClientData(config)
-
-	managerRequest := loadManagerRequest(repositoryRequest, repositoryResponse)
-	managerContext := loadManagerContext(repositoryContext)
-	managerCollection := loadManagerCollection(repositoryCollection, managerContext, managerRequest)
-	managerHistoric := loadManagerHistoric(managerRequest, managerCollection)
-	managerGroup := loadManagerGroup(repositoryGroup, managerCollection)
-	managerMetrics := loadManagerMetrics(repositoryMetrics)
-	managerEndPoint := loadManagerEndPoint(repositoryEndPoint, managerMetrics)
-	managerToken := loadManagerToken(repositoryToken)
-	managerClientData := loadManagerClientData(repositoryClient, managerCollection, managerGroup)
-
-	container := &DependencyContainer{
-		RepositoryContext: repositoryContext,
-		ManagerRequest:    managerRequest,
-		ManagerContext:    managerContext,
-		ManagerCollection: managerCollection,
-		ManagerHistoric:   managerHistoric,
-		ManagerGroup:      managerGroup,
-		ManagerEndPoint:   managerEndPoint,
-		ManagerMetrics:    managerMetrics,
-		ManagerToken:      managerToken,
-		ManagerClientData: managerClientData,
-	}
-
-	instance = container
+	once.Do(func() {
+		_, err := infrastructure.WarmUp()
+		if err != nil {
+			log.Error(err)
+		}
+	
+		repositoryRequest := loadRepositoryRequest(config)
+		repositoryResponse := loadRepositoryResponse(config)
+	
+		repositoryContext := loadRepositoryContext(config)
+		repositoryCollection := loadRepositoryCollection(config)
+		repositoryGroup := loadRepositoryGroup(config)
+		repositoryEndPoint := loadRepositoryEndPoint(config)
+		repositoryMetrics := loadRepositoryMetrics(config)
+		repositoryToken := loadRepositoryToken(config)
+		repositoryClient := loadRepositoryClientData(config)
+	
+		managerRequest := loadManagerRequest(repositoryRequest, repositoryResponse)
+		managerContext := loadManagerContext(repositoryContext)
+		managerCollection := loadManagerCollection(repositoryCollection, managerContext, managerRequest)
+		managerHistoric := loadManagerHistoric(managerRequest, managerCollection)
+		managerGroup := loadManagerGroup(repositoryGroup, managerCollection)
+		managerMetrics := loadManagerMetrics(repositoryMetrics)
+		managerEndPoint := loadManagerEndPoint(repositoryEndPoint, managerMetrics)
+		managerToken := loadManagerToken(repositoryToken)
+		managerClientData := loadManagerClientData(repositoryClient, managerCollection, managerGroup)
+	
+		container := &DependencyContainer{
+			RepositoryContext: repositoryContext,
+			ManagerRequest:    managerRequest,
+			ManagerContext:    managerContext,
+			ManagerCollection: managerCollection,
+			ManagerHistoric:   managerHistoric,
+			ManagerGroup:      managerGroup,
+			ManagerEndPoint:   managerEndPoint,
+			ManagerMetrics:    managerMetrics,
+			ManagerToken:      managerToken,
+			ManagerClientData: managerClientData,
+		}
+	
+		instance = container
+	})
 
 	return instance
 }
