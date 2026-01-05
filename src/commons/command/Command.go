@@ -26,6 +26,7 @@ type CompleteHelp struct {
 	Message     string
 	Application string
 	Position    int
+	Lenght      int
 }
 
 func emptyCompleteHelp() *CompleteHelp {
@@ -33,6 +34,7 @@ func emptyCompleteHelp() *CompleteHelp {
 		Message:     "",
 		Application: "",
 		Position:    InitialStep,
+		Lenght:      0,
 	}
 }
 
@@ -117,6 +119,7 @@ func Comp(user, command string, position int) (*CompleteHelp, error) {
 			Message:     "",
 			Application: command,
 			Position:    InitialStep,
+			Lenght:      0,
 		}, nil
 	}
 
@@ -144,6 +147,7 @@ func Comp(user, command string, position int) (*CompleteHelp, error) {
 		Message:     message,
 		Application: string(cursor.Flag),
 		Position:    position,
+		Lenght:      len(coincidences),
 	}, nil
 }
 
