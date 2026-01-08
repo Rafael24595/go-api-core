@@ -3,18 +3,19 @@ package command
 import (
 	"testing"
 
+	"github.com/Rafael24595/go-api-core/src/commons/command/apps"
 	"github.com/Rafael24595/go-api-core/test/support/assert"
 )
 
-var testCmdActions = []commandApplication{
+var testCmdActions = []apps.CommandApplication{
 	{
-		commandReference: commandReference{
+		CommandReference: apps.CommandReference{
 			Flag: "snapshot",
 		},
 		Help: func() string { return "Test help message" },
 	},
 	{
-		commandReference: commandReference{
+		CommandReference: apps.CommandReference{
 			Flag: "system",
 		},
 	},
@@ -64,9 +65,9 @@ func TestComplete_WhenPartialCommandMatches_ReturnsHelpContext(t *testing.T) {
 	assert.NotError(t, err)
 	assert.NotNil(t, help)
 
-	action := &cmdActions[1]
+	action := &refApps[2]
 
-	assert.Equal(t, help.Position, 1)
+	assert.Equal(t, help.Position, 2)
 	assert.Equal(t, string(action.Flag), help.Application)
 	assert.Equal(t, "", help.Message)
 }
@@ -84,7 +85,7 @@ func TestComplete_WhenCommandDoesNotExist_ReturnsEmptyHelp(t *testing.T) {
 }
 
 func TestComplete_WhenExactCommandProvided_ReturnsCommandHelp(t *testing.T) {
-	action := &cmdActions[0]
+	action := &refApps[0]
 
 	help, err := Comp("anonymous", string(action.Flag), InitialStep)
 

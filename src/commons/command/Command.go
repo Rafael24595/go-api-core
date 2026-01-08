@@ -4,17 +4,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Rafael24595/go-api-core/src/commons/command/apps"
+	cmd_app "github.com/Rafael24595/go-api-core/src/commons/command/apps/app"
+	cmd_log "github.com/Rafael24595/go-api-core/src/commons/command/apps/log"
+	cmd_snapshot "github.com/Rafael24595/go-api-core/src/commons/command/apps/snapshot"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-collections/collection"
 )
 
-type SnapshotFlag string
-
-const (
-	CMD      SnapshotFlag = "cmd"
-	LOG      SnapshotFlag = "log"
-	SNAPSHOT SnapshotFlag = "snpsh"
-)
+const Command apps.SnapshotFlag = "cmd"
 
 const (
 	FLAG_CMD_HELP = "-h"
@@ -38,66 +36,32 @@ func emptyCompleteHelp() *CompleteHelp {
 	}
 }
 
-type commandReference struct {
-	Flag        SnapshotFlag
-	Name        string
-	Description string
-	Example     string
-}
-
-type commandApplication struct {
-	commandReference
-	Exec func(user string, cmd *collection.Vector[string]) (string, error)
-	Help func() string
-}
-
-var cmdRoot = commandReference{
-	Flag:        CMD,
+var refRoot = apps.CommandReference{
+	Flag:        Command,
 	Name:        "Help",
 	Description: "Shows this help message.",
-	Example:     `cmd -h`,
+	Example:     fmt.Sprintf(`%s %s`, Command, FLAG_CMD_HELP),
 }
 
-var cmdLog = commandApplication{
-	commandReference: commandReference{
-		Flag:        LOG,
-		Name:        "Log",
-		Description: "Manages log records",
-		Example:     "log -h",
-	},
-	Exec: logg,
-	Help: runLogHelp,
+var refApps = []apps.CommandApplication{
+	cmd_app.App,
+	cmd_log.App,
+	cmd_snapshot.App,
 }
 
-var cmdSnapshot = commandApplication{
-	commandReference: commandReference{
-		Flag:        SNAPSHOT,
-		Name:        "Snapshot",
-		Description: "Manages in-memory persistence snapshots",
-		Example:     "snpsh -h",
-	},
-	Exec: snapshot,
-	Help: runSnapshotHelp,
-}
+func findApps() []apps.CommandReference {
+	actions := make([]apps.CommandReference, len(refApps)+1)
+	actions[0] = refRoot
 
-var cmdActions = []commandApplication{
-	cmdLog,
-	cmdSnapshot,
-}
-
-func findActions() []commandReference {
-	actions := make([]commandReference, len(cmdActions)+1)
-	actions[0] = cmdRoot
-
-	for i := 1; i < len(cmdActions); i++ {
-		actions[i] = cmdActions[i].commandReference
+	for i := 1; i < len(refApps)+1; i++ {
+		actions[i] = refApps[i-1].CommandReference
 	}
 
 	return actions
 }
 
-func findActionMetadata(flag SnapshotFlag) *commandApplication {
-	for _, meta := range cmdActions {
+func findApp(flag apps.SnapshotFlag) *apps.CommandApplication {
+	for _, meta := range refApps {
 		if meta.Flag == flag {
 			return &meta
 		}
@@ -123,11 +87,11 @@ func Comp(user, command string, position int) (*CompleteHelp, error) {
 		}, nil
 	}
 
-	if position >= len(cmdActions) {
+	if position >= len(refApps) {
 		position = InitialStep
 	}
 
-	coincidences, cursor, position := comp(*head, position, cmdActions)
+	coincidences, cursor, position := comp(*head, position, refApps)
 	if cursor == nil {
 		return emptyCompleteHelp(), nil
 	}
@@ -151,11 +115,11 @@ func Comp(user, command string, position int) (*CompleteHelp, error) {
 	}, nil
 }
 
-func comp(head string, position int, actions []commandApplication) ([]commandApplication, *commandApplication, int) {
-	var cursor *commandApplication
+func comp(head string, position int, actions []apps.CommandApplication) ([]apps.CommandApplication, *apps.CommandApplication, int) {
+	var cursor *apps.CommandApplication
 
-	cache := make(map[SnapshotFlag]int)
-	coincidences := make([]commandApplication, 0)
+	cache := make(map[apps.SnapshotFlag]int)
+	coincidences := make([]apps.CommandApplication, 0)
 
 	for i, v := range actions {
 		if !strings.HasPrefix(string(v.Flag), head) {
@@ -197,11 +161,11 @@ func Exec(user, command string) (string, error) {
 }
 
 func exec(user, head string, cmd *collection.Vector[string]) (string, error) {
-	if head == string(CMD) || head == FLAG_CMD_HELP {
+	if head == string(Command) || head == FLAG_CMD_HELP {
 		return root(user, cmd)
 	}
 
-	action := findActionMetadata(SnapshotFlag(head))
+	action := findApp(apps.SnapshotFlag(head))
 	if action == nil {
 		return "", fmt.Errorf("unknown command %q", head)
 	}
@@ -211,7 +175,7 @@ func exec(user, head string, cmd *collection.Vector[string]) (string, error) {
 
 func root(_ string, cmd *collection.Vector[string]) (string, error) {
 	if cmd.Size() == 0 {
-		return runCmdHelp(), nil
+		return help(), nil
 	}
 
 	for cmd.Size() > 0 {
@@ -222,7 +186,7 @@ func root(_ string, cmd *collection.Vector[string]) (string, error) {
 
 		switch *flag {
 		case FLAG_CMD_HELP:
-			return runCmdHelp(), nil
+			return help(), nil
 		default:
 			return fmt.Sprintf("Unrecognized command flag: %s", *flag), nil
 		}
@@ -231,17 +195,7 @@ func root(_ string, cmd *collection.Vector[string]) (string, error) {
 	return "", nil
 }
 
-func runCmdHelp() string {
+func help() string {
 	title := "Available cmd applications:\n"
-	return runHelp(title, findActions())
-}
-
-func runHelp(title string, actions []commandReference) string {
-	result := make([]string, 0)
-	result = append(result, title)
-	for _, a := range actions {
-		result = append(result, fmt.Sprintf(" %s: %s", a.Flag, a.Description))
-		result = append(result, fmt.Sprintf("  Example: %s\n", a.Example))
-	}
-	return strings.Join(result, "\n")
+	return apps.RunHelp(title, findApps())
 }

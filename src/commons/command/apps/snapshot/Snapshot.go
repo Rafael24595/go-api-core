@@ -1,11 +1,11 @@
-package command
+package cmd_snapshot
 
 import (
 	"fmt"
 	"os"
 	"strings"
 
-	command_helper "github.com/Rafael24595/go-api-core/src/commons/command/helper"
+	"github.com/Rafael24595/go-api-core/src/commons/command/apps"
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/format"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
@@ -14,70 +14,83 @@ import (
 	"github.com/Rafael24595/go-collections/collection"
 )
 
+const Command apps.SnapshotFlag = "snpsh"
+
 const (
-	FLAG_SNAPSHOT_HELP      = "-h"
-	FLAG_SNAPSHOT_VERBOSE   = "-v"
-	FLAG_SNAPSHOT_SAVE      = "-s"
-	FLAG_SNAPSHOT_APPLY     = "-a"
-	FLAG_SNAPSHOT_REMOVE    = "-r"
-	FLAG_SNAPSHOT_LISTENERS = "-l"
-	FLAG_SNAPSHOT_DETAILS   = "-d"
+	FLAG_HELP      = "-h"
+	FLAG_VERBOSE   = "-v"
+	FLAG_SAVE      = "-s"
+	FLAG_APPLY     = "-a"
+	FLAG_REMOVE    = "-r"
+	FLAG_LISTENERS = "-l"
+	FLAG_DETAILS   = "-d"
 )
 
-var snapshotHelp = commandReference{
-	Flag:        FLAG_SNAPSHOT_HELP,
+var App = apps.CommandApplication{
+	CommandReference: apps.CommandReference{
+		Flag:        Command,
+		Name:        "Snapshot",
+		Description: "Manages in-memory persistence snapshots",
+		Example:     "snpsh -h",
+	},
+	Exec: exec,
+	Help: help,
+}
+
+var refs = []apps.CommandReference{
+	refHelp,
+	refSave,
+	refApply,
+	refRemove,
+	refDetails,
+	refListeners,
+}
+
+var refHelp = apps.CommandReference{
+	Flag:        FLAG_HELP,
 	Name:        "Help",
 	Description: "Shows this help message.",
-	Example:     `snpsh -h`,
+	Example:     fmt.Sprintf(`%s %s`, Command, FLAG_HELP),
 }
 
-var snapshotSave = commandReference{
-	Flag:        FLAG_SNAPSHOT_SAVE,
+var refSave = apps.CommandReference{
+	Flag:        FLAG_SAVE,
 	Name:        "Save",
 	Description: "Saves the current data as snapshot for a given target and type, use all as topic to save all data.",
-	Example:     `snpsh -s snpsh_${target}=${type}`,
+	Example:     fmt.Sprintf(`%s %s snpsh_${target}=${type}`, Command, FLAG_SAVE),
 }
 
-var snapshotApply = commandReference{
-	Flag:        FLAG_SNAPSHOT_APPLY,
+var refApply = apps.CommandReference{
+	Flag:        FLAG_APPLY,
 	Name:        "Apply",
 	Description: "Applies a previously saved input snapshot for a given target and type retrieved from the extension.",
-	Example:     `snpsh -a snpsh_${target}=${name}.${extension}`,
+	Example:     fmt.Sprintf(`%s %s snpsh_${target}=${name}.${extension}`, Command, FLAG_APPLY),
 }
 
-var snapshotRemove = commandReference{
-	Flag:        FLAG_SNAPSHOT_REMOVE,
+var refRemove = apps.CommandReference{
+	Flag:        FLAG_REMOVE,
 	Name:        "Remove",
 	Description: "Removes a previously saved snapshot for a given target and type retrieved from the extension.",
-	Example:     `snpsh -r snpsh_${target}=${name}.${extension}`,
+	Example:     fmt.Sprintf(`%s %s snpsh_${target}=${name}.${extension}`, Command, FLAG_REMOVE),
 }
 
-var snapshotDetails = commandReference{
-	Flag:        FLAG_SNAPSHOT_DETAILS,
+var refDetails = apps.CommandReference{
+	Flag:        FLAG_DETAILS,
 	Name:        "Details",
 	Description: "Displays the list of snapshots data for a given target and type.",
-	Example:     `snpsh -d snpsh_${target}=${type}`,
+	Example:     fmt.Sprintf(`%s %s snpsh_${target}=${type}`, Command, FLAG_DETAILS),
 }
 
-var snapshotListeners = commandReference{
-	Flag:        FLAG_SNAPSHOT_LISTENERS,
+var refListeners = apps.CommandReference{
+	Flag:        FLAG_LISTENERS,
 	Name:        "Listeners",
 	Description: "Lists all available snapshot listeners, use the verbose flag to expand the details.",
-	Example:     `snpsh -v -l`,
+	Example:     fmt.Sprintf(`%s %s %s`, Command, FLAG_VERBOSE, FLAG_LISTENERS),
 }
 
-var snapshotActions = []commandReference{
-	snapshotHelp,
-	snapshotSave,
-	snapshotApply,
-	snapshotRemove,
-	snapshotDetails,
-	snapshotListeners,
-}
-
-func snapshot(_ string, cmd *collection.Vector[string]) (string, error) {
+func exec(_ string, cmd *collection.Vector[string]) (string, error) {
 	if cmd.Size() == 0 {
-		return runSnapshotHelp(), nil
+		return help(), nil
 	}
 
 	verbose := false
@@ -95,20 +108,20 @@ func snapshot(_ string, cmd *collection.Vector[string]) (string, error) {
 		}
 
 		switch *flag {
-		case FLAG_SNAPSHOT_HELP:
-			return runSnapshotHelp(), nil
-		case FLAG_SNAPSHOT_VERBOSE:
+		case FLAG_HELP:
+			return help(), nil
+		case FLAG_VERBOSE:
 			verbose = true
-		case FLAG_SNAPSHOT_SAVE:
-			tuples, err := runSnapshotSave(*flag, cmd)
+		case FLAG_SAVE:
+			tuples, err := save(*flag, cmd)
 			if err != nil {
 				return "", err
 			}
 
 			saveData = append(saveData, tuples...)
 
-		case FLAG_SNAPSHOT_APPLY:
-			topic, value, err := runSnapshotCursor(*flag, cmd)
+		case FLAG_APPLY:
+			topic, value, err := resolveCursor(*flag, cmd)
 			if err != nil {
 				return "", err
 			}
@@ -116,8 +129,8 @@ func snapshot(_ string, cmd *collection.Vector[string]) (string, error) {
 			tuple := utils.NewCmdTuple(topic.TopicSnapshotAppyInput(), value)
 			applyData = append(applyData, *tuple)
 
-		case FLAG_SNAPSHOT_REMOVE:
-			topic, value, err := runSnapshotCursor(*flag, cmd)
+		case FLAG_REMOVE:
+			topic, value, err := resolveCursor(*flag, cmd)
 			if err != nil {
 				return "", err
 			}
@@ -125,12 +138,12 @@ func snapshot(_ string, cmd *collection.Vector[string]) (string, error) {
 			tuple := utils.NewCmdTuple(topic.TopicSnapshotRemoveInput(), value)
 			removeData = append(removeData, *tuple)
 
-		case FLAG_SNAPSHOT_LISTENERS:
-			message := runSnapshotListeners(verbose)
+		case FLAG_LISTENERS:
+			message := listeners(verbose)
 			messages = append(messages, message)
 
-		case FLAG_SNAPSHOT_DETAILS:
-			message, err := runSnapshotDetails(*flag, cmd)
+		case FLAG_DETAILS:
+			message, err := details(*flag, cmd)
 			if err != nil {
 				return "", err
 			}
@@ -156,31 +169,12 @@ func snapshot(_ string, cmd *collection.Vector[string]) (string, error) {
 	return strings.Join(messages, ", "), nil
 }
 
-func runSnapshotHelp() string {
+func help() string {
 	title := "Available snapshot actions:\n"
-	return runHelp(title, snapshotActions)
+	return apps.RunHelp(title, refs)
 }
 
-func runSnapshotCursor(flag string, cmd *collection.Vector[string]) (system.TopicSnapshot, string, error) {
-	value, ok := cmd.Shift()
-	if !ok {
-		return "", "", nil
-	}
-
-	tpc, snpsh, ok := strings.Cut(*value, "=")
-	if !ok {
-		return "", "", fmt.Errorf("invalid flag %q value %q", flag, *value)
-	}
-
-	topic, ok := system.TopicSnapshotFromString(tpc)
-	if !ok {
-		return "", "", fmt.Errorf("unknown topic: %s", *value)
-	}
-
-	return topic, snpsh, nil
-}
-
-func runSnapshotSave(flag string, cmd *collection.Vector[string]) ([]utils.CmdTuple, error) {
+func save(flag string, cmd *collection.Vector[string]) ([]utils.CmdTuple, error) {
 	cmds := make([]utils.CmdTuple, 0)
 
 	value, ok := cmd.Shift()
@@ -222,7 +216,7 @@ func publishEvent(data ...utils.CmdTuple) string {
 	return fmt.Sprintf("%d events pushed successfully, check the logs to see the result.", len(data))
 }
 
-func runSnapshotListeners(verbose bool) string {
+func listeners(verbose bool) string {
 	config := configuration.Instance()
 	raw := config.EventHub.Topics(repository.SnapshotListener)
 	listeners := system.FilterTopicSnapshot(raw)
@@ -250,13 +244,13 @@ func runSnapshotListeners(verbose bool) string {
 	return strings.Join(result, "\n")
 }
 
-func runSnapshotDetails(flag string, cmd *collection.Vector[string]) (string, error) {
-	path, err := findSnapshotDetailsPath(flag, cmd)
+func details(flag string, cmd *collection.Vector[string]) (string, error) {
+	path, err := findDetailsPath(flag, cmd)
 	if err != nil {
 		return "", err
 	}
 
-	files, err := command_helper.FindSnapshots(path)
+	files, err := repository.FindSnapshots(path)
 	if err != nil {
 		return "", err
 	}
@@ -268,7 +262,7 @@ func runSnapshotDetails(flag string, cmd *collection.Vector[string]) (string, er
 	return strings.Join(snapshots.Collect(), "\n"), nil
 }
 
-func findSnapshotDetailsPath(flag string, cmd *collection.Vector[string]) (string, error) {
+func findDetailsPath(flag string, cmd *collection.Vector[string]) (string, error) {
 	value, ok := cmd.Shift()
 	if !ok {
 		return "", nil
@@ -295,4 +289,23 @@ func findSnapshotDetailsPath(flag string, cmd *collection.Vector[string]) (strin
 	}
 
 	return path, nil
+}
+
+func resolveCursor(flag string, cmd *collection.Vector[string]) (system.TopicSnapshot, string, error) {
+	value, ok := cmd.Shift()
+	if !ok {
+		return "", "", nil
+	}
+
+	tpc, snpsh, ok := strings.Cut(*value, "=")
+	if !ok {
+		return "", "", fmt.Errorf("invalid flag %q value %q", flag, *value)
+	}
+
+	topic, ok := system.TopicSnapshotFromString(tpc)
+	if !ok {
+		return "", "", fmt.Errorf("unknown topic: %s", *value)
+	}
+
+	return topic, snpsh, nil
 }

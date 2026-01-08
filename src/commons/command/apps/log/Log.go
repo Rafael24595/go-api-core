@@ -1,50 +1,64 @@
-package command
+package cmd_log
 
 import (
 	"fmt"
 	"strings"
 
+	"github.com/Rafael24595/go-api-core/src/commons/command/apps"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-collections/collection"
 )
 
+const Command apps.SnapshotFlag = "log"
+
 const (
-	FLAG_LOG_HELP = "-h"
-	FLAG_LOG_LIST = "-l"
-	FLAG_LOG_PUSH = "-p"
+	FLAG_HELP = "-h"
+	FLAG_LIST = "-l"
+	FLAG_PUSH = "-p"
 )
 
-var logHelp = commandReference{
-	Flag:        FLAG_LOG_HELP,
+var App = apps.CommandApplication{
+	CommandReference: apps.CommandReference{
+		Flag:        Command,
+		Name:        "Log",
+		Description: "Manages log records",
+		Example:     refHelp.Example,
+	},
+	Exec: exec,
+	Help: help,
+}
+
+var refs = []apps.CommandReference{
+	refHelp,
+	refList,
+	refPush,
+}
+
+var refHelp = apps.CommandReference{
+	Flag:        FLAG_HELP,
 	Name:        "Help",
 	Description: "Shows this help message.",
-	Example:     `log -h`,
+	Example:     fmt.Sprintf(`%s %s`, Command, FLAG_HELP),
 }
 
-var logList = commandReference{
-	Flag:        FLAG_LOG_LIST,
+var refList = apps.CommandReference{
+	Flag:        FLAG_LIST,
 	Name:        "List",
 	Description: "Displays the list of log records.",
-	Example:     `log -l`,
+	Example:     fmt.Sprintf(`%s %s`, Command, FLAG_LIST),
 }
 
-var logPush = commandReference{
-	Flag:        FLAG_LOG_PUSH,
+var refPush = apps.CommandReference{
+	Flag:        FLAG_PUSH,
 	Name:        "Push",
 	Description: "Insert a new log record.",
-	Example:     `log -p ${category}=${message}`,
+	Example:     fmt.Sprintf(`%s %s ${category}=${message}`, Command, FLAG_PUSH),
 }
 
-var logActions = []commandReference{
-	logHelp,
-	logList,
-	logPush,
-}
-
-func logg(user string, cmd *collection.Vector[string]) (string, error) {
+func exec(user string, cmd *collection.Vector[string]) (string, error) {
 	if cmd.Size() == 0 {
-		return runLogHelp(), nil
+		return help(), nil
 	}
 
 	pushData := make([]utils.CmdTuple, 0)
@@ -58,17 +72,17 @@ func logg(user string, cmd *collection.Vector[string]) (string, error) {
 		}
 
 		switch *flag {
-		case FLAG_LOG_HELP:
-			return runLogHelp(), nil
-		case FLAG_LOG_LIST:
-			tuple, err := runLogCursor(*flag, cmd)
+		case FLAG_HELP:
+			return help(), nil
+		case FLAG_LIST:
+			tuple, err := resolveCursor(*flag, cmd)
 			if err != nil {
 				return "", err
 			}
 
-			return runLogList(tuple), nil
-		case FLAG_LOG_PUSH:
-			tuple, err := runLogCursor(*flag, cmd)
+			return list(tuple), nil
+		case FLAG_PUSH:
+			tuple, err := resolveCursor(*flag, cmd)
 			if err != nil {
 				return "", err
 			}
@@ -80,18 +94,18 @@ func logg(user string, cmd *collection.Vector[string]) (string, error) {
 	}
 
 	if len(pushData) > 0 {
-		publishLog(user, pushData...)
+		publish(user, pushData...)
 	}
 
 	return strings.Join(messages, ", "), nil
 }
 
-func runLogHelp() string {
+func help() string {
 	title := "Available log actions:\n"
-	return runHelp(title, logActions)
+	return apps.RunHelp(title, refs)
 }
 
-func runLogList(tuple *utils.CmdTuple) string {
+func list(tuple *utils.CmdTuple) string {
 	records := collection.VectorFromList(log.Records())
 
 	if tuple != nil {
@@ -111,7 +125,7 @@ func runLogList(tuple *utils.CmdTuple) string {
 		}).Join("\n")
 }
 
-func runLogCursor(flag string, cmd *collection.Vector[string]) (*utils.CmdTuple, error) {
+func resolveCursor(flag string, cmd *collection.Vector[string]) (*utils.CmdTuple, error) {
 	value, ok := cmd.Shift()
 	if !ok {
 		return nil, nil
@@ -125,7 +139,7 @@ func runLogCursor(flag string, cmd *collection.Vector[string]) (*utils.CmdTuple,
 	return utils.NewCmdTuple(cat, mes), nil
 }
 
-func publishLog(user string, data ...utils.CmdTuple) {
+func publish(user string, data ...utils.CmdTuple) {
 	for _, l := range data {
 		message := fmt.Sprintf("(%s) - %s", user, l.Data)
 		log.Custom(l.Flag, message)
