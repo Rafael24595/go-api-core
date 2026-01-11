@@ -2,6 +2,7 @@ package mock
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/mock/swr"
@@ -95,16 +96,20 @@ func FixResponses(responses []Response) []Response {
 		return r
 	})
 
-	return fixResponsesName(coll.Collect())
+	return fixResponsesData(coll.Collect())
 }
 
-func fixResponsesName(responses []Response) []Response {
+func fixResponsesData(responses []Response) []Response {
 	cache := make(map[string]bool, 0)
 
 	for i, v := range responses {
 		name := fixResponseName(v, cache)
 		responses[i].Name = name
 		cache[name] = true
+
+		if responses[i].Timestamp == 0 {
+			responses[i].Timestamp = time.Now().UnixMilli()
+		}
 	}
 
 	return responses

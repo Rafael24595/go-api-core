@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	command_helper "github.com/Rafael24595/go-api-core/src/commons/command/helper"
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/format"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
@@ -28,6 +27,8 @@ const snpsh = "snpsh"
 
 const snapshotRetries = 3
 const snapshotRetrySeconds = 30
+
+const SnpshTimestamp = `^(snpsh_)(\d*)(\.csvt)$`
 
 type builderManagerSnapshotFile[T IStructure] struct {
 	manager *managerSnapshotFile[T]
@@ -235,7 +236,7 @@ func (m *managerSnapshotFile[T]) save(force bool, format format.DataFormat) erro
 	if m.last == 0 {
 		last, ok := snapshots.Last()
 		if ok && last != nil {
-			re := regexp.MustCompile(command_helper.SnpshTimestamp)
+			re := regexp.MustCompile(SnpshTimestamp)
 			rawLast := re.FindStringSubmatch((*last).Name())[2]
 			timeLast, _ := strconv.ParseInt(rawLast, 10, 64)
 			m.last = timeLast
@@ -337,7 +338,7 @@ func (m *managerSnapshotFile[T]) remove(name string, format format.DataFormat) e
 		return err
 	}
 
-	re := regexp.MustCompile(command_helper.SnpshTimestamp)
+	re := regexp.MustCompile(SnpshTimestamp)
 	raw := re.FindStringSubmatch((*cursor).Name())[2]
 	timestamp, _ := strconv.ParseInt(raw, 10, 64)
 
@@ -389,7 +390,7 @@ func (m *managerSnapshotFile[T]) collect(format format.DataFormat) (*collection.
 		return nil, err
 	}
 
-	return command_helper.FindSnapshots(path)
+	return FindSnapshots(path)
 }
 
 func (m *managerSnapshotFile[T]) Read() (map[string]T, error) {
@@ -398,4 +399,32 @@ func (m *managerSnapshotFile[T]) Read() (map[string]T, error) {
 
 func (m *managerSnapshotFile[T]) Write(items []T) error {
 	return m.manager.Write(items)
+}
+
+func FindSnapshots(path string) (*collection.Vector[os.DirEntry], error) {
+	err := os.MkdirAll(path, os.ModePerm)
+	if err != nil {
+		return nil, err
+	}
+
+	raw, err := os.ReadDir(path)
+	if err != nil {
+		return nil, fmt.Errorf("an error ocurred during snapshot directory %q reading: %s", path, err.Error())
+	}
+
+	re := regexp.MustCompile(SnpshTimestamp)
+
+	return collection.VectorFromList(raw).
+		Filter(func(d os.DirEntry) bool {
+			return !d.IsDir() && len(re.FindStringSubmatch(d.Name())) == 4
+		}).
+		Sort(func(a, b os.DirEntry) bool {
+			ar := re.FindStringSubmatch(a.Name())[2]
+			at, _ := strconv.ParseInt(ar, 10, 64)
+
+			br := re.FindStringSubmatch(b.Name())[2]
+			bt, _ := strconv.ParseInt(br, 10, 64)
+
+			return at < bt
+		}), nil
 }

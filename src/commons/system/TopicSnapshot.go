@@ -10,6 +10,18 @@ import (
 
 type TopicSnapshot string
 
+type SnapshotMeta struct {
+	isCore      bool
+	Description string
+	CsvPath     string
+}
+
+type SnapshotExtension struct {
+	Topic       TopicSnapshot
+	Description string
+	CsvPath     string
+}
+
 const (
 	SNAPSHOT_TOPIC_CONTEXT     TopicSnapshot = "snpsh_ctx"
 	SNAPSHOT_TOPIC_REQUEST     TopicSnapshot = "snpsh_rqt"
@@ -23,62 +35,97 @@ const (
 	SNAPSHOT_TOPIC_CLIENT_DATA TopicSnapshot = "snpsh_cld"
 )
 
-const (
-	CSVT_SNAPSHOT_PATH_CONTEXT     string = "./db/snapshot/context"
-	CSVT_SNAPSHOT_PATH_REQUEST     string = "./db/snapshot/request"
-	CSVT_SNAPSHOT_PATH_RESPONSE    string = "./db/snapshot/response"
-	CSVT_SNAPSHOT_PATH_COLLECTION  string = "./db/snapshot/collection"
-	CSVT_SNAPSHOT_PATH_GROUP       string = "./db/snapshot/group"
-	CSVT_SNAPSHOT_PATH_END_POINT   string = "./db/snapshot/end_point"
-	CSVT_SNAPSHOT_PATH_METRICS     string = "./db/snapshot/metrics"
-	CSVT_SNAPSHOT_PATH_TOKEN       string = "./db/snapshot/token"
-	CSVT_SNAPSHOT_PATH_SESSION     string = "./db/snapshot/session"
-	CSVT_SNAPSHOT_PATH_CLIENT_DATA string = "./db/snapshot/client_data"
-	CSVT_SNAPSHOT_PATH_MISC        string = "./db/snapshot/misc"
-)
-
-var allTopicSnapshots = []TopicSnapshot{
-	SNAPSHOT_TOPIC_CONTEXT,
-	SNAPSHOT_TOPIC_REQUEST,
-	SNAPSHOT_TOPIC_RESPONSE,
-	SNAPSHOT_TOPIC_COLLECTION,
-	SNAPSHOT_TOPIC_GROUP,
-	SNAPSHOT_TOPIC_END_POINT,
-	SNAPSHOT_TOPIC_METRICS,
-	SNAPSHOT_TOPIC_TOKEN,
-	SNAPSHOT_TOPIC_SESSION,
-	SNAPSHOT_TOPIC_CLIENT_DATA,
+var snapshotMeta = map[TopicSnapshot]SnapshotMeta{
+	SNAPSHOT_TOPIC_CONTEXT: {
+		isCore:      true,
+		Description: "Represents a snapshot of contextual data.",
+		CsvPath:     "./db/snapshot/context",
+	},
+	SNAPSHOT_TOPIC_REQUEST: {
+		isCore:      true,
+		Description: "Represents a snapshot of request data.",
+		CsvPath:     "./db/snapshot/request",
+	},
+	SNAPSHOT_TOPIC_RESPONSE: {
+		isCore:      true,
+		Description: "Represents a snapshot of response data.",
+		CsvPath:     "./db/snapshot/response",
+	},
+	SNAPSHOT_TOPIC_COLLECTION: {
+		isCore:      true,
+		Description: "Represents a snapshot of collection data.",
+		CsvPath:     "./db/snapshot/collection",
+	},
+	SNAPSHOT_TOPIC_GROUP: {
+		isCore:      true,
+		Description: "Represents a snapshot of group data.",
+		CsvPath:     "./db/snapshot/group",
+	},
+	SNAPSHOT_TOPIC_END_POINT: {
+		isCore:      true,
+		Description: "Represents a snapshot of mocked API endpoint data.",
+		CsvPath:     "./db/snapshot/end_point",
+	},
+	SNAPSHOT_TOPIC_METRICS: {
+		isCore:      true,
+		Description: "Represents a snapshot of mocked API endpoint metrics.",
+		CsvPath:     "./db/snapshot/metrics",
+	},
+	SNAPSHOT_TOPIC_TOKEN: {
+		isCore:      true,
+		Description: "Represents a snapshot of user token data.",
+		CsvPath:     "./db/snapshot/token",
+	},
+	SNAPSHOT_TOPIC_SESSION: {
+		isCore:      true,
+		Description: "Represents a snapshot of user session data.",
+		CsvPath:     "./db/snapshot/session",
+	},
+	SNAPSHOT_TOPIC_CLIENT_DATA: {
+		isCore:      true,
+		Description: "Represents a snapshot of user client data.",
+		CsvPath:     "./db/snapshot/client_data",
+	},
 }
 
-var topicDescriptions = map[TopicSnapshot]string{
-	SNAPSHOT_TOPIC_CONTEXT:     "Represents a snapshot of contextual data.",
-	SNAPSHOT_TOPIC_REQUEST:     "Represents a snapshot of request data.",
-	SNAPSHOT_TOPIC_RESPONSE:    "Represents a snapshot of response data.",
-	SNAPSHOT_TOPIC_COLLECTION:  "Represents a snapshot of collection data.",
-	SNAPSHOT_TOPIC_GROUP:       "Represents a snapshot of group data.",
-	SNAPSHOT_TOPIC_END_POINT:   "Represents a snapshot of mocked API endpoint data.",
-	SNAPSHOT_TOPIC_METRICS:     "Represents a snapshot of mocked API endpoint metrics.",
-	SNAPSHOT_TOPIC_TOKEN:       "Represents a snapshot of user token data.",
-	SNAPSHOT_TOPIC_SESSION:     "Represents a snapshot of user session data.",
-	SNAPSHOT_TOPIC_CLIENT_DATA: "Represents a snapshot of user client data.",
+const CSVT_SNAPSHOT_PATH_MISC string = "./db/snapshot/misc"
+
+func allTopicSnapshots() []TopicSnapshot {
+	keys := make([]TopicSnapshot, 0, len(snapshotMeta))
+	for ts := range snapshotMeta {
+		keys = append(keys, ts)
+	}
+	return keys
 }
 
-var topicCsvPath = map[TopicSnapshot]string{
-	SNAPSHOT_TOPIC_CONTEXT:     CSVT_SNAPSHOT_PATH_CONTEXT,
-	SNAPSHOT_TOPIC_REQUEST:     CSVT_SNAPSHOT_PATH_REQUEST,
-	SNAPSHOT_TOPIC_RESPONSE:    CSVT_SNAPSHOT_PATH_RESPONSE,
-	SNAPSHOT_TOPIC_COLLECTION:  CSVT_SNAPSHOT_PATH_COLLECTION,
-	SNAPSHOT_TOPIC_GROUP:       CSVT_SNAPSHOT_PATH_GROUP,
-	SNAPSHOT_TOPIC_END_POINT:   CSVT_SNAPSHOT_PATH_END_POINT,
-	SNAPSHOT_TOPIC_METRICS:     CSVT_SNAPSHOT_PATH_METRICS,
-	SNAPSHOT_TOPIC_TOKEN:       CSVT_SNAPSHOT_PATH_TOKEN,
-	SNAPSHOT_TOPIC_SESSION:     CSVT_SNAPSHOT_PATH_SESSION,
-	SNAPSHOT_TOPIC_CLIENT_DATA: CSVT_SNAPSHOT_PATH_CLIENT_DATA,
+func ExtendMany(topics ...SnapshotExtension) []TopicSnapshot {
+	result := make([]TopicSnapshot, 0)
+	for _, t := range topics {
+		r, ok := Extend(t)
+		if ok {
+			result = append(result, r)
+		}
+	}
+	return result
+}
+
+func Extend(topic SnapshotExtension) (TopicSnapshot, bool) {
+	old, ok := snapshotMeta[topic.Topic]
+	if ok && old.isCore {
+		return topic.Topic, false
+	}
+
+	snapshotMeta[topic.Topic] = SnapshotMeta{
+		isCore:      false,
+		Description: topic.Description,
+		CsvPath:     topic.CsvPath,
+	}
+	return topic.Topic, true
 }
 
 func TopicSnapshotFromString(s string) (TopicSnapshot, bool) {
 	s = strings.ToLower(strings.TrimSpace(s))
-	for _, t := range allTopicSnapshots {
+	for _, t := range allTopicSnapshots() {
 		if string(t) == s {
 			return t, true
 		}
@@ -89,7 +136,7 @@ func TopicSnapshotFromString(s string) (TopicSnapshot, bool) {
 func FilterTopicSnapshot(topics []string) []TopicSnapshot {
 	cache := make(map[TopicSnapshot]byte)
 	for _, c := range topics {
-		for _, t := range allTopicSnapshots {
+		for _, t := range allTopicSnapshots() {
 			if strings.HasPrefix(c, string(t)) {
 				cache[t] = byte(0)
 			}
@@ -99,8 +146,8 @@ func FilterTopicSnapshot(topics []string) []TopicSnapshot {
 }
 
 func (t TopicSnapshot) Description() string {
-	if desc, ok := topicDescriptions[t]; ok {
-		return desc
+	if meta, ok := snapshotMeta[t]; ok {
+		return meta.Description
 	}
 	return "Unknown topic snapshot type"
 }
@@ -114,8 +161,8 @@ func (t TopicSnapshot) Path(frmt format.DataFormat) (string, bool) {
 }
 
 func (t TopicSnapshot) CsvtPath() string {
-	if desc, ok := topicCsvPath[t]; ok {
-		return desc
+	if meta, ok := snapshotMeta[t]; ok {
+		return meta.CsvPath
 	}
 	return CSVT_SNAPSHOT_PATH_MISC
 }
