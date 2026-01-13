@@ -92,6 +92,14 @@ func Initialize(config configuration.Configuration) *DependencyContainer {
 	return instance
 }
 
+func Instance() *DependencyContainer {
+	if instance == nil {
+		panic("depencency container is not instanced")
+	}
+
+	return instance
+}
+
 func loadRepositoryRequest(config configuration.Configuration) repository.IRepositoryRequest {
 	var file repository.IFileManager[action.Request]
 	file = repository.NewManagerCsvtFile[action.Request](repository.CSVT_FILE_PATH_REQUEST)

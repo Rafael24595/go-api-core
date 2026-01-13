@@ -1,4 +1,4 @@
-package cmd_log
+package cmd_user
 
 import (
 	"fmt"
@@ -6,23 +6,24 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/commons/command/apps"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
+	"github.com/Rafael24595/go-api-core/src/commons/session"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
+	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
 )
 
-const Command apps.SnapshotFlag = "log"
+const Command apps.SnapshotFlag = "user"
 
 const (
 	FLAG_HELP = "-h"
 	FLAG_LIST = "-l"
-	FLAG_PUSH = "-p"
 )
 
 var App = apps.CommandApplication{
 	CommandReference: apps.CommandReference{
 		Flag:        Command,
-		Name:        "Log",
-		Description: "Manages log records",
+		Name:        "User",
+		Description: "Manages system users",
 		Example:     refHelp.Example,
 	},
 	Exec: exec,
@@ -32,7 +33,6 @@ var App = apps.CommandApplication{
 var refs = []apps.CommandReference{
 	refHelp,
 	refList,
-	refPush,
 }
 
 var refHelp = apps.CommandReference{
@@ -45,15 +45,8 @@ var refHelp = apps.CommandReference{
 var refList = apps.CommandReference{
 	Flag:        FLAG_LIST,
 	Name:        "List",
-	Description: "Displays the list of log records.",
+	Description: "Displays the list of users.",
 	Example:     fmt.Sprintf(`%s %s`, Command, FLAG_LIST),
-}
-
-var refPush = apps.CommandReference{
-	Flag:        FLAG_PUSH,
-	Name:        "Push",
-	Description: "Insert a new log record.",
-	Example:     fmt.Sprintf(`%s %s ${category}=${message}`, Command, FLAG_PUSH),
 }
 
 func exec(user string, cmd *collection.Vector[string]) (string, error) {
@@ -81,13 +74,6 @@ func exec(user string, cmd *collection.Vector[string]) (string, error) {
 			}
 
 			return list(tuple), nil
-		case FLAG_PUSH:
-			tuple, err := resolveCursor(*flag, cmd)
-			if err != nil {
-				return "", err
-			}
-
-			pushData = append(pushData, *tuple)
 		default:
 			return fmt.Sprintf("Unrecognized command flag: %s", *flag), nil
 		}
@@ -106,22 +92,33 @@ func help() string {
 }
 
 func list(tuple *utils.CmdTuple) string {
-	records := collection.VectorFromList(log.Records())
+	sess := repository.InstanceManagerSession()
+	users := collection.VectorFromList(sess.FindAll())
 
 	if tuple != nil {
 		switch tuple.Flag {
-		case "category":
-			records.FilterSelf(func(r log.Record) bool {
-				return string(r.Category) == tuple.Data
+		case "name":
+			users.FilterSelf(func(u session.SessionLite) bool {
+				return u.Username == tuple.Data
 			})
 		}
 	}
 
-	formatter := log.Formatter{}
+	maxlen := 0
+	for _, v := range users.Collect() {
+		if len(v.Username) > maxlen {
+			maxlen = len(v.Username)
+		}
+	}
 
-	return collection.VectorMap(records,
-		func(r log.Record) string {
-			return formatter.Format(r)
+	users.Sort(func(i, j session.SessionLite) bool {
+		return i.Timestamp < j.Timestamp 
+	})
+
+	return collection.VectorMap(users,
+		func(s session.SessionLite) string {
+			space := strings.Repeat(" ", maxlen - len(s.Username))
+			return fmt.Sprintf(" %s%s   %s", s.Username, space, utils.FormatMilliseconds(s.Timestamp))
 		}).Join("\n")
 }
 

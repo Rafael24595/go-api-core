@@ -170,7 +170,7 @@ func exec(_ string, cmd *collection.Vector[string]) (string, error) {
 }
 
 func help() string {
-	title := "Available snapshot actions:\n"
+	title := fmt.Sprintf("Available %s actions:\n", Command)
 	return apps.RunHelp(title, refs)
 }
 

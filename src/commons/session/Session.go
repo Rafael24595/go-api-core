@@ -19,6 +19,22 @@ type Session struct {
 	Roles      []Role `json:"roles"`
 }
 
+type SessionLite struct {
+	Username   string `json:"username"`
+	Timestamp  int64  `json:"timestamp"`
+	Count      int    `json:"count"`
+	Roles      []Role `json:"roles"`
+}
+
+func ToLite(session Session) SessionLite {
+	return SessionLite{
+		Username: session.Username,
+		Timestamp: session.Timestamp,
+		Count: session.Count,
+		Roles: session.Roles,
+	}
+}
+
 func (s Session) HasRole(role Role) bool {
 	return slices.Contains(s.Roles, role)
 }

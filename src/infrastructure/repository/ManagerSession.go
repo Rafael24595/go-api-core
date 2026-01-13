@@ -163,6 +163,12 @@ func (s *ManagerSession) defineDefaultUser(username, secret string, roles []sess
 	return nil
 }
 
+func (s *ManagerSession) FindAll() []session.SessionLite {
+	return collection.MapToVector(s.sessions.Values(), func(s session.Session) session.SessionLite {
+		return session.ToLite(s)
+	}).Collect()
+}
+
 func (s *ManagerSession) Find(user string) (*session.Session, bool) {
 	return s.sessions.Get(user)
 }

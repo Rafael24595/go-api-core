@@ -8,6 +8,7 @@ import (
 	cmd_app "github.com/Rafael24595/go-api-core/src/commons/command/apps/app"
 	cmd_log "github.com/Rafael24595/go-api-core/src/commons/command/apps/log"
 	cmd_snapshot "github.com/Rafael24595/go-api-core/src/commons/command/apps/snapshot"
+	cmd_user "github.com/Rafael24595/go-api-core/src/commons/command/apps/user"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-collections/collection"
 )
@@ -47,6 +48,7 @@ var refApps = []apps.CommandApplication{
 	cmd_app.App,
 	cmd_log.App,
 	cmd_snapshot.App,
+	cmd_user.App,
 }
 
 func findApps() []apps.CommandReference {
