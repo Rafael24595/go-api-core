@@ -12,7 +12,7 @@ var testCmdActions = []apps.CommandApplication{
 		CommandReference: apps.CommandReference{
 			Flag: "snapshot",
 		},
-		Help: func() string { return "Test help message" },
+		Help: func() *apps.CmdResult { return apps.NewResult("Test help message") },
 	},
 	{
 		CommandReference: apps.CommandReference{
@@ -32,7 +32,7 @@ func TestComplete_WhenSingleMatch_ReturnsCorrectAction(t *testing.T) {
 	assert.Equal(t, position, 0)
 	assert.Equal(t, action.Flag, cursor.Flag)
 	assert.Equal(t, 1, len(coincidences))
-	assert.Equal(t, cursor.Help(), action.Help())
+	assert.Equal(t, cursor.Help().Output, action.Help().Output)
 }
 
 func TestComplete_WhenMultipleMatches_CyclesThroughActions(t *testing.T) {
@@ -92,5 +92,5 @@ func TestComplete_WhenExactCommandProvided_ReturnsCommandHelp(t *testing.T) {
 	assert.NotError(t, err)
 	assert.NotNil(t, help)
 
-	assert.Equal(t, action.Help(), help.Message)
+	assert.Equal(t, action.Help().Output, help.Message)
 }

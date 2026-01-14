@@ -2,7 +2,6 @@ package cmd_log
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/Rafael24595/go-api-core/src/commons/command/apps"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
@@ -53,17 +52,13 @@ var refPush = apps.CommandReference{
 	Flag:        FLAG_PUSH,
 	Name:        "Push",
 	Description: "Insert a new log record.",
-	Example:     fmt.Sprintf(`%s %s ${category}=${message}`, Command, FLAG_PUSH),
+	Example:     fmt.Sprintf(`%s %s ${category}="${message}"`, Command, FLAG_PUSH),
 }
 
-func exec(user string, cmd *collection.Vector[string]) (string, error) {
+func exec(user, _ string, cmd *collection.Vector[string]) *apps.CmdResult {
 	if cmd.Size() == 0 {
-		return help(), nil
+		return help()
 	}
-
-	pushData := make([]utils.CmdTuple, 0)
-
-	messages := make([]string, 0)
 
 	for cmd.Size() > 0 {
 		flag, ok := cmd.Shift()
@@ -71,41 +66,35 @@ func exec(user string, cmd *collection.Vector[string]) (string, error) {
 			break
 		}
 
-		switch *flag {
+		switch flag {
 		case FLAG_HELP:
-			return help(), nil
+			return help()
 		case FLAG_LIST:
-			tuple, err := resolveCursor(*flag, cmd)
+			tuple, err := apps.ResolveKeyValueCursor(cmd, "=", false)
 			if err != nil {
-				return "", err
+				return apps.ErrorResult(err)
 			}
-
-			return list(tuple), nil
+			return list(tuple)
 		case FLAG_PUSH:
-			tuple, err := resolveCursor(*flag, cmd)
+			tuple, err := apps.ResolveKeyValueCursor(cmd, "=", true)
 			if err != nil {
-				return "", err
+				return apps.ErrorResult(err)
 			}
-
-			pushData = append(pushData, *tuple)
+			return execPush(user, cmd, []utils.CmdTuple{*tuple})
 		default:
-			return fmt.Sprintf("Unrecognized command flag: %s", *flag), nil
+			return apps.NewResultf("Unrecognized command flag: %s", flag)
 		}
 	}
 
-	if len(pushData) > 0 {
-		publish(user, pushData...)
-	}
-
-	return strings.Join(messages, ", "), nil
+	return apps.EmptyResult()
 }
 
-func help() string {
+func help() *apps.CmdResult {
 	title := fmt.Sprintf("Available %s actions:\n", Command)
 	return apps.RunHelp(title, refs)
 }
 
-func list(tuple *utils.CmdTuple) string {
+func list(tuple *utils.CmdTuple) *apps.CmdResult {
 	records := collection.VectorFromList(log.Records())
 
 	if tuple != nil {
@@ -117,31 +106,45 @@ func list(tuple *utils.CmdTuple) string {
 		}
 	}
 
-	formatter := log.Formatter{}
-
-	return collection.VectorMap(records,
+	result := collection.VectorMap(records,
 		func(r log.Record) string {
-			return formatter.Format(r)
+			return log.Formatter{}.Format(r)
 		}).Join("\n")
+
+	return apps.NewResult(result)
 }
 
-func resolveCursor(flag string, cmd *collection.Vector[string]) (*utils.CmdTuple, error) {
-	value, ok := cmd.Shift()
-	if !ok {
-		return nil, nil
+func execPush(user string, cmd *collection.Vector[string], pushData []utils.CmdTuple) *apps.CmdResult {
+	for cmd.Size() > 0 {
+		flag, ok := cmd.Shift()
+		if !ok {
+			break
+		}
+
+		switch flag {
+		case FLAG_PUSH:
+			tuple, err := apps.ResolveKeyValueCursor(cmd, "=", true)
+			if err != nil {
+				return apps.ErrorResult(err)
+			}
+
+			pushData = append(pushData, *tuple)
+		default:
+			return apps.NewResultf("Unrecognized command flag: %s", flag)
+		}
 	}
 
-	cat, mes, ok := strings.Cut(*value, "=")
-	if !ok {
-		return nil, fmt.Errorf("invalid flag %q value %q", flag, *value)
+	if len(pushData) > 0 {
+		return publish(user, pushData...)
 	}
 
-	return utils.NewCmdTuple(cat, mes), nil
+	return apps.EmptyResult()
 }
 
-func publish(user string, data ...utils.CmdTuple) {
+func publish(user string, data ...utils.CmdTuple) *apps.CmdResult {
 	for _, l := range data {
 		message := fmt.Sprintf("(%s) - %s", user, l.Data)
 		log.Custom(l.Flag, message)
 	}
+	return apps.NewResultf("%d records pushed successfully, check the logs to see the result.", len(data))
 }

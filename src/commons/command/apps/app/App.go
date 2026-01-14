@@ -46,12 +46,10 @@ var refVersion = apps.CommandReference{
 	Example:     fmt.Sprintf(`%s %s`, Command, FLAG_VERSION),
 }
 
-func exec(user string, cmd *collection.Vector[string]) (string, error) {
+func exec(user, _ string, cmd *collection.Vector[string]) *apps.CmdResult {
 	if cmd.Size() == 0 {
-		return help(), nil
+		return help()
 	}
-
-	messages := make([]string, 0)
 
 	for cmd.Size() > 0 {
 		flag, ok := cmd.Shift()
@@ -59,25 +57,25 @@ func exec(user string, cmd *collection.Vector[string]) (string, error) {
 			break
 		}
 
-		switch *flag {
+		switch flag {
 		case FLAG_HELP:
-			return help(), nil
+			return help()
 		case FLAG_VERSION:
-			return version(), nil
+			return version()
 		default:
-			return fmt.Sprintf("Unrecognized command flag: %s", *flag), nil
+			return apps.NewResultf("Unrecognized command flag: %s", flag)
 		}
 	}
 
-	return strings.Join(messages, ", "), nil
+	return apps.EmptyResult()
 }
 
-func help() string {
+func help() *apps.CmdResult {
 	title := fmt.Sprintf("Available %s actions:\n", Command)
 	return apps.RunHelp(title, refs)
 }
 
-func version() string {
+func version() *apps.CmdResult {
 	config := configuration.Instance()
 	project := config.Project
 
@@ -85,5 +83,5 @@ func version() string {
 
 	buffer = append(buffer, fmt.Sprintf("%s %s", project.Name, project.Version))
 
-	return strings.Join(buffer, "\n")
+	return apps.NewResult(strings.Join(buffer, "\n"))
 }

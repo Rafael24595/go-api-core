@@ -16,7 +16,7 @@ import (
 const Command apps.SnapshotFlag = "cmd"
 
 const (
-	FLAG_CMD_HELP = "-h"
+	FLAG_HELP = "-h"
 )
 
 const InitialStep = -1
@@ -41,7 +41,7 @@ var refRoot = apps.CommandReference{
 	Flag:        Command,
 	Name:        "Help",
 	Description: "Shows this help message.",
-	Example:     fmt.Sprintf(`%s %s`, Command, FLAG_CMD_HELP),
+	Example:     fmt.Sprintf(`%s %s`, Command, FLAG_HELP),
 }
 
 var refApps = []apps.CommandApplication{
@@ -93,7 +93,7 @@ func Comp(user, command string, position int) (*CompleteHelp, error) {
 		position = InitialStep
 	}
 
-	coincidences, cursor, position := comp(*head, position, refApps)
+	coincidences, cursor, position := comp(head, position, refApps)
 	if cursor == nil {
 		return emptyCompleteHelp(), nil
 	}
@@ -105,8 +105,8 @@ func Comp(user, command string, position int) (*CompleteHelp, error) {
 			buffer[i] = string(coincidences[i].Flag)
 		}
 		message = strings.Join(buffer, " ")
-	} else if len(coincidences) == 1 && string(cursor.Flag) == *head {
-		message = cursor.Help()
+	} else if len(coincidences) == 1 && string(cursor.Flag) == head {
+		message = cursor.Help().Output
 	}
 
 	return &CompleteHelp{
@@ -146,38 +146,38 @@ func comp(head string, position int, actions []apps.CommandApplication) ([]apps.
 	return coincidences, cursor, cache[cursor.Flag]
 }
 
-func Exec(user, command string) (string, error) {
-	raw, err := utils.SplitCommand(command)
+func Exec(user, request string) *apps.CmdResult {
+	raw, err := utils.SplitCommand(request)
 	if err != nil {
-		return "", err
+		return apps.ErrorResult(err)
 	}
 
 	cmd := collection.VectorFromList(raw)
 
 	head, ok := cmd.Shift()
 	if !ok {
-		return "", nil
+		return apps.EmptyResult()
 	}
 
-	return exec(user, *head, cmd)
+	return exec(user, request, head, cmd)
 }
 
-func exec(user, head string, cmd *collection.Vector[string]) (string, error) {
-	if head == string(Command) || head == FLAG_CMD_HELP {
+func exec(user, request, head string, cmd *collection.Vector[string]) *apps.CmdResult {
+	if head == string(Command) || head == FLAG_HELP {
 		return root(user, cmd)
 	}
 
 	action := findApp(apps.SnapshotFlag(head))
 	if action == nil {
-		return "", fmt.Errorf("unknown command %q", head)
+		return apps.NewResultf("unknown command %q", head)
 	}
 
-	return action.Exec(user, cmd)
+	return action.Exec(user, request, cmd)
 }
 
-func root(_ string, cmd *collection.Vector[string]) (string, error) {
+func root(_ string, cmd *collection.Vector[string]) *apps.CmdResult {
 	if cmd.Size() == 0 {
-		return help(), nil
+		return help()
 	}
 
 	for cmd.Size() > 0 {
@@ -186,18 +186,18 @@ func root(_ string, cmd *collection.Vector[string]) (string, error) {
 			break
 		}
 
-		switch *flag {
-		case FLAG_CMD_HELP:
-			return help(), nil
+		switch flag {
+		case FLAG_HELP:
+			return help()
 		default:
-			return fmt.Sprintf("Unrecognized command flag: %s", *flag), nil
+			return apps.NewResultf("Unrecognized command flag: %s", flag)
 		}
 	}
 
-	return "", nil
+	return apps.EmptyResult()
 }
 
-func help() string {
-	title := "Available cmd applications:\n"
-	return apps.RunHelp(title, findApps())
+func help() *apps.CmdResult {
+	title := fmt.Sprintf("Available %s actions:\n", Command)
+	return  apps.RunHelp(title, findApps())
 }
