@@ -146,36 +146,44 @@ func comp(head string, position int, actions []apps.CommandApplication) ([]apps.
 	return coincidences, cursor, cache[cursor.Flag]
 }
 
-func Exec(user, request string) *apps.CmdResult {
-	raw, err := utils.SplitCommand(request)
+func Exec(user, input string) *apps.CmdResult {
+	raw, err := utils.SplitCommand(input)
 	if err != nil {
 		return apps.ErrorResult(err)
 	}
 
 	cmd := collection.VectorFromList(raw)
 
-	head, ok := cmd.Shift()
+	app, ok := cmd.Shift()
 	if !ok {
 		return apps.EmptyResult()
 	}
 
-	return exec(user, request, head, cmd)
-}
-
-func exec(user, request, head string, cmd *collection.Vector[string]) *apps.CmdResult {
-	if head == string(Command) || head == FLAG_HELP {
-		return root(user, cmd)
+	request := &apps.CmdRequest{
+		User:    user,
+		Input:   input,
+		Command: cmd,
 	}
 
-	action := findApp(apps.SnapshotFlag(head))
+	return exec(app, request)
+}
+
+func exec(app string, request *apps.CmdRequest) *apps.CmdResult {
+	if app == string(Command) || app == FLAG_HELP {
+		return root(request)
+	}
+
+	action := findApp(apps.SnapshotFlag(app))
 	if action == nil {
-		return apps.NewResultf("unknown command %q", head)
+		return apps.NewResultf("unknown command %q", app)
 	}
 
-	return action.Exec(user, request, cmd)
+	return action.Exec(request)
 }
 
-func root(_ string, cmd *collection.Vector[string]) *apps.CmdResult {
+func root(request *apps.CmdRequest) *apps.CmdResult {
+	cmd := request.Command
+
 	if cmd.Size() == 0 {
 		return help()
 	}
@@ -199,5 +207,5 @@ func root(_ string, cmd *collection.Vector[string]) *apps.CmdResult {
 
 func help() *apps.CmdResult {
 	title := fmt.Sprintf("Available %s actions:\n", Command)
-	return  apps.RunHelp(title, findApps())
+	return apps.RunHelp(title, findApps())
 }

@@ -6,7 +6,6 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/commons/command/apps"
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
-	"github.com/Rafael24595/go-collections/collection"
 )
 
 const Command apps.SnapshotFlag = "app"
@@ -46,7 +45,9 @@ var refVersion = apps.CommandReference{
 	Example:     fmt.Sprintf(`%s %s`, Command, FLAG_VERSION),
 }
 
-func exec(user, _ string, cmd *collection.Vector[string]) *apps.CmdResult {
+func exec(request *apps.CmdRequest) *apps.CmdResult {
+	cmd := request.Command
+
 	if cmd.Size() == 0 {
 		return help()
 	}

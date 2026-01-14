@@ -93,7 +93,10 @@ type pushPayload struct {
 	roles []session.Role
 }
 
-func exec(user, request string, cmd *collection.Vector[string]) *apps.CmdResult {
+func exec(request *apps.CmdRequest) *apps.CmdResult {
+	user := request.User
+	cmd := request.Command
+
 	if cmd.Size() == 0 {
 		return help()
 	}
@@ -129,12 +132,13 @@ func exec(user, request string, cmd *collection.Vector[string]) *apps.CmdResult 
 			return userDetails(cmd)
 		case FLAG_USER_PUSH:
 			re := regexp.MustCompile(`#([^\s]+)`)
-			hidden := re.ReplaceAllString(request, "#****")
+			hidden := re.ReplaceAllString(request.Input, "#****")
 
 			tuple, err := apps.ResolveKeyValueCursor(cmd, "#", true)
 			if err != nil {
 				return apps.ErrorResult(err).SetInput(hidden)
 			}
+
 			return execUserPush(publ, cmd, tuple.Flag, tuple.Data).SetInput(hidden)
 		case FLAG_USER_REMOVE:
 			users, err := apps.ResolveChainCursor(cmd, "+")

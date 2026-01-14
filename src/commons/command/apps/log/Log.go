@@ -55,7 +55,9 @@ var refPush = apps.CommandReference{
 	Example:     fmt.Sprintf(`%s %s ${category}="${message}"`, Command, FLAG_PUSH),
 }
 
-func exec(user, _ string, cmd *collection.Vector[string]) *apps.CmdResult {
+func exec(request *apps.CmdRequest) *apps.CmdResult {
+	cmd := request.Command
+	
 	if cmd.Size() == 0 {
 		return help()
 	}
@@ -80,7 +82,7 @@ func exec(user, _ string, cmd *collection.Vector[string]) *apps.CmdResult {
 			if err != nil {
 				return apps.ErrorResult(err)
 			}
-			return execPush(user, cmd, []utils.CmdTuple{*tuple})
+			return execPush(request.User, cmd, []utils.CmdTuple{*tuple})
 		default:
 			return apps.NewResultf("Unrecognized command flag: %s", flag)
 		}

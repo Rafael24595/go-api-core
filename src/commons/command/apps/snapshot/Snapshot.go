@@ -88,7 +88,9 @@ var refRemove = apps.CommandReference{
 	Example:     fmt.Sprintf(`%s %s snpsh_${target}=${name}.${extension}`, Command, FLAG_REMOVE),
 }
 
-func exec(_, _ string, cmd *collection.Vector[string]) *apps.CmdResult {
+func exec(request *apps.CmdRequest) *apps.CmdResult {
+	cmd := request.Command
+	
 	if cmd.Size() == 0 {
 		return help()
 	}

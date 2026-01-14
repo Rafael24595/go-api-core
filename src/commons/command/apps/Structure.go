@@ -8,6 +8,12 @@ import (
 
 type SnapshotFlag string
 
+type CmdRequest struct {
+	User    string
+	Input   string
+	Command *collection.Vector[string]
+}
+
 type CmdResult struct {
 	Input  string
 	Output string
@@ -63,6 +69,6 @@ type CommandReference struct {
 
 type CommandApplication struct {
 	CommandReference
-	Exec func(user, request string, cmd *collection.Vector[string]) *CmdResult
+	Exec func(request *CmdRequest) *CmdResult
 	Help func() *CmdResult
 }
