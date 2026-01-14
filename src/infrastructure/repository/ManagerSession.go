@@ -136,11 +136,11 @@ func (r *ManagerSession) read() error {
 }
 
 func (s *ManagerSession) defineDefaultUser(username, secret string, roles []session.Role, count int) error {
-	session, exists := s.sessions.Get(username)
-	if exists && len(session.Roles) != len(roles) {
+	sess, exists := s.sessions.Get(username)
+	if exists && len(sess.Roles) != len(roles) {
 		log.Messagef("Updating user %s with roles: %v", username, roles)
-		session.Roles = roles
-		s.sessions.Put(session.Username, *session)
+		sess.Roles = roles
+		s.sessions.Put(sess.Username, sess)
 
 		go s.write(s.sessions)
 
@@ -155,12 +155,16 @@ func (s *ManagerSession) defineDefaultUser(username, secret string, roles []sess
 			return errors.New("client data cannot be initialized")
 		}
 
-		_, err := s.insert(username, string(secret), roles, count)
+		_, err := s.insert(session.SYSTEM_USER, username, string(secret), roles, count)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (s *ManagerSession) GetPublicRoles() []session.Role {
+	return session.PUBLIC_ROLES
 }
 
 func (s *ManagerSession) FindAll() []session.SessionLite {
@@ -169,8 +173,15 @@ func (s *ManagerSession) FindAll() []session.SessionLite {
 	}).Collect()
 }
 
+func (s *ManagerSession) FindSafe(user string) (*session.SessionSafe, bool) {
+	sess, ok := s.sessions.Get(user)
+	safe := session.ToSafe(sess)
+	return &safe, ok
+}
+
 func (s *ManagerSession) Find(user string) (*session.Session, bool) {
-	return s.sessions.Get(user)
+	session, ok := s.sessions.Get(user)
+	return &session, ok
 }
 
 func (s *ManagerSession) Insert(sess *session.Session, user, password string, roles []session.Role) (*session.Session, error) {
@@ -192,7 +203,27 @@ func (s *ManagerSession) Insert(sess *session.Session, user, password string, ro
 		return nil, errors.New("client data cannot be initialized")
 	}
 
-	return s.insert(user, password, roles, -1)
+	roles = manager.cleanPrivateRoles(roles)
+
+	return s.insert(sess.Username, user, password, roles, -1)
+}
+
+func (s *ManagerSession) cleanPrivateRoles(roles []session.Role) []session.Role {
+	cache := make(map[session.Role]bool, 0)
+	fix := make([]session.Role, 0)
+
+	for _, v := range roles {
+		if session.IsPrivateRole(v) {
+			continue
+		}
+
+		if _, ok := cache[v]; !ok {
+			fix = append(fix, v)
+			cache[v] = true
+		}
+	}
+
+	return fix
 }
 
 func (s *ManagerSession) Delete(sess *session.Session) (*session.Session, error) {
@@ -205,8 +236,8 @@ func (s *ManagerSession) Delete(sess *session.Session) (*session.Session, error)
 
 	s.managerClientData.delete(sess.Username)
 
-	sess, _ = s.sessions.Remove(sess.Username)
-	return sess, nil
+	deleted, _ := s.sessions.Remove(sess.Username)
+	return &deleted, nil
 }
 
 func (s *ManagerSession) Authorize(user, password string) (*session.Session, error) {
@@ -219,7 +250,7 @@ func (s *ManagerSession) Authorize(user, password string) (*session.Session, err
 		return nil, errors.New("session not found")
 	}
 
-	return session, nil
+	return &session, nil
 }
 
 func (s *ManagerSession) Verify(username, oldPassword, newPassword1, newPassword2 string) (*session.Session, error) {
@@ -255,7 +286,7 @@ func (s *ManagerSession) Visited(session *session.Session) *session.Session {
 	return session
 }
 
-func (s *ManagerSession) insert(user, password string, roles []session.Role, count int) (*session.Session, error) {
+func (s *ManagerSession) insert(publisher, user, password string, roles []session.Role, count int) (*session.Session, error) {
 	s.mut.Lock()
 	defer s.mut.Unlock()
 
@@ -269,10 +300,13 @@ func (s *ManagerSession) insert(user, password string, roles []session.Role, cou
 		return nil, err
 	}
 
+	roles = s.fixRoles(roles)
+
 	session := session.Session{
 		Username:  user,
 		Secret:    secret,
 		Timestamp: time.Now().UnixMilli(),
+		Publisher: publisher,
 		Count:     count,
 		Refresh:   "",
 		Roles:     roles,
@@ -285,6 +319,20 @@ func (s *ManagerSession) insert(user, password string, roles []session.Role, cou
 	return &session, nil
 }
 
+func (s *ManagerSession) fixRoles(roles []session.Role) []session.Role {
+	cache := make(map[session.Role]bool, 0)
+	fix := make([]session.Role, 0)
+
+	for _, v := range roles {
+		if _, ok := cache[v]; !ok {
+			fix = append(fix, v)
+			cache[v] = true
+		}
+	}
+
+	return fix
+}
+
 func (s *ManagerSession) update(session *session.Session) (*session.Session, bool) {
 	if _, ok := s.sessions.Get(session.Username); !ok {
 		return nil, false
@@ -293,8 +341,8 @@ func (s *ManagerSession) update(session *session.Session) (*session.Session, boo
 	old, exists := s.sessions.Put(session.Username, *session)
 
 	go s.write(s.sessions)
-	
-	return old, exists
+
+	return &old, exists
 }
 
 func (s *ManagerSession) Refresh(session *session.Session, refresh string) *session.Session {
