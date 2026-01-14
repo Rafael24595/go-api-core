@@ -73,7 +73,7 @@ func FixResponses(responses []Response) []Response {
 	if index != -1 {
 		def, _ := coll.Remove(index)
 		def.Condition = ""
-		defRes = def
+		defRes = &def
 	}
 
 	if defRes == nil {

@@ -88,7 +88,8 @@ func (r *RepositoryMemory) read() error {
 func (r *RepositoryMemory) Find(key string) (*action.Request, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(key)
+	request, ok := r.collection.Get(key)
+	return &request, ok
 }
 
 func (r *RepositoryMemory) FindMany(ids ...string) []action.Request {
@@ -98,7 +99,7 @@ func (r *RepositoryMemory) FindMany(ids ...string) []action.Request {
 	requests := make([]action.Request, 0)
 	for _, v := range ids {
 		if request, ok := r.collection.Get(v); ok {
-			requests = append(requests, *request)
+			requests = append(requests, request)
 		}
 	}
 
@@ -118,7 +119,7 @@ func (r *RepositoryMemory) FindNodes(references []domain.NodeReference) []action
 
 		requests = append(requests, action.NodeRequest{
 			Order:   v.Order,
-			Request: *request,
+			Request: request,
 		})
 	}
 
@@ -132,7 +133,7 @@ func (r *RepositoryMemory) FindRequests(references []domain.NodeReference) []act
 	requests := make([]action.Request, 0)
 	for _, v := range references {
 		if request, ok := r.collection.Get(v.Item); ok {
-			requests = append(requests, *request)
+			requests = append(requests, request)
 		}
 	}
 
@@ -186,12 +187,12 @@ func (r *RepositoryMemory) Delete(request *action.Request) *action.Request {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
-	cursor, _ := r.collection.Remove(request.Id)
-	if cursor != nil {
+	cursor, ok := r.collection.Remove(request.Id)
+	if ok {
 		go r.write(r.collection)
 	}
 
-	return cursor
+	return &cursor
 }
 
 func (r *RepositoryMemory) DeleteMany(requests ...action.Request) []action.Request {
@@ -201,7 +202,7 @@ func (r *RepositoryMemory) DeleteMany(requests ...action.Request) []action.Reque
 	deleted := make([]action.Request, 0)
 	for _, v := range requests {
 		cursor, _ := r.collection.Remove(v.Id)
-		deleted = append(deleted, *cursor)
+		deleted = append(deleted, cursor)
 	}
 
 	go r.write(r.collection)

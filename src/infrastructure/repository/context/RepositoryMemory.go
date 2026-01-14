@@ -98,7 +98,8 @@ func (r *RepositoryMemory) read() error {
 func (r *RepositoryMemory) Find(id string) (*context.Context, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(id)
+	context, ok := r.collection.Get(id)
+	return &context, ok
 }
 
 func (r *RepositoryMemory) Insert(owner, collection string, ctx *context.Context) *context.Context {
@@ -154,7 +155,7 @@ func (r *RepositoryMemory) Delete(context *context.Context) *context.Context {
 	cursor, _ := r.collection.Remove(context.Id)
 	go r.write(r.collection)
 
-	return cursor
+	return &cursor
 }
 
 func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, context.Context]) {

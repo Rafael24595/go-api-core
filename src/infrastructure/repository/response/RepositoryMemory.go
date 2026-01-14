@@ -85,7 +85,8 @@ func (r *RepositoryMemory) read() error {
 func (r *RepositoryMemory) Find(key string) (*action.Response, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(key)
+	response, ok := r.collection.Get(key)
+	return &response, ok
 }
 
 func (r *RepositoryMemory) FindMany(ids []string) []action.Response {
@@ -95,7 +96,7 @@ func (r *RepositoryMemory) FindMany(ids []string) []action.Response {
 	responses := make([]action.Response, 0)
 	for _, v := range ids {
 		if response, ok := r.collection.Get(v); ok {
-			responses = append(responses, *response)
+			responses = append(responses, response)
 		}
 	}
 
@@ -134,7 +135,7 @@ func (r *RepositoryMemory) Delete(response *action.Response) *action.Response {
 	cursor, _ := r.collection.Remove(response.Id)
 	go r.write(r.collection)
 
-	return cursor
+	return &cursor
 }
 
 func (r *RepositoryMemory) DeleteMany(responses ...action.Response) []action.Response {
@@ -144,7 +145,7 @@ func (r *RepositoryMemory) DeleteMany(responses ...action.Response) []action.Res
 	deleted := make([]action.Response, 0)
 	for _, v := range responses {
 		cursor, _ := r.collection.Remove(v.Id)
-		deleted = append(deleted, *cursor)
+		deleted = append(deleted, cursor)
 	}
 
 	go r.write(r.collection)

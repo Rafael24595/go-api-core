@@ -118,20 +118,20 @@ func (f *swrEngine) match(fragments *collection.Vector[string], isMain bool) (an
 			return nil, false
 		}
 
-		if f.isLogical(*cursor) {
-			target, ok = f.operate(*cursor, target, fragments)
+		if f.isLogical(cursor) {
+			target, ok = f.operate(cursor, target, fragments)
 			if !ok {
 				return nil, false
 			}
 			continue
 		}
 
-		if raw, ok := findValue(*cursor); ok {
+		if raw, ok := findValue(cursor); ok {
 			target = raw
 			continue
 		}
 
-		target, ok = f.moveCursor(*cursor, target)
+		target, ok = f.moveCursor(cursor, target)
 		if !ok {
 			return nil, false
 		}
@@ -337,13 +337,13 @@ func (f *swrEngine) findRoot(fragments *collection.Vector[string]) (any, bool) {
 		return nil, false
 	}
 
-	switch *cursor {
+	switch cursor {
 	case string(StepInputPayload):
 		return f.findPayload(fragments)
 	case string(StepInputArgument):
 		return f.arguments, true
 	default:
-		return findValue(*cursor)
+		return findValue(cursor)
 	}
 }
 
@@ -353,13 +353,13 @@ func (f *swrEngine) findPayload(fragments *collection.Vector[string]) (any, bool
 		return nil, false
 	}
 
-	if cached, ok := f.cache[*content]; ok {
+	if cached, ok := f.cache[content]; ok {
 		return cached, ok
 	}
 
 	var result any
 	ok = false
-	switch *content {
+	switch content {
 	case string(StepFormatText):
 		return f.payload, true
 	case string(StepFormatJson):
@@ -377,7 +377,7 @@ func (f *swrEngine) findPayload(fragments *collection.Vector[string]) (any, bool
 	}
 
 	if ok {
-		f.cache[*content] = result
+		f.cache[content] = result
 	}
 
 	return result, ok
@@ -444,6 +444,6 @@ func (f *swrEngine) isNextLogical(fragments *collection.Vector[string]) bool {
 	if !ok {
 		return false
 	}
-	return *next == string(StepOperatorAnd) ||
-		*next == string(StepOperatorOr)
+	return next == string(StepOperatorAnd) ||
+		next == string(StepOperatorOr)
 }

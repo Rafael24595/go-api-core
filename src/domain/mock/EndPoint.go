@@ -39,19 +39,19 @@ func (r EndPoint) PersistenceId() string {
 
 func ToRequest(server string, endPoint *EndPoint) *action.Request {
 	return &action.Request{
-		Id: "",
+		Id:        "",
 		Timestamp: endPoint.Timestamp,
-		Name: endPoint.Name,
-		Method: endPoint.Method,
-		Uri: fmt.Sprintf("%s%s", server, endPoint.Path),
-		Query: *query.NewQueries(),
-		Header: *header.NewHeaders(),
-		Cookie: *cookie.NewCookiesClient(),
-		Body: *body.EmptyBody(true, domain.None),
-		Auth: *auth.NewAuths(false),
-		Owner: endPoint.Owner,
-		Modified: endPoint.Modified,
-		Status: action.DRAFT,
+		Name:      endPoint.Name,
+		Method:    endPoint.Method,
+		Uri:       fmt.Sprintf("%s%s", server, endPoint.Path),
+		Query:     *query.NewQueries(),
+		Header:    *header.NewHeaders(),
+		Cookie:    *cookie.NewCookiesClient(),
+		Body:      *body.EmptyBody(true, domain.None),
+		Auth:      *auth.NewAuths(false),
+		Owner:     endPoint.Owner,
+		Modified:  endPoint.Modified,
+		Status:    action.DRAFT,
 	}
 }
 
@@ -211,7 +211,7 @@ func FindResponse(payload string, arguments map[string]string, endPoint *EndPoin
 			return r.Condition == key
 		})
 		if ok && response.Status {
-			return response, true
+			return &response, true
 		}
 	}
 
@@ -223,6 +223,5 @@ func FindResponse(payload string, arguments map[string]string, endPoint *EndPoin
 		return nil, false
 	}
 
-	return response, true
+	return &response, true
 }
-

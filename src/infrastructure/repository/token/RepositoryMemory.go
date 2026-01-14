@@ -98,31 +98,35 @@ func (r *RepositoryMemory) FindAll(owner string) []token_domain.LiteToken {
 func (r *RepositoryMemory) Find(id string) (*token_domain.Token, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(id)
+	token, ok := r.collection.Get(id)
+	return &token, ok
 }
 
 func (r *RepositoryMemory) FindByName(owner, name string) (*token_domain.Token, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.FindOne(func(s string, t token_domain.Token) bool {
+	token, ok := r.collection.FindOne(func(s string, t token_domain.Token) bool {
 		return t.Owner == owner && t.Name == name
 	})
+	return &token, ok
 }
 
 func (r *RepositoryMemory) FindByToken(owner, token string) (*token_domain.Token, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.FindOne(func(s string, t token_domain.Token) bool {
+	tkn, ok := r.collection.FindOne(func(s string, t token_domain.Token) bool {
 		return t.Owner == owner && t.Token == token
 	})
+	return &tkn, ok
 }
 
 func (r *RepositoryMemory) FindGlobal(token string) (*token_domain.Token, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.FindOne(func(s string, t token_domain.Token) bool {
+	tkn, ok := r.collection.FindOne(func(s string, t token_domain.Token) bool {
 		return t.Token == token
 	})
+	return &tkn, ok
 }
 
 func (r *RepositoryMemory) Insert(owner string, token *token_domain.Token) *token_domain.Token {
@@ -168,7 +172,7 @@ func (r *RepositoryMemory) Delete(endPoint *token_domain.Token) *token_domain.To
 	cursor, _ := r.collection.Remove(endPoint.Id)
 	go r.write(r.collection)
 
-	return cursor
+	return &cursor
 }
 
 func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, token_domain.Token]) {

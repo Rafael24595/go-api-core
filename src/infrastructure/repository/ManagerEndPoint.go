@@ -138,7 +138,7 @@ func (m *ManagerEndPoint) Sort(owner string, references []domain.NodeReference) 
 		}
 
 		endPoint.Order = i
-		sorted = append(sorted, *endPoint)
+		sorted = append(sorted, endPoint)
 	}
 
 	sorted = mock_domain.FixEndPoints(owner, sorted)

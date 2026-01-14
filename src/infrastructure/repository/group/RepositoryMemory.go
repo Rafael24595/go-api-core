@@ -88,7 +88,8 @@ func (r *RepositoryMemory) read() error {
 func (r *RepositoryMemory) Find(id string) (*domain.Group, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(id)
+	group, ok := r.collection.Get(id)
+	return &group, ok
 }
 
 func (r *RepositoryMemory) Insert(owner string, group *domain.Group) *domain.Group {
@@ -136,7 +137,7 @@ func (r *RepositoryMemory) Delete(context *domain.Group) *domain.Group {
 	cursor, _ := r.collection.Remove(context.Id)
 	go r.write(r.collection)
 
-	return cursor
+	return &cursor
 }
 
 func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, domain.Group]) {

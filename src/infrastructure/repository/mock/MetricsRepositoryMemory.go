@@ -89,7 +89,8 @@ func (r *MetricsRepositoryMemory) read() error {
 func (r *MetricsRepositoryMemory) Find(endPoint *mock_domain.EndPoint) (*mock_domain.Metrics, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(endPoint.Id)
+	metrics, ok := r.collection.Get(endPoint.Id)
+	return &metrics, ok
 }
 
 func (r *MetricsRepositoryMemory) Resolve(endPoint *mock_domain.EndPoint, metrics *mock_domain.Metrics) *mock_domain.Metrics {
@@ -127,7 +128,7 @@ func (r *MetricsRepositoryMemory) Delete(endPoint *mock_domain.EndPoint, metrics
 	cursor, _ := r.collection.Remove(endPoint.Id)
 	go r.write(r.collection)
 
-	return cursor
+	return &cursor
 }
 
 func (r *MetricsRepositoryMemory) write(snapshot collection.IDictionary[string, mock_domain.Metrics]) {

@@ -89,7 +89,8 @@ func (r *RepositoryMemory) read() error {
 func (r *RepositoryMemory) Find(id string) (*collection.Collection, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(id)
+	collection, ok := r.collection.Get(id)
+	return &collection, ok
 }
 
 func (r *RepositoryMemory) FindNodes(references []domain.NodeReference) []collection.NodeCollection {
@@ -105,7 +106,7 @@ func (r *RepositoryMemory) FindNodes(references []domain.NodeReference) []collec
 
 		colls = append(colls, collection.NodeCollection{
 			Order:      v.Order,
-			Collection: *coll,
+			Collection: coll,
 		})
 	}
 
@@ -163,7 +164,7 @@ func (r *RepositoryMemory) Delete(collection *collection.Collection) *collection
 	cursor, _ := r.collection.Remove(collection.Id)
 	go r.write(r.collection)
 
-	return cursor
+	return &cursor
 }
 
 func (r *RepositoryMemory) write(snapshot collection_utils.IDictionary[string, collection.Collection]) {

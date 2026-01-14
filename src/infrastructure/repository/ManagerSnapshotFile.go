@@ -206,7 +206,7 @@ func (m *managerSnapshotFile[T]) actionApply(e system.SystemEvent) error {
 		return nil
 	}
 
-	return m.apply((*cursor).Name(), format)
+	return m.apply((cursor).Name(), format)
 }
 
 func (m *managerSnapshotFile[T]) actionRemove(e system.SystemEvent) error {
@@ -237,7 +237,7 @@ func (m *managerSnapshotFile[T]) save(force bool, format format.DataFormat) erro
 		last, ok := snapshots.Last()
 		if ok && last != nil {
 			re := regexp.MustCompile(SnpshTimestamp)
-			rawLast := re.FindStringSubmatch((*last).Name())[2]
+			rawLast := re.FindStringSubmatch((last).Name())[2]
 			timeLast, _ := strconv.ParseInt(rawLast, 10, 64)
 			m.last = timeLast
 		} else {
@@ -334,12 +334,12 @@ func (m *managerSnapshotFile[T]) remove(name string, format format.DataFormat) e
 		return nil
 	}
 
-	if err := m.clean(true, format, *cursor); err != nil {
+	if err := m.clean(true, format, cursor); err != nil {
 		return err
 	}
 
 	re := regexp.MustCompile(SnpshTimestamp)
-	raw := re.FindStringSubmatch((*cursor).Name())[2]
+	raw := re.FindStringSubmatch((cursor).Name())[2]
 	timestamp, _ := strconv.ParseInt(raw, 10, 64)
 
 	if m.last == timestamp {

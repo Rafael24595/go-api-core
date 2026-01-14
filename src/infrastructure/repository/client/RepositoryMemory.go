@@ -90,7 +90,8 @@ func (r *RepositoryMemory) read() error {
 func (r *RepositoryMemory) Find(owner string) (*client.ClientData, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(owner)
+	data, ok := r.collection.Get(owner)
+	return &data, ok
 }
 
 func (r *RepositoryMemory) Insert(data *client.ClientData) *client.ClientData {
@@ -132,7 +133,7 @@ func (r *RepositoryMemory) Delete(data *client.ClientData) *client.ClientData {
 	cursor, _ := r.collection.Remove(data.Owner)
 	go r.write(r.collection)
 
-	return cursor
+	return &cursor
 }
 
 func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, client.ClientData]) {

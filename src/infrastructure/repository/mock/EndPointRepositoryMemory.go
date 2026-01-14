@@ -119,14 +119,15 @@ func (r *EndPointRepositoryMemory) FindMany(ids ...string) []mock_domain.EndPoin
 func (r *EndPointRepositoryMemory) Find(id string) (*mock_domain.EndPoint, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(id)
+	endpoint, ok := r.collection.Get(id)
+	return &endpoint, ok
 }
 
 func (r *EndPointRepositoryMemory) FindByRequest(owner string, method domain.HttpMethod, path string) (*mock_domain.EndPoint, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 
-	return r.collection.
+	endpoint, ok := r.collection.
 		Filter(func(s string, ep mock_domain.EndPoint) bool {
 			return ep.Owner == owner && ep.Method == method && ep.Path == path
 		}).
@@ -135,6 +136,8 @@ func (r *EndPointRepositoryMemory) FindByRequest(owner string, method domain.Htt
 			return i.Order < j.Order
 		}).
 		First()
+		
+	return &endpoint, ok
 }
 
 func (r *EndPointRepositoryMemory) Insert(endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
@@ -199,7 +202,7 @@ func (r *EndPointRepositoryMemory) Delete(endPoint *mock_domain.EndPoint) *mock_
 	cursor, _ := r.collection.Remove(endPoint.Id)
 	go r.write(r.collection)
 
-	return cursor
+	return &cursor
 }
 
 func (r *EndPointRepositoryMemory) write(snapshot collection.IDictionary[string, mock_domain.EndPoint]) {
