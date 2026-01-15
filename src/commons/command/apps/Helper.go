@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-collections/collection"
 )
@@ -65,7 +66,7 @@ func TakeCursorValue(cmd *collection.Vector[string], required bool) (string, *co
 	return value, cmd, nil
 }
 
-func RunHelp(title string, actions []CommandReference) *CmdResult {
+func RunHelp(title string, actions []CommandReference) *CmdExecResult {
 	result := make([]string, 0)
 	result = append(result, title)
 	for _, a := range actions {
@@ -73,4 +74,12 @@ func RunHelp(title string, actions []CommandReference) *CmdResult {
 		result = append(result, fmt.Sprintf("  Example: %s\n", a.Example))
 	}
 	return NewResult(strings.Join(result, "\n"))
+}
+
+func PublishEvent(data ...utils.CmdTuple) *CmdExecResult {
+	config := configuration.Instance()
+	for _, cmd := range data {
+		config.EventHub.Publish(cmd.Flag, cmd.Data)
+	}
+	return NewResultf("%d events pushed successfully, check the logs to see the result.", len(data))
 }

@@ -25,6 +25,14 @@ const (
 	FLAG_USER_REMOVE  = "-rm"
 )
 
+const (
+	TABLE_USERNAME  = "Username"
+	TABLE_DATE      = "Date"
+	TABLE_PUBLISHER = "Publisher"
+	TABLE_ROLES     = "Roles"
+	TABLE_ACCESS    = "Access"
+)
+
 var App = apps.CommandApplication{
 	CommandReference: apps.CommandReference{
 		Flag:        Command,
@@ -93,7 +101,7 @@ type pushPayload struct {
 	roles []session.Role
 }
 
-func exec(request *apps.CmdRequest) *apps.CmdResult {
+func exec(request *apps.CmdExecRequest) *apps.CmdExecResult {
 	user := request.User
 	cmd := request.Command
 
@@ -154,12 +162,12 @@ func exec(request *apps.CmdRequest) *apps.CmdResult {
 	return apps.EmptyResult()
 }
 
-func help() *apps.CmdResult {
+func help() *apps.CmdExecResult {
 	title := fmt.Sprintf("Available %s actions:\n", Command)
 	return apps.RunHelp(title, refs)
 }
 
-func roleslist() *apps.CmdResult {
+func roleslist() *apps.CmdExecResult {
 	sess := repository.InstanceManagerSession()
 
 	buffer := make([]string, 0)
@@ -173,7 +181,7 @@ func roleslist() *apps.CmdResult {
 	return apps.NewResult(strings.Join(buffer, "\n"))
 }
 
-func execUserList(cmd *collection.Vector[string], tuple *utils.CmdTuple, verbose bool) *apps.CmdResult {
+func execUserList(cmd *collection.Vector[string], tuple *utils.CmdTuple, verbose bool) *apps.CmdExecResult {
 	for cmd.Size() > 0 {
 		flag, ok := cmd.Shift()
 		if !ok {
@@ -188,7 +196,9 @@ func execUserList(cmd *collection.Vector[string], tuple *utils.CmdTuple, verbose
 		}
 	}
 
-	return apps.NewResult(userlist(tuple, verbose))
+	result := userlist(tuple, verbose)
+
+	return apps.NewResult(result)
 }
 
 func userlist(tuple *utils.CmdTuple, verbose bool) string {
@@ -209,13 +219,13 @@ func userlist(tuple *utils.CmdTuple, verbose bool) string {
 	})
 
 	if verbose {
-		return formatSessionsVerbose(users)
+		return formatSessionsVerbose(users.Collect()...)
 	}
 
 	return formatSessions(users)
 }
 
-func userDetails(cmd *collection.Vector[string]) *apps.CmdResult {
+func userDetails(cmd *collection.Vector[string]) *apps.CmdExecResult {
 	value, err := apps.ResolveValueCursor(cmd)
 	if err != nil {
 		return apps.ErrorResult(err)
@@ -228,23 +238,12 @@ func userDetails(cmd *collection.Vector[string]) *apps.CmdResult {
 		return apps.NewResultf("user '%s' not found", value)
 	}
 
-	max_username := len(s.Username)
-	max_publisher := len(s.Publisher)
-	max_timestamp := len(utils.FormatMilliseconds(s.Timestamp))
-	max_roles := len(fmt.Sprintf("%v", s.Roles))
-	max_accesss := utils.Digits(s.Count)
+	result := formatSessionsVerbose(session.ToLite(*s))
 
-	max_username, max_timestamp, max_publisher, max_roles, max_accesss = fixMax(max_username, max_timestamp, max_publisher, max_roles, max_accesss)
-
-	buffer := make([]string, 0)
-
-	buffer = append(buffer, formatHeaderVerbose(max_username, max_timestamp, max_publisher, max_roles, max_accesss))
-	buffer = append(buffer, formatSessionVerbose(session.ToLite(*s), max_username, max_timestamp, max_publisher, max_roles, max_accesss))
-
-	return apps.NewResult(strings.Join(buffer, "\n"))
+	return apps.NewResult(result)
 }
 
-func execUserPush(publ *session.Session, cmd *collection.Vector[string], name, pass string) *apps.CmdResult {
+func execUserPush(publ *session.Session, cmd *collection.Vector[string], name, pass string) *apps.CmdExecResult {
 	pushData := pushPayload{
 		name:  name,
 		pass:  pass,
@@ -272,7 +271,7 @@ func execUserPush(publ *session.Session, cmd *collection.Vector[string], name, p
 	return userPush(publ, pushData)
 }
 
-func userPush(publ *session.Session, payload pushPayload) *apps.CmdResult {
+func userPush(publ *session.Session, payload pushPayload) *apps.CmdExecResult {
 	sess := repository.InstanceManagerSession()
 
 	if _, ok := sess.Find(payload.name); ok {
@@ -287,7 +286,7 @@ func userPush(publ *session.Session, payload pushPayload) *apps.CmdResult {
 	return apps.NewResultf("user '%s' created successfully", user.Username)
 }
 
-func execUserRemove(cmd *collection.Vector[string], users []string) *apps.CmdResult {
+func execUserRemove(cmd *collection.Vector[string], users []string) *apps.CmdExecResult {
 	for cmd.Size() > 0 {
 		flag, ok := cmd.Shift()
 		if !ok {
@@ -309,7 +308,7 @@ func execUserRemove(cmd *collection.Vector[string], users []string) *apps.CmdRes
 	return userRemove(users)
 }
 
-func userRemove(names []string) *apps.CmdResult {
+func userRemove(names []string) *apps.CmdExecResult {
 	sess := repository.InstanceManagerSession()
 
 	users := make([]session.Session, 0)
@@ -338,68 +337,20 @@ func userRemove(names []string) *apps.CmdResult {
 	return apps.NewResultf("%d users removed: %s", len(removed), strings.Join(removed, " "))
 }
 
-func formatSessionsVerbose(users *collection.Vector[session.SessionLite]) string {
-	_, max_username, _ := users.Max(func(s session.SessionLite) int {
-		return len(s.Username)
-	})
+func formatSessionsVerbose(users ...session.SessionLite) string {
+	table := utils.NewTable()
 
-	_, max_timestamp, _ := users.Max(func(s session.SessionLite) int {
-		return len(utils.FormatMilliseconds(s.Timestamp))
-	})
+	table.Headers(TABLE_USERNAME, TABLE_DATE, TABLE_PUBLISHER, TABLE_ROLES, TABLE_ACCESS)
 
-	_, max_publisher, _ := users.Max(func(s session.SessionLite) int {
-		return len(s.Publisher)
-	})
-
-	_, max_roles, _ := users.Max(func(s session.SessionLite) int {
-		return len(fmt.Sprintf("%v", s.Roles))
-	})
-
-	_, max_accesss, _ := users.Max(func(s session.SessionLite) int {
-		return utils.Digits(s.Count)
-	})
-
-	max_username, max_timestamp, max_publisher, max_roles, max_accesss = fixMax(max_username, max_timestamp, max_publisher, max_roles, max_accesss)
-
-	users.Sort(func(i, j session.SessionLite) bool {
-		return i.Timestamp < j.Timestamp
-	})
-
-	buffer := make([]string, 0)
-
-	buffer = append(buffer, formatHeaderVerbose(max_username, max_timestamp, max_publisher, max_roles, max_accesss))
-	for _, s := range users.Collect() {
-		buffer = append(buffer, formatSessionVerbose(s, max_username, max_timestamp, max_publisher, max_roles, max_accesss))
+	for i, v := range users {
+		table.Field(TABLE_USERNAME, i, v.Username)
+		table.Field(TABLE_DATE, i, utils.FormatMilliseconds(v.Timestamp))
+		table.Field(TABLE_PUBLISHER, i, v.Publisher)
+		table.Field(TABLE_ROLES, i, v.Roles)
+		table.Field(TABLE_ACCESS, i, v.Count)
 	}
 
-	return strings.Join(buffer, "\n")
-}
-
-func fixMax(max_username, max_timestamp, max_publisher, max_roles, max_accesss int) (int, int, int, int, int) {
-	return utils.Max(max_username, len("Username")),
-		utils.Max(max_timestamp, len("Date")),
-		utils.Max(max_publisher, len("Publisher")),
-		utils.Max(max_roles, len("Roles")),
-		utils.Max(max_accesss, len("Access"))
-}
-
-func formatHeaderVerbose(max_username, max_timestamp, max_publisher, max_roles, max_accesss int) string {
-	return fmt.Sprintf(" %s | %s | %s | %s | %s ",
-		utils.Center("Username", max_username),
-		utils.Center("Date", max_timestamp),
-		utils.Center("Publisher", max_publisher),
-		utils.Center("Roles", max_roles),
-		utils.Center("Access", max_accesss))
-}
-
-func formatSessionVerbose(user session.SessionLite, max_username, max_timestamp, max_publisher, max_roles, max_accesss int) string {
-	timestamp := utils.FormatMilliseconds(user.Timestamp)
-	return fmt.Sprintf(" %s | %s | %s | %s | %s ",
-		utils.Right(user.Username, max_username),
-		utils.Right(timestamp, max_timestamp),
-		utils.Right(user.Publisher, max_publisher),
-		utils.Right(user.Roles, max_roles),
-		utils.Right(user.Count, max_accesss))
+	return table.ToString()
 }
 
 func formatSessions(users *collection.Vector[session.SessionLite]) string {

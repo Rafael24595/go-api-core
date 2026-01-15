@@ -7,6 +7,8 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
+	"github.com/Rafael24595/go-api-core/src/commons/system/topic"
+	topic_repository "github.com/Rafael24595/go-api-core/src/commons/system/topic/repository"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
@@ -56,8 +58,8 @@ func (r *RepositoryMemory) watch() {
 		hub := make(chan system.SystemEvent, 1)
 		defer close(hub)
 
-		topics := []string{
-			system.SNAPSHOT_TOPIC_CONTEXT.TopicSnapshotApplyOutput(),
+		topics := []topic.TopicAction{
+			topic_repository.TOPIC_CONTEXT.ActionReload(),
 		}
 
 		conf.EventHub.Subcribe(repository.RepositoryListener, hub, topics...)

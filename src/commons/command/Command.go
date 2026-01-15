@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/Rafael24595/go-api-core/src/commons/command/apps"
@@ -9,6 +10,7 @@ import (
 	cmd_log "github.com/Rafael24595/go-api-core/src/commons/command/apps/log"
 	cmd_snapshot "github.com/Rafael24595/go-api-core/src/commons/command/apps/snapshot"
 	cmd_user "github.com/Rafael24595/go-api-core/src/commons/command/apps/user"
+	cmd_repo "github.com/Rafael24595/go-api-core/src/commons/command/apps/repo"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-collections/collection"
 )
@@ -21,15 +23,44 @@ const (
 
 const InitialStep = -1
 
-type CompleteHelp struct {
+type CmdAuxApp struct {
+	Order int
+	Flag  string
+	Help  string
+}
+
+func auxAppToApp(aux ...CmdAuxApp) []apps.CommandApplication {
+	app := make([]apps.CommandApplication, len(aux))
+
+	sort.Slice(aux, func(i, j int) bool {
+		return aux[i].Order < aux[j].Order
+	})
+
+	for i, v := range aux {
+		app[i] = apps.CommandApplication{
+			CommandReference: apps.CommandReference{
+				Flag: apps.SnapshotFlag(v.Flag),
+			},
+			Exec: func(request *apps.CmdExecRequest) *apps.CmdExecResult {
+				return apps.EmptyResult()
+			},
+			Help: func() *apps.CmdExecResult {
+				return apps.NewResult(v.Help)
+			},
+		}
+	}
+	return app
+}
+
+type CmdCompResult struct {
 	Message     string
 	Application string
 	Position    int
 	Lenght      int
 }
 
-func emptyCompleteHelp() *CompleteHelp {
-	return &CompleteHelp{
+func emptyCompleteHelp() *CmdCompResult {
+	return &CmdCompResult{
 		Message:     "",
 		Application: "",
 		Position:    InitialStep,
@@ -37,7 +68,18 @@ func emptyCompleteHelp() *CompleteHelp {
 	}
 }
 
-var refRoot = apps.CommandReference{
+var App = apps.CommandApplication{
+	CommandReference: apps.CommandReference{
+		Flag:        Command,
+		Name:        "go-api",
+		Description: "Retrieves the project metadata",
+		Example:     refHelp.Example,
+	},
+	Exec: root,
+	Help: help,
+}
+
+var refHelp = apps.CommandReference{
 	Flag:        Command,
 	Name:        "Help",
 	Description: "Shows this help message.",
@@ -49,11 +91,12 @@ var refApps = []apps.CommandApplication{
 	cmd_log.App,
 	cmd_snapshot.App,
 	cmd_user.App,
+	cmd_repo.App,
 }
 
 func findApps() []apps.CommandReference {
 	actions := make([]apps.CommandReference, len(refApps)+1)
-	actions[0] = refRoot
+	actions[0] = refHelp
 
 	for i := 1; i < len(refApps)+1; i++ {
 		actions[i] = refApps[i-1].CommandReference
@@ -71,7 +114,7 @@ func findApp(flag apps.SnapshotFlag) *apps.CommandApplication {
 	return nil
 }
 
-func Comp(user, command string, position int) (*CompleteHelp, error) {
+func Comp(user, command string, position int, auxApps ...CmdAuxApp) (*CmdCompResult, error) {
 	raw, err := utils.SplitCommand(command)
 	if err != nil {
 		return nil, err
@@ -81,7 +124,7 @@ func Comp(user, command string, position int) (*CompleteHelp, error) {
 
 	head, ok := cmd.Shift()
 	if !ok {
-		return &CompleteHelp{
+		return &CmdCompResult{
 			Message:     "",
 			Application: command,
 			Position:    InitialStep,
@@ -89,27 +132,28 @@ func Comp(user, command string, position int) (*CompleteHelp, error) {
 		}, nil
 	}
 
-	if position >= len(refApps) {
+	apps := []apps.CommandApplication{App}
+
+	apps = append(apps, refApps...)
+	apps = append(apps, auxAppToApp(auxApps...)...)
+
+	if position >= len(apps) {
 		position = InitialStep
 	}
 
-	coincidences, cursor, position := comp(head, position, refApps)
+	coincidences, cursor, position := comp(head, position, apps)
 	if cursor == nil {
 		return emptyCompleteHelp(), nil
 	}
 
 	message := ""
 	if len(coincidences) > 1 {
-		buffer := make([]string, len(coincidences))
-		for i := range coincidences {
-			buffer[i] = string(coincidences[i].Flag)
-		}
-		message = strings.Join(buffer, " ")
+		message = strings.Join(coincidences, " ")
 	} else if len(coincidences) == 1 && string(cursor.Flag) == head {
 		message = cursor.Help().Output
 	}
 
-	return &CompleteHelp{
+	return &CmdCompResult{
 		Message:     message,
 		Application: string(cursor.Flag),
 		Position:    position,
@@ -117,11 +161,11 @@ func Comp(user, command string, position int) (*CompleteHelp, error) {
 	}, nil
 }
 
-func comp(head string, position int, actions []apps.CommandApplication) ([]apps.CommandApplication, *apps.CommandApplication, int) {
+func comp(head string, position int, actions []apps.CommandApplication) ([]string, *apps.CommandApplication, int) {
 	var cursor *apps.CommandApplication
 
 	cache := make(map[apps.SnapshotFlag]int)
-	coincidences := make([]apps.CommandApplication, 0)
+	apps := make([]apps.CommandApplication, 0)
 
 	for i, v := range actions {
 		if !strings.HasPrefix(string(v.Flag), head) {
@@ -129,24 +173,30 @@ func comp(head string, position int, actions []apps.CommandApplication) ([]apps.
 		}
 
 		cache[v.Flag] = i
-		coincidences = append(coincidences, v)
+		apps = append(apps, v)
 
 		if cursor == nil && i > position {
 			cursor = &v
 		}
 	}
 
-	if cursor == nil {
-		if len(coincidences) > 0 {
-			return coincidences, &coincidences[0], cache[coincidences[0].Flag]
-		}
-		return coincidences, nil, InitialStep
+	flags := make([]string, len(apps))
+	for i, v := range apps {
+		flags[i] = string(v.Flag)
 	}
 
-	return coincidences, cursor, cache[cursor.Flag]
+	if cursor != nil {
+		return flags, cursor, cache[cursor.Flag]
+	}
+
+	if len(apps) > 0 {
+		return flags, &apps[0], cache[apps[0].Flag]
+	}
+
+	return flags, nil, InitialStep
 }
 
-func Exec(user, input string) *apps.CmdResult {
+func Exec(user, input string) *apps.CmdExecResult {
 	raw, err := utils.SplitCommand(input)
 	if err != nil {
 		return apps.ErrorResult(err)
@@ -159,7 +209,7 @@ func Exec(user, input string) *apps.CmdResult {
 		return apps.EmptyResult()
 	}
 
-	request := &apps.CmdRequest{
+	request := &apps.CmdExecRequest{
 		User:    user,
 		Input:   input,
 		Command: cmd,
@@ -168,7 +218,7 @@ func Exec(user, input string) *apps.CmdResult {
 	return exec(app, request)
 }
 
-func exec(app string, request *apps.CmdRequest) *apps.CmdResult {
+func exec(app string, request *apps.CmdExecRequest) *apps.CmdExecResult {
 	if app == string(Command) || app == FLAG_HELP {
 		return root(request)
 	}
@@ -181,7 +231,7 @@ func exec(app string, request *apps.CmdRequest) *apps.CmdResult {
 	return action.Exec(request)
 }
 
-func root(request *apps.CmdRequest) *apps.CmdResult {
+func root(request *apps.CmdExecRequest) *apps.CmdExecResult {
 	cmd := request.Command
 
 	if cmd.Size() == 0 {
@@ -205,7 +255,7 @@ func root(request *apps.CmdRequest) *apps.CmdResult {
 	return apps.EmptyResult()
 }
 
-func help() *apps.CmdResult {
+func help() *apps.CmdExecResult {
 	title := fmt.Sprintf("Available %s actions:\n", Command)
 	return apps.RunHelp(title, findApps())
 }

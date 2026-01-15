@@ -5,7 +5,7 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
-	"github.com/Rafael24595/go-api-core/src/commons/system"
+	topic_snapshot "github.com/Rafael24595/go-api-core/src/commons/system/topic/snapshot"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/action"
 	"github.com/Rafael24595/go-api-core/src/domain/client"
@@ -51,10 +51,10 @@ func Initialize(config configuration.Configuration) *DependencyContainer {
 		if err != nil {
 			log.Error(err)
 		}
-	
+
 		repositoryRequest := loadRepositoryRequest(config)
 		repositoryResponse := loadRepositoryResponse(config)
-	
+
 		repositoryContext := loadRepositoryContext(config)
 		repositoryCollection := loadRepositoryCollection(config)
 		repositoryGroup := loadRepositoryGroup(config)
@@ -62,7 +62,7 @@ func Initialize(config configuration.Configuration) *DependencyContainer {
 		repositoryMetrics := loadRepositoryMetrics(config)
 		repositoryToken := loadRepositoryToken(config)
 		repositoryClient := loadRepositoryClientData(config)
-	
+
 		managerRequest := loadManagerRequest(repositoryRequest, repositoryResponse)
 		managerContext := loadManagerContext(repositoryContext)
 		managerCollection := loadManagerCollection(repositoryCollection, managerContext, managerRequest)
@@ -72,7 +72,7 @@ func Initialize(config configuration.Configuration) *DependencyContainer {
 		managerEndPoint := loadManagerEndPoint(repositoryEndPoint, managerMetrics)
 		managerToken := loadManagerToken(repositoryToken)
 		managerClientData := loadManagerClientData(repositoryClient, managerCollection, managerGroup)
-	
+
 		container := &DependencyContainer{
 			RepositoryContext: repositoryContext,
 			ManagerRequest:    managerRequest,
@@ -85,7 +85,7 @@ func Initialize(config configuration.Configuration) *DependencyContainer {
 			ManagerToken:      managerToken,
 			ManagerClientData: managerClientData,
 		}
-	
+
 		instance = container
 	})
 
@@ -106,7 +106,7 @@ func loadRepositoryRequest(config configuration.Configuration) repository.IRepos
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		topic := system.SNAPSHOT_TOPIC_REQUEST
+		topic := topic_snapshot.TOPIC_REQUEST
 		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
@@ -125,7 +125,7 @@ func loadRepositoryResponse(config configuration.Configuration) repository.IRepo
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		topic := system.SNAPSHOT_TOPIC_RESPONSE
+		topic := topic_snapshot.TOPIC_RESPONSE
 		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
@@ -144,7 +144,7 @@ func loadRepositoryContext(config configuration.Configuration) repository.IRepos
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		topic := system.SNAPSHOT_TOPIC_CONTEXT
+		topic := topic_snapshot.TOPIC_CONTEXT
 		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
@@ -163,7 +163,7 @@ func loadRepositoryCollection(config configuration.Configuration) repository.IRe
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		topic := system.SNAPSHOT_TOPIC_COLLECTION
+		topic := topic_snapshot.TOPIC_COLLECTION
 		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
@@ -182,7 +182,7 @@ func loadRepositoryGroup(config configuration.Configuration) repository.IReposit
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		topic := system.SNAPSHOT_TOPIC_GROUP
+		topic := topic_snapshot.TOPIC_GROUP
 		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
@@ -201,7 +201,7 @@ func loadRepositoryEndPoint(config configuration.Configuration) repository.IRepo
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		topic := system.SNAPSHOT_TOPIC_END_POINT
+		topic := topic_snapshot.TOPIC_END_POINT
 		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
@@ -220,7 +220,7 @@ func loadRepositoryMetrics(config configuration.Configuration) repository.IRepos
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		topic := system.SNAPSHOT_TOPIC_END_POINT
+		topic := topic_snapshot.TOPIC_END_POINT
 		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
@@ -239,7 +239,7 @@ func loadRepositoryToken(config configuration.Configuration) repository.IReposit
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		topic := system.SNAPSHOT_TOPIC_TOKEN
+		topic := topic_snapshot.TOPIC_TOKEN
 		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
@@ -258,7 +258,7 @@ func loadRepositoryClientData(config configuration.Configuration) repository.IRe
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		topic := system.SNAPSHOT_TOPIC_TOKEN
+		topic := topic_snapshot.TOPIC_TOKEN
 		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
@@ -271,7 +271,7 @@ func loadRepositoryClientData(config configuration.Configuration) repository.IRe
 	return repository
 }
 
-func loadManagerSnapshotFile[T repository.IStructure](topic system.TopicSnapshot, snapshot configuration.Snapshot, file repository.IFileManager[T]) repository.IFileManager[T] {
+func loadManagerSnapshotFile[T repository.IStructure](topic topic_snapshot.TopicSnapshot, snapshot configuration.Snapshot, file repository.IFileManager[T]) repository.IFileManager[T] {
 	return repository.
 		BuilderManagerSnapshotFile(topic, file).
 		Limit(snapshot.Limit).

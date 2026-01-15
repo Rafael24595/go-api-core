@@ -3,59 +3,60 @@ package apps
 import (
 	"fmt"
 
+	"github.com/Rafael24595/go-api-core/src/commons/system"
 	"github.com/Rafael24595/go-collections/collection"
 )
 
 type SnapshotFlag string
 
-type CmdRequest struct {
+type CmdExecRequest struct {
 	User    string
 	Input   string
 	Command *collection.Vector[string]
 }
 
-type CmdResult struct {
+type CmdExecResult struct {
 	Input  string
 	Output string
 }
 
-func EmptyResult() *CmdResult {
-	return &CmdResult{
+func EmptyResult() *CmdExecResult {
+	return &CmdExecResult{
 		Input:  "",
 		Output: "",
 	}
 }
 
-func NewResult(output string) *CmdResult {
-	return &CmdResult{
+func NewResult(output string) *CmdExecResult {
+	return &CmdExecResult{
 		Input:  "",
 		Output: output,
 	}
 }
 
-func NewResultf(format string, a ...any) *CmdResult {
+func NewResultf(format string, a ...any) *CmdExecResult {
 	output := fmt.Sprintf(format, a...)
-	return &CmdResult{
+	return &CmdExecResult{
 		Input:  "",
 		Output: output,
 	}
 }
 
-func ErrorResult(err error) *CmdResult {
-	return &CmdResult{
+func ErrorResult(err error) *CmdExecResult {
+	return &CmdExecResult{
 		Input:  "",
 		Output: err.Error(),
 	}
 }
 
-func OverrideResult(input, output string) *CmdResult {
-	return &CmdResult{
+func OverrideResult(input, output string) *CmdExecResult {
+	return &CmdExecResult{
 		Input:  input,
 		Output: output,
 	}
 }
 
-func (r *CmdResult) SetInput(input string) *CmdResult {
+func (r *CmdExecResult) SetInput(input string) *CmdExecResult {
 	r.Input = input
 	return r
 }
@@ -69,6 +70,22 @@ type CommandReference struct {
 
 type CommandApplication struct {
 	CommandReference
-	Exec func(request *CmdRequest) *CmdResult
-	Help func() *CmdResult
+	Exec func(request *CmdExecRequest) *CmdExecResult
+	Help func() *CmdExecResult
+}
+
+type TopicMetaExpanded struct {
+	Code        string
+	Status      bool
+	Timestamp   int64
+	Description string
+}
+
+func ExpandTopicMeta(topic *system.TopicMeta, description string) TopicMetaExpanded {
+	return TopicMetaExpanded{
+		Code:        topic.Code,
+		Status:      topic.Status,
+		Timestamp:   topic.Timestamp,
+		Description: description,
+	}
 }

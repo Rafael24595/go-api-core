@@ -9,6 +9,7 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/format"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
+	topic_snapshot "github.com/Rafael24595/go-api-core/src/commons/system/topic/snapshot"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
@@ -23,6 +24,7 @@ const (
 	FLAG_APPLY     = "-a"
 	FLAG_REMOVE    = "-rm"
 	FLAG_LISTENERS = "-l"
+	FLAG_FILES     = "-f"
 	FLAG_DETAILS   = "-d"
 )
 
@@ -41,6 +43,7 @@ var refs = []apps.CommandReference{
 	refHelp,
 	refListeners,
 	refDetails,
+	refFiles,
 	refSave,
 	refApply,
 	refRemove,
@@ -63,8 +66,15 @@ var refListeners = apps.CommandReference{
 var refDetails = apps.CommandReference{
 	Flag:        FLAG_DETAILS,
 	Name:        "Details",
-	Description: "Displays the list of snapshots data for a given target and type.",
-	Example:     fmt.Sprintf(`%s %s snpsh_${target}=${type}`, Command, FLAG_DETAILS),
+	Description: "Displays the list of snapshot listeners with it's status and metadata for a given targets.",
+	Example:     fmt.Sprintf(`%s %s ${topic}+${topic}`, Command, FLAG_DETAILS),
+}
+
+var refFiles = apps.CommandReference{
+	Flag:        FLAG_FILES,
+	Name:        "Details",
+	Description: "Displays the list of snapshots files for a given target and type (e.g., csvt).",
+	Example:     fmt.Sprintf(`%s %s ${topic}=${type}`, Command, FLAG_DETAILS),
 }
 
 var refSave = apps.CommandReference{
@@ -88,9 +98,9 @@ var refRemove = apps.CommandReference{
 	Example:     fmt.Sprintf(`%s %s snpsh_${target}=${name}.${extension}`, Command, FLAG_REMOVE),
 }
 
-func exec(request *apps.CmdRequest) *apps.CmdResult {
+func exec(request *apps.CmdExecRequest) *apps.CmdExecResult {
 	cmd := request.Command
-	
+
 	if cmd.Size() == 0 {
 		return help()
 	}
@@ -111,12 +121,25 @@ func exec(request *apps.CmdRequest) *apps.CmdResult {
 		case FLAG_LISTENERS:
 			return execListerner(cmd, verbose)
 		case FLAG_DETAILS:
-			return details(cmd)
+			filter, err := resolveTopics(cmd)
+			if err != nil {
+				return apps.ErrorResult(err)
+			}
+
+			return execDetails(cmd, filter)
+		case FLAG_FILES:
+			path, err := findDetailsPath(cmd)
+			if err != nil {
+				return apps.ErrorResult(err)
+			}
+
+			return execFiles(cmd, path)
 		case FLAG_SAVE:
 			tuples, err := save(cmd)
 			if err != nil {
 				return apps.ErrorResult(err)
 			}
+
 			return execSave(cmd, tuples)
 		case FLAG_APPLY:
 			topic, value, err := resolveCursor(cmd)
@@ -124,7 +147,7 @@ func exec(request *apps.CmdRequest) *apps.CmdResult {
 				return apps.ErrorResult(err)
 			}
 
-			tuple := utils.NewCmdTuple(topic.TopicSnapshotAppyInput(), value)
+			tuple := utils.NewCmdTuple(topic.ActionAppy().Code, value)
 			return execApply(cmd, []utils.CmdTuple{*tuple})
 		case FLAG_REMOVE:
 			topic, value, err := resolveCursor(cmd)
@@ -132,7 +155,7 @@ func exec(request *apps.CmdRequest) *apps.CmdResult {
 				return apps.ErrorResult(err)
 			}
 
-			tuple := utils.NewCmdTuple(topic.TopicSnapshotRemoveInput(), value)
+			tuple := utils.NewCmdTuple(topic.ActionRemove().Code, value)
 			return execRemove(cmd, []utils.CmdTuple{*tuple})
 		default:
 			return apps.NewResultf("Unrecognized command flag: %s", flag)
@@ -142,12 +165,12 @@ func exec(request *apps.CmdRequest) *apps.CmdResult {
 	return apps.EmptyResult()
 }
 
-func help()  *apps.CmdResult {
+func help() *apps.CmdExecResult {
 	title := fmt.Sprintf("Available %s actions:\n", Command)
 	return apps.RunHelp(title, refs)
 }
 
-func execListerner(cmd *collection.Vector[string], verbose bool) *apps.CmdResult {
+func execListerner(cmd *collection.Vector[string], verbose bool) *apps.CmdExecResult {
 	for cmd.Size() > 0 {
 		flag, ok := cmd.Shift()
 		if !ok {
@@ -165,46 +188,98 @@ func execListerner(cmd *collection.Vector[string], verbose bool) *apps.CmdResult
 	return listeners(verbose)
 }
 
-func listeners(verbose bool) *apps.CmdResult {
+func listeners(verbose bool) *apps.CmdExecResult {
 	config := configuration.Instance()
-	raw := config.EventHub.Topics(repository.SnapshotListener)
-	listeners := system.FilterTopicSnapshot(raw)
-
-	result := make([]string, len(listeners))
-
-	for i, v := range listeners {
-		var listener string
-		if verbose {
-			listener = fmt.Sprintf(" - %s: %s", v, v.Description())
-		} else {
-			listener = string(v)
-		}
-		result[i] = listener
-	}
+	topics := config.EventHub.TopicsMeta(repository.SnapshotListener)
+	parents := findParents(topics)
 
 	if verbose {
-		header := fmt.Sprintf("Active listeners [%d]", len(result))
-		result = append([]string{header}, result...)
+		result := formatParentsVerbose(parents...)
+		return apps.NewResult(result)
 	}
 
-	format := fmt.Sprintf("Active format [%s]", config.Format())
-	result = append([]string{format, ""}, result...)
-
-	return apps.NewResult(strings.Join(result, "\n"))
+	result := formatParents(parents...)
+	return apps.NewResult(result)
 }
 
-func details(cmd *collection.Vector[string]) *apps.CmdResult {
-	path, err := findDetailsPath(cmd)
-	if err != nil {
-		return apps.ErrorResult(err)
+func execDetails(cmd *collection.Vector[string], topics []topic_snapshot.TopicSnapshot) *apps.CmdExecResult {
+	for cmd.Size() > 0 {
+		flag, ok := cmd.Shift()
+		if !ok {
+			break
+		}
+
+		switch flag {
+		case FLAG_DETAILS:
+			result, err := resolveTopics(cmd)
+			if err != nil {
+				return apps.ErrorResult(err)
+			}
+			topics = append(topics, result...)
+		default:
+			return apps.NewResultf("Unrecognized command flag: %s", flag)
+		}
 	}
 
-	files, err := repository.FindSnapshots(path)
-	if err != nil {
-		return apps.ErrorResult(err)
+	return details(topics)
+}
+
+func details(filter []topic_snapshot.TopicSnapshot) *apps.CmdExecResult {
+	config := configuration.Instance()
+	topics := config.EventHub.TopicsMeta(repository.SnapshotListener)
+
+	result := make([]system.TopicMeta, 0)
+
+	for _, f := range filter {
+		for _, e := range topics {
+			if e.Parent == string(f) {
+				result = append(result, e)
+			}
+		}
 	}
 
-	snapshots := collection.VectorMap(files, func(e os.DirEntry) string {
+	extend := extendTopicMeta(result)
+
+	format := formatTopicsVerbose(extend...)
+	return apps.NewResult(format)
+}
+
+func execFiles(cmd *collection.Vector[string], paths ...string) *apps.CmdExecResult {
+	for cmd.Size() > 0 {
+		flag, ok := cmd.Shift()
+		if !ok {
+			break
+		}
+
+		switch flag {
+		case FLAG_FILES:
+			path, err := findDetailsPath(cmd)
+			if err != nil {
+				return apps.ErrorResult(err)
+			}
+
+			paths = append(paths, path)
+		default:
+			return apps.NewResultf("Unrecognized command flag: %s", flag)
+		}
+	}
+
+	return files(paths)
+}
+
+func files(paths []string) *apps.CmdExecResult {
+	buffer := collection.VectorEmpty[os.DirEntry]()
+
+	for _, v := range paths {
+		files, err := repository.FindSnapshots(v)
+		if err != nil {
+			return apps.ErrorResult(err)
+		}
+	
+		buffer.Merge(*files)
+	}
+
+	snapshots := collection.VectorMap(buffer, func(e os.DirEntry) string {
 		return e.Name()
 	})
 
@@ -213,7 +288,71 @@ func details(cmd *collection.Vector[string]) *apps.CmdResult {
 	return apps.NewResult(result)
 }
 
-func execSave(cmd *collection.Vector[string], data []utils.CmdTuple) *apps.CmdResult {
+func formatParents(topics ...topic_snapshot.TopicSnapshot) string {
+	maxlen := 0
+
+	for _, v := range topics {
+		maxlen = utils.Max(maxlen, len(v))
+	}
+
+	buffer := make([]string, len(topics))
+
+	for i, v := range topics {
+		fcode := utils.Right(v, maxlen)
+		buffer[i] = fmt.Sprintf(" - %s   %s", fcode, v.Description())
+	}
+
+	return strings.Join(buffer, "\n")
+}
+
+func formatParentsVerbose(topics ...topic_snapshot.TopicSnapshot) string {
+	table := utils.NewTable()
+
+	table.Headers("Code", "Description")
+
+	for i, v := range topics {
+		table.Field("Code", i, v)
+		table.Field("Description", i, v.Description())
+	}
+
+	return table.ToString()
+}
+
+func formatTopicsVerbose(topics ...apps.TopicMetaExpanded) string {
+	table := utils.NewTable()
+
+	table.Headers("Code", "Status", "Timestamp", "Description")
+
+	for i, v := range topics {
+		table.Field("Code", i, v.Code)
+		table.Field("Status", i, v.Status)
+		table.Field("Timestamp", i, utils.FormatMilliseconds(v.Timestamp))
+		table.Field("Description", i, v.Description)
+	}
+
+	return table.ToString()
+}
+
+func extendTopicMeta(topics []system.TopicMeta) []apps.TopicMetaExpanded {
+	buffer := make([]apps.TopicMetaExpanded, len(topics))
+
+	for i, v := range topics {
+		description := ""
+
+		topic, ok := topic_snapshot.TopicFromString(v.Parent)
+		if ok {
+			if action, ok := topic.FindAcction(v.Code); ok {
+				description = action.Description
+			}
+		}
+
+		buffer[i] = apps.ExpandTopicMeta(&v, description)
+	}
+
+	return buffer
+}
+
+func execSave(cmd *collection.Vector[string], data []utils.CmdTuple) *apps.CmdExecResult {
 	for cmd.Size() > 0 {
 		flag, ok := cmd.Shift()
 		if !ok {
@@ -233,13 +372,13 @@ func execSave(cmd *collection.Vector[string], data []utils.CmdTuple) *apps.CmdRe
 	}
 
 	if len(data) > 0 {
-		return publishEvent(data...)
+		return apps.PublishEvent(data...)
 	}
 
 	return apps.EmptyResult()
 }
 
-func execApply(cmd *collection.Vector[string], data []utils.CmdTuple) *apps.CmdResult {
+func execApply(cmd *collection.Vector[string], data []utils.CmdTuple) *apps.CmdExecResult {
 	for cmd.Size() > 0 {
 		flag, ok := cmd.Shift()
 		if !ok {
@@ -253,7 +392,7 @@ func execApply(cmd *collection.Vector[string], data []utils.CmdTuple) *apps.CmdR
 				return apps.ErrorResult(err)
 			}
 
-			tuple := utils.NewCmdTuple(topic.TopicSnapshotAppyInput(), value)
+			tuple := utils.NewCmdTuple(topic.ActionAppy().Code, value)
 			data = append(data, *tuple)
 		default:
 			return apps.NewResultf("Unrecognized command flag: %s", flag)
@@ -261,13 +400,13 @@ func execApply(cmd *collection.Vector[string], data []utils.CmdTuple) *apps.CmdR
 	}
 
 	if len(data) > 0 {
-		return publishEvent(data...)
+		return apps.PublishEvent(data...)
 	}
 
 	return apps.EmptyResult()
 }
 
-func execRemove(cmd *collection.Vector[string], data []utils.CmdTuple) *apps.CmdResult {
+func execRemove(cmd *collection.Vector[string], data []utils.CmdTuple) *apps.CmdExecResult {
 	for cmd.Size() > 0 {
 		flag, ok := cmd.Shift()
 		if !ok {
@@ -281,7 +420,7 @@ func execRemove(cmd *collection.Vector[string], data []utils.CmdTuple) *apps.Cmd
 				return apps.ErrorResult(err)
 			}
 
-			tuple := utils.NewCmdTuple(topic.TopicSnapshotRemoveInput(), value)
+			tuple := utils.NewCmdTuple(topic.ActionRemove().Code, value)
 			data = append(data, *tuple)
 		default:
 			return apps.NewResultf("Unrecognized command flag: %s", flag)
@@ -289,7 +428,7 @@ func execRemove(cmd *collection.Vector[string], data []utils.CmdTuple) *apps.Cmd
 	}
 
 	if len(data) > 0 {
-		return publishEvent(data...)
+		return apps.PublishEvent(data...)
 	}
 
 	return apps.EmptyResult()
@@ -306,33 +445,25 @@ func save(cmd *collection.Vector[string]) ([]utils.CmdTuple, error) {
 	tpc := tuple.Flag
 	snpsh := tuple.Data
 
-	var topics []system.TopicSnapshot
+	var topics []topic_snapshot.TopicSnapshot
 	if tpc == "all" {
 		config := configuration.Instance()
 		raw := config.EventHub.Topics(repository.SnapshotListener)
-		topics = system.FilterTopicSnapshot(raw)
+		topics = topic_snapshot.FindTopics(raw)
 	} else {
-		topic, ok := system.TopicSnapshotFromString(tpc)
+		topic, ok := topic_snapshot.TopicFromString(tpc)
 		if !ok {
 			return cmds, fmt.Errorf("unknown topic: %s", tpc)
 		}
-		topics = []system.TopicSnapshot{topic}
+		topics = []topic_snapshot.TopicSnapshot{topic}
 	}
 
 	for _, v := range topics {
-		tuple := utils.NewCmdTuple(v.TopicSnapshotSaveInput(), snpsh)
+		tuple := utils.NewCmdTuple(v.ActionSave().Code, snpsh)
 		cmds = append(cmds, *tuple)
 	}
 
 	return cmds, nil
-}
-
-func publishEvent(data ...utils.CmdTuple) *apps.CmdResult {
-	config := configuration.Instance()
-	for _, cmd := range data {
-		config.EventHub.Publish(cmd.Flag, cmd.Data)
-	}
-	return apps.NewResultf("%d events pushed successfully, check the logs to see the result.", len(data))
 }
 
 func findDetailsPath(cmd *collection.Vector[string]) (string, error) {
@@ -344,7 +475,7 @@ func findDetailsPath(cmd *collection.Vector[string]) (string, error) {
 	tpc := tuple.Flag
 	ext := tuple.Data
 
-	topic, ok := system.TopicSnapshotFromString(tpc)
+	topic, ok := topic_snapshot.TopicFromString(tpc)
 	if !ok {
 		return "", fmt.Errorf("unknown topic: %s", tpc)
 	}
@@ -362,7 +493,25 @@ func findDetailsPath(cmd *collection.Vector[string]) (string, error) {
 	return path, nil
 }
 
-func resolveCursor(cmd *collection.Vector[string]) (system.TopicSnapshot, string, error) {
+func resolveTopics(cmd *collection.Vector[string]) ([]topic_snapshot.TopicSnapshot, error) {
+	raw, err := apps.ResolveChainCursor(cmd, "+")
+	if err != nil {
+		return make([]topic_snapshot.TopicSnapshot, 0), err
+	}
+
+	topics := make([]topic_snapshot.TopicSnapshot, len(raw))
+	for i, v := range raw {
+		topic, ok := topic_snapshot.TopicFromString(v)
+		if !ok {
+			return topics, fmt.Errorf("unknown topic: %s", v)
+		}
+		topics[i] = topic
+	}
+
+	return topics, nil
+}
+
+func resolveCursor(cmd *collection.Vector[string]) (topic_snapshot.TopicSnapshot, string, error) {
 	tuple, err := apps.ResolveKeyValueCursor(cmd, "=", true)
 	if err != nil {
 		return "", "", err
@@ -371,10 +520,27 @@ func resolveCursor(cmd *collection.Vector[string]) (system.TopicSnapshot, string
 	tpc := tuple.Flag
 	snpsh := tuple.Data
 
-	topic, ok := system.TopicSnapshotFromString(tpc)
+	topic, ok := topic_snapshot.TopicFromString(tpc)
 	if !ok {
 		return "", "", fmt.Errorf("unknown topic: %s", tpc)
 	}
 
 	return topic, snpsh, nil
+}
+
+func findParents(topics []system.TopicMeta) []topic_snapshot.TopicSnapshot {
+	cache := make(map[string]topic_snapshot.TopicSnapshot)
+
+	for _, v := range topics {
+		if _, ok := cache[v.Parent]; ok {
+			continue
+		}
+
+		topic, ok := topic_snapshot.TopicFromString(v.Parent)
+		if ok {
+			cache[v.Parent] = topic
+		}
+	}
+
+	return collection.DictionaryFromMap(cache).Values()
 }

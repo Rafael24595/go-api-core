@@ -55,9 +55,9 @@ var refPush = apps.CommandReference{
 	Example:     fmt.Sprintf(`%s %s ${category}="${message}"`, Command, FLAG_PUSH),
 }
 
-func exec(request *apps.CmdRequest) *apps.CmdResult {
+func exec(request *apps.CmdExecRequest) *apps.CmdExecResult {
 	cmd := request.Command
-	
+
 	if cmd.Size() == 0 {
 		return help()
 	}
@@ -91,12 +91,12 @@ func exec(request *apps.CmdRequest) *apps.CmdResult {
 	return apps.EmptyResult()
 }
 
-func help() *apps.CmdResult {
+func help() *apps.CmdExecResult {
 	title := fmt.Sprintf("Available %s actions:\n", Command)
 	return apps.RunHelp(title, refs)
 }
 
-func list(tuple *utils.CmdTuple) *apps.CmdResult {
+func list(tuple *utils.CmdTuple) *apps.CmdExecResult {
 	records := collection.VectorFromList(log.Records())
 
 	if tuple != nil {
@@ -116,7 +116,7 @@ func list(tuple *utils.CmdTuple) *apps.CmdResult {
 	return apps.NewResult(result)
 }
 
-func execPush(user string, cmd *collection.Vector[string], pushData []utils.CmdTuple) *apps.CmdResult {
+func execPush(user string, cmd *collection.Vector[string], pushData []utils.CmdTuple) *apps.CmdExecResult {
 	for cmd.Size() > 0 {
 		flag, ok := cmd.Shift()
 		if !ok {
@@ -143,7 +143,7 @@ func execPush(user string, cmd *collection.Vector[string], pushData []utils.CmdT
 	return apps.EmptyResult()
 }
 
-func publish(user string, data ...utils.CmdTuple) *apps.CmdResult {
+func publish(user string, data ...utils.CmdTuple) *apps.CmdExecResult {
 	for _, l := range data {
 		message := fmt.Sprintf("(%s) - %s", user, l.Data)
 		log.Custom(l.Flag, message)

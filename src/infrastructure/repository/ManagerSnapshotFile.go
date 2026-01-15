@@ -14,6 +14,8 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/format"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
+	"github.com/Rafael24595/go-api-core/src/commons/system/topic"
+	topic_snapshot "github.com/Rafael24595/go-api-core/src/commons/system/topic/snapshot"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/utils"
 	"github.com/Rafael24595/go-collections/collection"
 )
@@ -34,7 +36,8 @@ type builderManagerSnapshotFile[T IStructure] struct {
 	manager *managerSnapshotFile[T]
 }
 
-func BuilderManagerSnapshotFile[T IStructure](topic system.TopicSnapshot, manager IFileManager[T]) *builderManagerSnapshotFile[T] {
+func BuilderManagerSnapshotFile[T IStructure](topic topic_snapshot.TopicSnapshot, manager IFileManager[T]) *builderManagerSnapshotFile[T] {
+
 	instance := &managerSnapshotFile[T]{
 		limit:   1,
 		topic:   topic,
@@ -76,7 +79,7 @@ type managerSnapshotFile[T IStructure] struct {
 	once    sync.Once
 	close   chan bool
 	limit   int
-	topic   system.TopicSnapshot
+	topic   topic_snapshot.TopicSnapshot
 	errors  []error
 	time    int64
 	last    int64
@@ -96,10 +99,10 @@ func (m *managerSnapshotFile[T]) watch() {
 		hub := make(chan system.SystemEvent, 1)
 		defer close(hub)
 
-		topics := []string{
-			m.topic.TopicSnapshotSaveInput(),
-			m.topic.TopicSnapshotAppyInput(),
-			m.topic.TopicSnapshotRemoveInput(),
+		topics := []topic.TopicAction{
+			m.topic.ActionSave(),
+			m.topic.ActionAppy(),
+			m.topic.ActionRemove(),
 		}
 
 		conf.EventHub.Subcribe(SnapshotListener, hub, topics...)
@@ -156,15 +159,15 @@ func (m *managerSnapshotFile[T]) trySave(force bool, format format.DataFormat) {
 
 func (m *managerSnapshotFile[T]) tryExec(e system.SystemEvent) {
 	switch e.Topic {
-	case m.topic.TopicSnapshotSaveInput():
+	case m.topic.ActionSave().Code:
 		if err := m.actionSave(e); err != nil {
 			log.Custome(SnapshotCategory, err)
 		}
-	case m.topic.TopicSnapshotAppyInput():
+	case m.topic.ActionAppy().Code:
 		if err := m.actionApply(e); err != nil {
 			log.Custome(SnapshotCategory, err)
 		}
-	case m.topic.TopicSnapshotRemoveInput():
+	case m.topic.ActionRemove().Code:
 		if err := m.actionRemove(e); err != nil {
 			log.Custome(SnapshotCategory, err)
 		}
@@ -289,7 +292,11 @@ func (m *managerSnapshotFile[T]) apply(name string, format format.DataFormat) er
 	}
 
 	conf := configuration.Instance()
-	conf.EventHub.Publish(m.topic.TopicSnapshotApplyOutput(), "true")
+
+	meta := m.topic.Meta()
+	action := meta.Repository.ActionReload()
+
+	conf.EventHub.Publish(action.Code, "true")
 
 	return nil
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/dependency"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
-	"github.com/Rafael24595/go-api-core/src/commons/system"
+	topic_snapshot "github.com/Rafael24595/go-api-core/src/commons/system/topic/snapshot"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
@@ -43,14 +43,14 @@ func initializeManagerSession(config configuration.Configuration, container *dep
 
 	snapshot := config.Snapshot()
 	if snapshot.Enable {
-		topic := system.SNAPSHOT_TOPIC_SESSION
+		topic := topic_snapshot.TOPIC_SESSION
 		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
 	return repository.InitializeManagerSession(file, container.ManagerClientData)
 }
 
-func loadManagerSnapshotFile[T repository.IStructure](topic system.TopicSnapshot, snapshot configuration.Snapshot, file repository.IFileManager[T]) repository.IFileManager[T] {
+func loadManagerSnapshotFile[T repository.IStructure](topic topic_snapshot.TopicSnapshot, snapshot configuration.Snapshot, file repository.IFileManager[T]) repository.IFileManager[T] {
 	return repository.
 		BuilderManagerSnapshotFile(topic, file).
 		Limit(snapshot.Limit).

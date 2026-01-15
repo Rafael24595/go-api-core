@@ -9,6 +9,8 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/session"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
+	"github.com/Rafael24595/go-api-core/src/commons/system/topic"
+	topic_repository "github.com/Rafael24595/go-api-core/src/commons/system/topic/repository"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-collections/collection"
 	"golang.org/x/crypto/bcrypt"
@@ -95,8 +97,8 @@ func (r *ManagerSession) watch() {
 		hub := make(chan system.SystemEvent, 1)
 		defer close(hub)
 
-		topics := []string{
-			system.SNAPSHOT_TOPIC_SESSION.TopicSnapshotApplyOutput(),
+		topics := []topic.TopicAction{
+			topic_repository.TOPIC_SESSION.ActionReload(),
 		}
 
 		conf.EventHub.Subcribe(RepositoryListener, hub, topics...)

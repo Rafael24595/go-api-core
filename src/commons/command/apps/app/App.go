@@ -45,7 +45,7 @@ var refVersion = apps.CommandReference{
 	Example:     fmt.Sprintf(`%s %s`, Command, FLAG_VERSION),
 }
 
-func exec(request *apps.CmdRequest) *apps.CmdResult {
+func exec(request *apps.CmdExecRequest) *apps.CmdExecResult {
 	cmd := request.Command
 
 	if cmd.Size() == 0 {
@@ -71,12 +71,12 @@ func exec(request *apps.CmdRequest) *apps.CmdResult {
 	return apps.EmptyResult()
 }
 
-func help() *apps.CmdResult {
+func help() *apps.CmdExecResult {
 	title := fmt.Sprintf("Available %s actions:\n", Command)
 	return apps.RunHelp(title, refs)
 }
 
-func version() *apps.CmdResult {
+func version() *apps.CmdExecResult {
 	config := configuration.Instance()
 	project := config.Project
 

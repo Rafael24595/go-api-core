@@ -8,6 +8,8 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
+	"github.com/Rafael24595/go-api-core/src/commons/system/topic"
+	topic_repository "github.com/Rafael24595/go-api-core/src/commons/system/topic/repository"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	mock_domain "github.com/Rafael24595/go-api-core/src/domain/mock"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
@@ -50,8 +52,8 @@ func (r *EndPointRepositoryMemory) watch() {
 		hub := make(chan system.SystemEvent, 1)
 		defer close(hub)
 
-		topics := []string{
-			system.SNAPSHOT_TOPIC_END_POINT.TopicSnapshotApplyOutput(),
+		topics := []topic.TopicAction{
+			topic_repository.TOPIC_END_POINT.ActionReload(),
 		}
 
 		conf.EventHub.Subcribe(repository.RepositoryListener, hub, topics...)
@@ -136,7 +138,7 @@ func (r *EndPointRepositoryMemory) FindByRequest(owner string, method domain.Htt
 			return i.Order < j.Order
 		}).
 		First()
-		
+
 	return &endpoint, ok
 }
 
