@@ -5,6 +5,7 @@ import (
 	"math"
 	"strings"
 	"time"
+	"unicode"
 )
 
 const ESCAPE_RUNE = '\\'
@@ -85,7 +86,7 @@ func SplitCommand(input string) ([]string, error) {
 			quote = r
 			closed = false
 
-		case r == ' ' || r == '\t' || r == '\n':
+		case unicode.IsSpace(r) || r == '\t' || r == '\n':
 			if len(buffer) > 0 || closed {
 				args = append(args, string(buffer))
 				buffer = make([]rune, 0)
