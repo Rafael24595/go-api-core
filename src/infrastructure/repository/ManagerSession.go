@@ -16,6 +16,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const NameMemory = "request_memory" 
+
 var (
 	manager *ManagerSession
 	once    sync.Once
@@ -107,15 +109,16 @@ func (r *ManagerSession) watch() {
 		for {
 			select {
 			case <-r.close:
-				log.Customf(SnapshotCategory, "Watcher stopped: local close signal received.")
+				log.Customf(RepositoryCategory, "Watcher stopped: local close signal received.")
 				return
 			case <-hub:
 				if err := r.read(); err != nil {
 					log.Custome(SnapshotCategory, err)
 					return
 				}
+				log.Customf(RepositoryCategory, "The repository %q has been reloaded.", NameMemory)
 			case <-conf.Signal.Done():
-				log.Customf(SnapshotCategory, "Watcher stopped: global shutdown signal received.")
+				log.Customf(RepositoryCategory, "Watcher stopped: global shutdown signal received.")
 				return
 			}
 		}

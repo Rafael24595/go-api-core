@@ -21,6 +21,7 @@ import (
 )
 
 const SnapshotCategory = "SNAPSHOT"
+const RepositoryCategory = "REPOSITORY"
 
 const SnapshotListener = "snapshot"
 const RepositoryListener = "repository"

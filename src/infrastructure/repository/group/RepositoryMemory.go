@@ -15,6 +15,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const NameMemory = "group_memory" 
+
 type RepositoryMemory struct {
 	once       sync.Once
 	muMemory   sync.RWMutex
@@ -62,15 +64,16 @@ func (r *RepositoryMemory) watch() {
 		for {
 			select {
 			case <-r.close:
-				log.Customf(repository.SnapshotCategory, "Watcher stopped: local close signal received.")
+				log.Customf(repository.RepositoryCategory, "Watcher stopped: local close signal received.")
 				return
 			case <-hub:
 				if err := r.read(); err != nil {
-					log.Custome(repository.SnapshotCategory, err)
+					log.Custome(repository.RepositoryCategory, err)
 					return
 				}
+				log.Customf(repository.RepositoryCategory, "The repository %q has been reloaded.", NameMemory)
 			case <-conf.Signal.Done():
-				log.Customf(repository.SnapshotCategory, "Watcher stopped: global shutdown signal received.")
+				log.Customf(repository.RepositoryCategory, "Watcher stopped: global shutdown signal received.")
 				return
 			}
 		}
