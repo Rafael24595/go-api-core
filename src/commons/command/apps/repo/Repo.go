@@ -38,6 +38,7 @@ var refs = []apps.CommandReference{
 	refHelp,
 	refListeners,
 	refDetails,
+	refReload,
 }
 
 var refHelp = apps.CommandReference{
@@ -59,6 +60,13 @@ var refDetails = apps.CommandReference{
 	Name:        "Details",
 	Description: "Displays the list of resolver listeners with it's status and metadata for a given targets.",
 	Example:     fmt.Sprintf(`%s %s ${topic}+${topic}`, Command, FLAG_DETAILS),
+}
+
+var refReload = apps.CommandReference{
+	Flag:        FLAG_RELOAD,
+	Name:        "Reload",
+	Description: "Reloads the given resolver.",
+	Example:     fmt.Sprintf(`%s %s ${topic}+${topic}`, Command, FLAG_RELOAD),
 }
 
 func exec(request *apps.CmdExecRequest) *apps.CmdExecResult {
