@@ -58,13 +58,19 @@ func (t *Table) ToString() string {
 
 	buffer := make([]string, 0)
 
-	buffer = append(buffer, t.formatRow(headers))
+	headersRow := t.formatRow(headers)
+
+	hborder := strings.Repeat("-", len(headersRow))
+
+	buffer = append(buffer, hborder)
+	buffer = append(buffer, headersRow)
 	buffer = append(buffer, t.formatRowOpts(separator, "-"))
 	for _, r := range table {
 		buffer = append(buffer, t.formatRow(r))
 	}
+	buffer = append(buffer, hborder)
 
-	return strings.Join(buffer, "\n")
+	return "\n" + strings.Join(buffer, "\n") + "\n"
 
 }
 

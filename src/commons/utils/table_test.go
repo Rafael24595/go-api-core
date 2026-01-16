@@ -81,11 +81,13 @@ func TestToString_SimpleTable(t *testing.T) {
 	table.Field("Id", 1, 2).
 		Field("Lang", 1, "Golang")
 
-	expected := "" +
+	expected := "\n" +
+		"---------------\n" +
 		"| Id |  Lang  |\n" +
 		"|----|--------|\n" +
 		"| 1  | Zig    |\n" +
-		"| 2  | Golang |"
+		"| 2  | Golang |\n" +
+		"---------------\n"
 
 	assert.Equal(t, expected, table.ToString())
 }
@@ -99,11 +101,13 @@ func TestToString_IncompleteTable(t *testing.T) {
 
 	table.Field("Id", 1, 2)
 
-	expected := "" +
+	expected := "\n" +
+		"-------------\n" +
 		"| Id | Lang |\n" +
 		"|----|------|\n" +
 		"|    | Zig  |\n" +
-		"| 2  |      |"
+		"| 2  |      |\n" +
+		"-------------\n"
 
 	assert.Equal(t, expected, table.ToString())
 }
@@ -113,9 +117,11 @@ func TestToString_EmptyRows(t *testing.T) {
 
 	table.Headers("Id", "Lang")
 
-	expected :=
+	expected := "\n" +
+		"-------------\n" +
 		"| Id | Lang |\n" +
-		"|----|------|"
+		"|----|------|\n" +
+		"-------------\n"
 
 	assert.Equal(t, expected, table.ToString())
 }
