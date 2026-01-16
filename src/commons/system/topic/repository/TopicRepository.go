@@ -24,7 +24,7 @@ const (
 	TOPIC_CONTEXT     TopicRepository = "rep_ctx"
 	TOPIC_REQUEST     TopicRepository = "rep_rqt"
 	TOPIC_RESPONSE    TopicRepository = "rep_rsp"
-	TOPIC_COLLECTION  TopicRepository = "rep_coll"
+	TOPIC_COLLECTION  TopicRepository = "rep_col"
 	TOPIC_GROUP       TopicRepository = "rep_grp"
 	TOPIC_END_POINT   TopicRepository = "rep_ept"
 	TOPIC_METRICS     TopicRepository = "rep_epm"

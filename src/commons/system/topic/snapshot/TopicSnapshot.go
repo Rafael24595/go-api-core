@@ -30,7 +30,7 @@ const (
 	TOPIC_CONTEXT     TopicSnapshot = "snpsh_ctx"
 	TOPIC_REQUEST     TopicSnapshot = "snpsh_rqt"
 	TOPIC_RESPONSE    TopicSnapshot = "snpsh_rsp"
-	TOPIC_COLLECTION  TopicSnapshot = "snpsh_coll"
+	TOPIC_COLLECTION  TopicSnapshot = "snpsh_col"
 	TOPIC_GROUP       TopicSnapshot = "snpsh_grp"
 	TOPIC_END_POINT   TopicSnapshot = "snpsh_ept"
 	TOPIC_METRICS     TopicSnapshot = "snpsh_epm"
