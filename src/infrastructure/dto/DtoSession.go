@@ -1,9 +1,10 @@
 package dto
 
-import "github.com/Rafael24595/go-api-core/src/commons/session"
+import "github.com/Rafael24595/go-api-core/src/domain/session"
 
 type DtoSession struct {
 	Username  string         `json:"username"`
+	Lock      bool           `json:"lock"`
 	Secret    string         `json:"secret"`
 	Timestamp int64          `json:"timestamp"`
 	Publisher string         `json:"publisher"`
@@ -23,6 +24,7 @@ func (s DtoSession) PersistenceId() string {
 func ToSession(dto DtoSession) *session.Session {
 	return &session.Session{
 		Username:  dto.Username,
+		Lock:      dto.Lock,
 		Secret:    []byte(dto.Secret),
 		Timestamp: dto.Timestamp,
 		Publisher: dto.Publisher,
@@ -35,6 +37,7 @@ func ToSession(dto DtoSession) *session.Session {
 func FromSession(session session.Session) *DtoSession {
 	return &DtoSession{
 		Username:  session.Username,
+		Lock:      session.Lock,
 		Secret:    string(session.Secret),
 		Timestamp: session.Timestamp,
 		Publisher: session.Publisher,

@@ -6,13 +6,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Rafael24595/go-api-core/src/application/session"
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/dependency"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	topic_snapshot "github.com/Rafael24595/go-api-core/src/commons/system/topic/snapshot"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
+	domain_session "github.com/Rafael24595/go-api-core/src/domain/session"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
+	repository_session "github.com/Rafael24595/go-api-core/src/infrastructure/repository/session"
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
@@ -33,11 +36,14 @@ func Initialize(kargs map[string]utils.Argument) (*configuration.Configuration, 
 	log.Messagef("Dev mode: %v", config.Dev())
 
 	container := dependency.Initialize(config)
-	initializeManagerSession(config, container)
+
+	repositorySession := loadRepositorySession(config)
+	initializeManagerSession(config, repositorySession, container)
+
 	return &config, container
 }
 
-func initializeManagerSession(config configuration.Configuration, container *dependency.DependencyContainer) *repository.ManagerSession {
+func loadRepositorySession(config configuration.Configuration) domain_session.RepositorySession {
 	var file repository.IFileManager[dto.DtoSession]
 	file = repository.NewManagerCsvtFile[dto.DtoSession](repository.CSVT_FILE_PATH_SESSION)
 
@@ -47,7 +53,19 @@ func initializeManagerSession(config configuration.Configuration, container *dep
 		file = loadManagerSnapshotFile(topic, snapshot, file)
 	}
 
-	return repository.InitializeManagerSession(file, container.ManagerClientData)
+	repository, err := repository_session.InitializeRepositoryMemory(file)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return repository
+}
+
+func initializeManagerSession(
+	config configuration.Configuration,
+	sessions domain_session.RepositorySession,
+	container *dependency.DependencyContainer) *session.ManagerSession {
+	return session.InitializeManagerSession(config, sessions, container.ManagerSessionData)
 }
 
 func loadManagerSnapshotFile[T repository.IStructure](topic topic_snapshot.TopicSnapshot, snapshot configuration.Snapshot, file repository.IFileManager[T]) repository.IFileManager[T] {

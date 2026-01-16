@@ -9,26 +9,26 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/system"
 	"github.com/Rafael24595/go-api-core/src/commons/system/topic"
 	topic_repository "github.com/Rafael24595/go-api-core/src/commons/system/topic/repository"
-	"github.com/Rafael24595/go-api-core/src/domain"
+	"github.com/Rafael24595/go-api-core/src/domain/group"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
 	"github.com/google/uuid"
 )
 
-const NameMemory = "group_memory" 
+const NameMemory = "group_memory"
 
 type RepositoryMemory struct {
 	once       sync.Once
 	muMemory   sync.RWMutex
 	muFile     sync.RWMutex
-	collection collection.IDictionary[string, domain.Group]
-	file       repository.IFileManager[domain.Group]
+	collection collection.IDictionary[string, group.Group]
+	file       repository.IFileManager[group.Group]
 	close      chan bool
 }
 
 func InitializeRepositoryMemory(
-	impl collection.IDictionary[string, domain.Group],
-	file repository.IFileManager[domain.Group]) (*RepositoryMemory, error) {
+	impl collection.IDictionary[string, group.Group],
+	file repository.IFileManager[group.Group]) (*RepositoryMemory, error) {
 	groups, err := file.Read()
 	if err != nil {
 		return nil, err
@@ -90,19 +90,19 @@ func (r *RepositoryMemory) read() error {
 	return nil
 }
 
-func (r *RepositoryMemory) Find(id string) (*domain.Group, bool) {
+func (r *RepositoryMemory) Find(id string) (*group.Group, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 	group, ok := r.collection.Get(id)
 	return &group, ok
 }
 
-func (r *RepositoryMemory) Insert(owner string, group *domain.Group) *domain.Group {
+func (r *RepositoryMemory) Insert(owner string, group *group.Group) *group.Group {
 	r.muMemory.Lock()
 	return r.resolve(owner, group)
 }
 
-func (r *RepositoryMemory) resolve(owner string, group *domain.Group) *domain.Group {
+func (r *RepositoryMemory) resolve(owner string, group *group.Group) *group.Group {
 	if group.Id != "" {
 		return r.insert(owner, group)
 	}
@@ -117,7 +117,7 @@ func (r *RepositoryMemory) resolve(owner string, group *domain.Group) *domain.Gr
 	return r.insert(owner, group)
 }
 
-func (r *RepositoryMemory) insert(owner string, group *domain.Group) *domain.Group {
+func (r *RepositoryMemory) insert(owner string, group *group.Group) *group.Group {
 	defer r.muMemory.Unlock()
 
 	group.Owner = owner
@@ -135,7 +135,7 @@ func (r *RepositoryMemory) insert(owner string, group *domain.Group) *domain.Gro
 	return group
 }
 
-func (r *RepositoryMemory) Delete(context *domain.Group) *domain.Group {
+func (r *RepositoryMemory) Delete(context *group.Group) *group.Group {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
@@ -145,7 +145,7 @@ func (r *RepositoryMemory) Delete(context *domain.Group) *domain.Group {
 	return &cursor
 }
 
-func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, domain.Group]) {
+func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, group.Group]) {
 	r.muFile.Lock()
 	defer r.muFile.Unlock()
 
