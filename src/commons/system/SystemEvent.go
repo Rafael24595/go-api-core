@@ -3,8 +3,10 @@ package system
 import (
 	"maps"
 	"sync"
+	"time"
 
 	"github.com/Rafael24595/go-api-core/src/commons/log"
+	str_topic "github.com/Rafael24595/go-api-core/src/commons/system/topic"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-collections/collection"
 )
@@ -17,14 +19,28 @@ type SystemEvent struct {
 }
 
 func NewSystemEvent(topic, payload string) SystemEvent {
-	return  SystemEvent{
+	return SystemEvent{
 		Topic: topic,
 		Value: *utils.ArgumentFrom(payload),
 	}
 }
 
-type topic map[string]chan SystemEvent
-type listeners map[string]topic
+type topic struct {
+	parent    string
+	status    bool
+	timestamp int64
+	channel   chan SystemEvent
+}
+
+type topics map[string]topic
+type listeners map[string]topics
+
+type TopicMeta struct {
+	Parent    string
+	Code      string
+	Status    bool
+	Timestamp int64
+}
 
 type SystemEventHub struct {
 	mu        sync.Mutex
@@ -46,8 +62,24 @@ func (h *SystemEventHub) Topics(code string) []string {
 	return collection.DictionaryFromMap(l).Keys()
 }
 
-func (h *SystemEventHub) Subcribe(code string, listener chan SystemEvent, topics ...string) {
-	if len(topics) == 0 {
+func (h *SystemEventHub) TopicsMeta(code string) []TopicMeta {
+	l, ok := h.listeners[code]
+	if !ok {
+		return make([]TopicMeta, 0)
+	}
+
+	return collection.MapToDictionary(l, func(k string, v topic) TopicMeta {
+		return TopicMeta{
+			Code:      k,
+			Parent:    v.parent,
+			Status:    v.status,
+			Timestamp: v.timestamp,
+		}
+	}).Values()
+}
+
+func (h *SystemEventHub) Subcribe(code string, listener chan SystemEvent, tcps ...str_topic.TopicAction) {
+	if len(tcps) == 0 {
 		return
 	}
 
@@ -56,17 +88,22 @@ func (h *SystemEventHub) Subcribe(code string, listener chan SystemEvent, topics
 
 	l, ok := h.listeners[code]
 	if !ok {
-		l = make(topic)
+		l = make(topics)
 	}
 
-	for _, t := range topics {
-		l[t] = listener
+	for _, t := range tcps {
+		l[t.Code] = topic{
+			parent:    t.Parent,
+			status:    true,
+			timestamp: time.Now().UnixMilli(),
+			channel:   listener,
+		}
 	}
 
 	h.listeners[code] = l
 }
 
-func (h *SystemEventHub) Unsubcribe(code string, topics ...string) {
+func (h *SystemEventHub) Unsubcribe(code string, topics ...str_topic.TopicAction) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -81,7 +118,7 @@ func (h *SystemEventHub) Unsubcribe(code string, topics ...string) {
 	}
 
 	for _, t := range topics {
-		delete(l, t)
+		delete(l, t.Parent)
 	}
 
 	h.listeners[code] = l
@@ -104,12 +141,12 @@ func (h *SystemEventHub) push(event SystemEvent) {
 
 	for c, ls := range snapshot {
 		for t, l := range ls {
-			if t != event.Topic {
+			if t != event.Topic || !l.status {
 				continue
 			}
 
 			select {
-			case l <- event:
+			case l.channel <- event:
 			default:
 				log.Customf(SystemHubCategory, "Dropped event for listener %q on topic %q: channel was full or not being read.", c, t)
 			}

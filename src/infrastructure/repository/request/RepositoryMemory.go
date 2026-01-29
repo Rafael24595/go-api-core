@@ -8,12 +8,16 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
+	"github.com/Rafael24595/go-api-core/src/commons/system/topic"
+	topic_repository "github.com/Rafael24595/go-api-core/src/commons/system/topic/repository"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/action"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
 	"github.com/google/uuid"
 )
+
+const NameMemory = "request_memory" 
 
 type RepositoryMemory struct {
 	once       sync.Once
@@ -50,8 +54,8 @@ func (r *RepositoryMemory) watch() {
 		hub := make(chan system.SystemEvent, 1)
 		defer close(hub)
 
-		topics := []string{
-			system.SNAPSHOT_TOPIC_REQUEST.TopicSnapshotApplyOutput(),
+		topics := []topic.TopicAction{
+			topic_repository.TOPIC_REQUEST.ActionReload(),
 		}
 
 		conf.EventHub.Subcribe(repository.RepositoryListener, hub, topics...)
@@ -60,15 +64,16 @@ func (r *RepositoryMemory) watch() {
 		for {
 			select {
 			case <-r.close:
-				log.Customf(repository.SnapshotCategory, "Watcher stopped: local close signal received.")
+				log.Customf(repository.RepositoryCategory, "Watcher stopped: local close signal received.")
 				return
 			case <-hub:
 				if err := r.read(); err != nil {
-					log.Custome(repository.SnapshotCategory, err)
+					log.Custome(repository.RepositoryCategory, err)
 					return
 				}
+				log.Customf(repository.RepositoryCategory, "The repository %q has been reloaded.", NameMemory)
 			case <-conf.Signal.Done():
-				log.Customf(repository.SnapshotCategory, "Watcher stopped: global shutdown signal received.")
+				log.Customf(repository.RepositoryCategory, "Watcher stopped: global shutdown signal received.")
 				return
 			}
 		}
@@ -88,7 +93,8 @@ func (r *RepositoryMemory) read() error {
 func (r *RepositoryMemory) Find(key string) (*action.Request, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(key)
+	request, ok := r.collection.Get(key)
+	return &request, ok
 }
 
 func (r *RepositoryMemory) FindMany(ids ...string) []action.Request {
@@ -98,7 +104,7 @@ func (r *RepositoryMemory) FindMany(ids ...string) []action.Request {
 	requests := make([]action.Request, 0)
 	for _, v := range ids {
 		if request, ok := r.collection.Get(v); ok {
-			requests = append(requests, *request)
+			requests = append(requests, request)
 		}
 	}
 
@@ -118,7 +124,7 @@ func (r *RepositoryMemory) FindNodes(references []domain.NodeReference) []action
 
 		requests = append(requests, action.NodeRequest{
 			Order:   v.Order,
-			Request: *request,
+			Request: request,
 		})
 	}
 
@@ -132,7 +138,7 @@ func (r *RepositoryMemory) FindRequests(references []domain.NodeReference) []act
 	requests := make([]action.Request, 0)
 	for _, v := range references {
 		if request, ok := r.collection.Get(v.Item); ok {
-			requests = append(requests, *request)
+			requests = append(requests, request)
 		}
 	}
 
@@ -186,12 +192,12 @@ func (r *RepositoryMemory) Delete(request *action.Request) *action.Request {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
-	cursor, _ := r.collection.Remove(request.Id)
-	if cursor != nil {
+	cursor, ok := r.collection.Remove(request.Id)
+	if ok {
 		go r.write(r.collection)
 	}
 
-	return cursor
+	return &cursor
 }
 
 func (r *RepositoryMemory) DeleteMany(requests ...action.Request) []action.Request {
@@ -201,7 +207,7 @@ func (r *RepositoryMemory) DeleteMany(requests ...action.Request) []action.Reque
 	deleted := make([]action.Request, 0)
 	for _, v := range requests {
 		cursor, _ := r.collection.Remove(v.Id)
-		deleted = append(deleted, *cursor)
+		deleted = append(deleted, cursor)
 	}
 
 	go r.write(r.collection)

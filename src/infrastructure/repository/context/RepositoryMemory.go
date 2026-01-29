@@ -7,12 +7,16 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
+	"github.com/Rafael24595/go-api-core/src/commons/system/topic"
+	topic_repository "github.com/Rafael24595/go-api-core/src/commons/system/topic/repository"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
 	"github.com/google/uuid"
 )
+
+const NameMemory = "context_memory" 
 
 type RepositoryMemory struct {
 	once       sync.Once
@@ -56,8 +60,8 @@ func (r *RepositoryMemory) watch() {
 		hub := make(chan system.SystemEvent, 1)
 		defer close(hub)
 
-		topics := []string{
-			system.SNAPSHOT_TOPIC_CONTEXT.TopicSnapshotApplyOutput(),
+		topics := []topic.TopicAction{
+			topic_repository.TOPIC_CONTEXT.ActionReload(),
 		}
 
 		conf.EventHub.Subcribe(repository.RepositoryListener, hub, topics...)
@@ -66,15 +70,16 @@ func (r *RepositoryMemory) watch() {
 		for {
 			select {
 			case <-r.close:
-				log.Customf(repository.SnapshotCategory, "Watcher stopped: local close signal received.")
+				log.Customf(repository.RepositoryCategory, "Watcher stopped: local close signal received.")
 				return
 			case <-hub:
 				if err := r.read(); err != nil {
-					log.Custome(repository.SnapshotCategory, err)
+					log.Custome(repository.RepositoryCategory, err)
 					return
 				}
+				log.Customf(repository.RepositoryCategory, "The repository %q has been reloaded.", NameMemory)
 			case <-conf.Signal.Done():
-				log.Customf(repository.SnapshotCategory, "Watcher stopped: global shutdown signal received.")
+				log.Customf(repository.RepositoryCategory, "Watcher stopped: global shutdown signal received.")
 				return
 			}
 		}
@@ -98,7 +103,8 @@ func (r *RepositoryMemory) read() error {
 func (r *RepositoryMemory) Find(id string) (*context.Context, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(id)
+	context, ok := r.collection.Get(id)
+	return &context, ok
 }
 
 func (r *RepositoryMemory) Insert(owner, collection string, ctx *context.Context) *context.Context {
@@ -154,7 +160,7 @@ func (r *RepositoryMemory) Delete(context *context.Context) *context.Context {
 	cursor, _ := r.collection.Remove(context.Id)
 	go r.write(r.collection)
 
-	return cursor
+	return &cursor
 }
 
 func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, context.Context]) {

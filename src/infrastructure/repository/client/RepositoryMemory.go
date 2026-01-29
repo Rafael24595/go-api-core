@@ -7,23 +7,27 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
-	"github.com/Rafael24595/go-api-core/src/domain/client"
+	"github.com/Rafael24595/go-api-core/src/commons/system/topic"
+	topic_repository "github.com/Rafael24595/go-api-core/src/commons/system/topic/repository"
+	"github.com/Rafael24595/go-api-core/src/domain/session"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
 )
+
+const NameMemory = "client_memory" 
 
 type RepositoryMemory struct {
 	once       sync.Once
 	muMemory   sync.RWMutex
 	muFile     sync.RWMutex
-	collection collection.IDictionary[string, client.ClientData]
-	file       repository.IFileManager[client.ClientData]
+	collection collection.IDictionary[string, session.ClientData]
+	file       repository.IFileManager[session.ClientData]
 	close      chan bool
 }
 
 func InitializeRepositoryMemory(
-	impl collection.IDictionary[string, client.ClientData],
-	file repository.IFileManager[client.ClientData]) (*RepositoryMemory, error) {
+	impl collection.IDictionary[string, session.ClientData],
+	file repository.IFileManager[session.ClientData]) (*RepositoryMemory, error) {
 	raw, err := file.Read()
 	if err != nil {
 		return nil, err
@@ -51,8 +55,8 @@ func (r *RepositoryMemory) watch() {
 		hub := make(chan system.SystemEvent, 1)
 		defer close(hub)
 
-		topics := []string{
-			system.SNAPSHOT_TOPIC_CLIENT_DATA.TopicSnapshotApplyOutput(),
+		topics := []topic.TopicAction{
+			topic_repository.TOPIC_CLIENT_DATA.ActionReload(),
 		}
 
 		conf.EventHub.Subcribe(repository.RepositoryListener, hub, topics...)
@@ -61,15 +65,16 @@ func (r *RepositoryMemory) watch() {
 		for {
 			select {
 			case <-r.close:
-				log.Customf(repository.SnapshotCategory, "Watcher stopped: local close signal received.")
+				log.Customf(repository.RepositoryCategory, "Watcher stopped: local close signal received.")
 				return
 			case <-hub:
 				if err := r.read(); err != nil {
-					log.Custome(repository.SnapshotCategory, err)
+					log.Custome(repository.RepositoryCategory, err)
 					return
 				}
+				log.Customf(repository.RepositoryCategory, "The repository %q has been reloaded.", NameMemory)
 			case <-conf.Signal.Done():
-				log.Customf(repository.SnapshotCategory, "Watcher stopped: global shutdown signal received.")
+				log.Customf(repository.RepositoryCategory, "Watcher stopped: global shutdown signal received.")
 				return
 			}
 		}
@@ -87,17 +92,18 @@ func (r *RepositoryMemory) read() error {
 	return nil
 }
 
-func (r *RepositoryMemory) Find(owner string) (*client.ClientData, bool) {
+func (r *RepositoryMemory) Find(owner string) (*session.ClientData, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(owner)
+	data, ok := r.collection.Get(owner)
+	return &data, ok
 }
 
-func (r *RepositoryMemory) Insert(data *client.ClientData) *client.ClientData {
+func (r *RepositoryMemory) Insert(data *session.ClientData) *session.ClientData {
 	return r.insert(data)
 }
 
-func (r *RepositoryMemory) insert(data *client.ClientData) *client.ClientData {
+func (r *RepositoryMemory) insert(data *session.ClientData) *session.ClientData {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
@@ -118,24 +124,24 @@ func (r *RepositoryMemory) insert(data *client.ClientData) *client.ClientData {
 	return data
 }
 
-func (r *RepositoryMemory) Update(data *client.ClientData) (*client.ClientData, bool) {
+func (r *RepositoryMemory) Update(data *session.ClientData) (*session.ClientData, bool) {
 	if _, exists := r.Find(data.Owner); !exists {
 		return data, false
 	}
 	return r.insert(data), true
 }
 
-func (r *RepositoryMemory) Delete(data *client.ClientData) *client.ClientData {
+func (r *RepositoryMemory) Delete(data *session.ClientData) *session.ClientData {
 	r.muMemory.Lock()
 	defer r.muMemory.Unlock()
 
 	cursor, _ := r.collection.Remove(data.Owner)
 	go r.write(r.collection)
 
-	return cursor
+	return &cursor
 }
 
-func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, client.ClientData]) {
+func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, session.ClientData]) {
 	r.muFile.Lock()
 	defer r.muFile.Unlock()
 

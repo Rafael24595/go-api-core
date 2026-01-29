@@ -8,12 +8,16 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
+	"github.com/Rafael24595/go-api-core/src/commons/system/topic"
+	topic_repository "github.com/Rafael24595/go-api-core/src/commons/system/topic/repository"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	mock_domain "github.com/Rafael24595/go-api-core/src/domain/mock"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
 	"github.com/google/uuid"
 )
+
+const NameEndPointMemory = "end_point_memory"
 
 type EndPointRepositoryMemory struct {
 	once       sync.Once
@@ -50,8 +54,8 @@ func (r *EndPointRepositoryMemory) watch() {
 		hub := make(chan system.SystemEvent, 1)
 		defer close(hub)
 
-		topics := []string{
-			system.SNAPSHOT_TOPIC_END_POINT.TopicSnapshotApplyOutput(),
+		topics := []topic.TopicAction{
+			topic_repository.TOPIC_END_POINT.ActionReload(),
 		}
 
 		conf.EventHub.Subcribe(repository.RepositoryListener, hub, topics...)
@@ -60,15 +64,16 @@ func (r *EndPointRepositoryMemory) watch() {
 		for {
 			select {
 			case <-r.close:
-				log.Customf(repository.SnapshotCategory, "Watcher stopped: local close signal received.")
+				log.Customf(repository.RepositoryCategory, "Watcher stopped: local close signal received.")
 				return
 			case <-hub:
 				if err := r.read(); err != nil {
-					log.Custome(repository.SnapshotCategory, err)
+					log.Custome(repository.RepositoryCategory, err)
 					return
 				}
+				log.Customf(repository.RepositoryCategory, "The repository %q has been reloaded.", NameEndPointMemory)
 			case <-conf.Signal.Done():
-				log.Customf(repository.SnapshotCategory, "Watcher stopped: global shutdown signal received.")
+				log.Customf(repository.RepositoryCategory, "Watcher stopped: global shutdown signal received.")
 				return
 			}
 		}
@@ -119,14 +124,15 @@ func (r *EndPointRepositoryMemory) FindMany(ids ...string) []mock_domain.EndPoin
 func (r *EndPointRepositoryMemory) Find(id string) (*mock_domain.EndPoint, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(id)
+	endpoint, ok := r.collection.Get(id)
+	return &endpoint, ok
 }
 
 func (r *EndPointRepositoryMemory) FindByRequest(owner string, method domain.HttpMethod, path string) (*mock_domain.EndPoint, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
 
-	return r.collection.
+	endpoint, ok := r.collection.
 		Filter(func(s string, ep mock_domain.EndPoint) bool {
 			return ep.Owner == owner && ep.Method == method && ep.Path == path
 		}).
@@ -135,6 +141,8 @@ func (r *EndPointRepositoryMemory) FindByRequest(owner string, method domain.Htt
 			return i.Order < j.Order
 		}).
 		First()
+
+	return &endpoint, ok
 }
 
 func (r *EndPointRepositoryMemory) Insert(endPoint *mock_domain.EndPoint) *mock_domain.EndPoint {
@@ -199,7 +207,7 @@ func (r *EndPointRepositoryMemory) Delete(endPoint *mock_domain.EndPoint) *mock_
 	cursor, _ := r.collection.Remove(endPoint.Id)
 	go r.write(r.collection)
 
-	return cursor
+	return &cursor
 }
 
 func (r *EndPointRepositoryMemory) write(snapshot collection.IDictionary[string, mock_domain.EndPoint]) {

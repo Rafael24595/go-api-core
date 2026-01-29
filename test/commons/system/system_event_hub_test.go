@@ -7,6 +7,7 @@ import (
 
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
+	"github.com/Rafael24595/go-api-core/src/commons/system/topic"
 	"github.com/Rafael24595/go-api-core/test/support/assert"
 )
 
@@ -14,7 +15,9 @@ func TestSubscribeAndPublish(t *testing.T) {
 	hub := system.InitializeSystemEventHub()
 	ch := make(chan system.SystemEvent, 1)
 
-	hub.Subcribe("listener_1", ch, "langs")
+	hub.Subcribe("listener_1", ch, topic.TopicAction{
+		Code: "langs",
+	})
 	hub.Publish("langs", "golang")
 
 	select {
@@ -31,8 +34,12 @@ func TestSubscribeAndPublish_MultipleListeners(t *testing.T) {
 	ch1 := make(chan system.SystemEvent, 1)
 	ch2 := make(chan system.SystemEvent, 1)
 
-	hub.Subcribe("listener_1", ch1, "langs")
-	hub.Subcribe("listener_2", ch2, "langs")
+	hub.Subcribe("listener_1", ch1, topic.TopicAction{
+		Code: "langs",
+	})
+	hub.Subcribe("listener_2", ch2, topic.TopicAction{
+		Code: "langs",
+	})
 
 	hub.Publish("langs", "zig")
 
@@ -68,9 +75,17 @@ func TestUnsubscribe_SingleTopic(t *testing.T) {
 	hub := system.InitializeSystemEventHub()
 	ch := make(chan system.SystemEvent, 1)
 
-	hub.Subcribe("listener_1", ch, "langs", "dbs")
+	hub.Subcribe("listener_1", ch,
+		topic.TopicAction{
+			Code: "langs",
+		},
+		topic.TopicAction{
+			Code: "dbs",
+		})
 
-	hub.Unsubcribe("listener_1", "langs")
+	hub.Unsubcribe("listener_1", topic.TopicAction{
+		Code: "langs",
+	})
 
 	hub.Publish("langs", "rust")
 	hub.Publish("dbs", "surrealdb")
@@ -88,7 +103,13 @@ func TestUnsubscribe_AllTopics(t *testing.T) {
 	hub := system.InitializeSystemEventHub()
 	ch := make(chan system.SystemEvent, 1)
 
-	hub.Subcribe("listener_1", ch, "langs", "dbs")
+	hub.Subcribe("listener_1", ch,
+		topic.TopicAction{
+			Code: "langs",
+		},
+		topic.TopicAction{
+			Code: "dbs",
+		})
 
 	hub.Unsubcribe("listener_1")
 
@@ -107,7 +128,9 @@ func TestSubscribeAndPublish_NonSubscribedTopic(t *testing.T) {
 	hub := system.InitializeSystemEventHub()
 	ch := make(chan system.SystemEvent, 1)
 
-	hub.Subcribe("listener_1", ch, "langs")
+	hub.Subcribe("listener_1", ch, topic.TopicAction{
+		Code: "langs",
+	})
 	hub.Publish("postgresql", "surrealdb")
 
 	select {
@@ -122,7 +145,9 @@ func TestSubscribeAndPublish_DroppedEventLogsWarning(t *testing.T) {
 	hub := system.InitializeSystemEventHub()
 	ch := make(chan system.SystemEvent, 1)
 
-	hub.Subcribe("listener_1", ch, "langs")
+	hub.Subcribe("listener_1", ch, topic.TopicAction{
+		Code: "langs",
+	})
 
 	ch <- system.NewSystemEvent("langs", "elixir")
 
@@ -148,7 +173,9 @@ func TestSubscribeAndPublish_DroppedEventLogsWarning(t *testing.T) {
 func TestSubscribeAndPublish_Concurrent(t *testing.T) {
 	hub := system.InitializeSystemEventHub()
 	ch := make(chan system.SystemEvent, 10)
-	hub.Subcribe("listener_1", ch, "langs")
+	hub.Subcribe("listener_1", ch, topic.TopicAction{
+		Code: "langs",
+	})
 
 	var wg sync.WaitGroup
 	for i := range 10 {

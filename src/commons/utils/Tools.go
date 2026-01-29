@@ -2,7 +2,10 @@ package utils
 
 import (
 	"fmt"
+	"math"
+	"strings"
 	"time"
+	"unicode"
 )
 
 const ESCAPE_RUNE = '\\'
@@ -58,7 +61,7 @@ func SplitCommand(input string) ([]string, error) {
 	quote := rune(0)
 	escaped := false
 	closed := false
-	
+
 	for _, r := range input {
 		switch {
 		case escaped:
@@ -83,7 +86,7 @@ func SplitCommand(input string) ([]string, error) {
 			quote = r
 			closed = false
 
-		case r == ' ' || r == '\t' || r == '\n':
+		case unicode.IsSpace(r) || r == '\t' || r == '\n':
 			if len(buffer) > 0 || closed {
 				args = append(args, string(buffer))
 				buffer = make([]rune, 0)
@@ -105,4 +108,60 @@ func SplitCommand(input string) ([]string, error) {
 	}
 
 	return args, nil
+}
+
+func Digits(n int) int {
+	if n == 0 {
+		return 1
+	}
+	return int(math.Log10(math.Abs(float64(n)))) + 1
+}
+
+func Center(item any, width int) string {
+	text := fmt.Sprintf("%v", item)
+	if len(text) >= width {
+		return text
+	}
+
+	padding := width - len(text)
+	left := padding / 2
+	right := padding - left
+
+	return strings.Repeat(" ", left) + text + strings.Repeat(" ", right)
+}
+
+func Left(item any, width int) string {
+	text := fmt.Sprintf("%v", item)
+	if len(text) >= width {
+		return text
+	}
+
+	padding := width - len(text)
+
+	return strings.Repeat(" ", padding) + text
+}
+
+func Right(item any, width int) string {
+	text := fmt.Sprintf("%v", item)
+	if len(text) >= width {
+		return text
+	}
+
+	padding := width - len(text)
+
+	return text + strings.Repeat(" ", padding)
+}
+
+func Max(a, b int) int {
+    if a > b {
+        return a
+    }
+    return b
+}
+
+func Min(a, b int) int {
+    if a < b {
+        return a
+    }
+    return b
 }

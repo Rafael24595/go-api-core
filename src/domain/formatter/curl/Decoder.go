@@ -183,7 +183,7 @@ func decode(curl []byte) (*curlData, error) {
 
 	fragments := collection.VectorFromList(args)
 	head, ok := fragments.Shift()
-	if !ok || *head != "curl" {
+	if !ok || head != "curl" {
 		return nil, errors.New("the command is not a valid curl sentence")
 	}
 
@@ -193,7 +193,7 @@ func decode(curl []byte) (*curlData, error) {
 			return nil, errors.New("the command flag could not be empty")
 		}
 
-		url, ok, err := cutUri(*flag, fragments)
+		url, ok, err := cutUri(flag, fragments)
 		if err != nil {
 			return nil, err
 		}
@@ -209,8 +209,8 @@ func decode(curl []byte) (*curlData, error) {
 		}
 
 		tuples = append(tuples, utils.CmdTuple{
-			Flag: *flag,
-			Data: *data,
+			Flag: flag,
+			Data: data,
 		})
 	}
 
@@ -235,7 +235,7 @@ func cutUri(flag string, fragmensts *collection.Vector[string]) (string, bool, e
 			return "", false, errors.New("the uri is not defined")
 		}
 
-		flag = *uri
+		flag = uri
 	} else if strings.HasPrefix(flag, "-") &&
 		(!strings.Contains(flag, "://") && !strings.HasPrefix(flag, "/")) {
 		return "", false, nil

@@ -6,11 +6,15 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
+	"github.com/Rafael24595/go-api-core/src/commons/system/topic"
+	topic_repository "github.com/Rafael24595/go-api-core/src/commons/system/topic/repository"
 	"github.com/Rafael24595/go-api-core/src/domain/action"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
 	"github.com/google/uuid"
 )
+
+const NameMemory = "response_memory" 
 
 type RepositoryMemory struct {
 	once       sync.Once
@@ -47,8 +51,8 @@ func (r *RepositoryMemory) watch() {
 		hub := make(chan system.SystemEvent, 1)
 		defer close(hub)
 
-		topics := []string{
-			system.SNAPSHOT_TOPIC_RESPONSE.TopicSnapshotApplyOutput(),
+		topics := []topic.TopicAction{
+			topic_repository.TOPIC_RESPONSE.ActionReload(),
 		}
 
 		conf.EventHub.Subcribe(repository.RepositoryListener, hub, topics...)
@@ -57,15 +61,16 @@ func (r *RepositoryMemory) watch() {
 		for {
 			select {
 			case <-r.close:
-				log.Customf(repository.SnapshotCategory, "Watcher stopped: local close signal received.")
+				log.Customf(repository.RepositoryCategory, "Watcher stopped: local close signal received.")
 				return
 			case <-hub:
 				if err := r.read(); err != nil {
-					log.Custome(repository.SnapshotCategory, err)
+					log.Custome(repository.RepositoryCategory, err)
 					return
 				}
+				log.Customf(repository.RepositoryCategory, "The repository %q has been reloaded.", NameMemory)
 			case <-conf.Signal.Done():
-				log.Customf(repository.SnapshotCategory, "Watcher stopped: global shutdown signal received.")
+				log.Customf(repository.RepositoryCategory, "Watcher stopped: global shutdown signal received.")
 				return
 			}
 		}
@@ -85,7 +90,8 @@ func (r *RepositoryMemory) read() error {
 func (r *RepositoryMemory) Find(key string) (*action.Response, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(key)
+	response, ok := r.collection.Get(key)
+	return &response, ok
 }
 
 func (r *RepositoryMemory) FindMany(ids []string) []action.Response {
@@ -95,7 +101,7 @@ func (r *RepositoryMemory) FindMany(ids []string) []action.Response {
 	responses := make([]action.Response, 0)
 	for _, v := range ids {
 		if response, ok := r.collection.Get(v); ok {
-			responses = append(responses, *response)
+			responses = append(responses, response)
 		}
 	}
 
@@ -134,7 +140,7 @@ func (r *RepositoryMemory) Delete(response *action.Response) *action.Response {
 	cursor, _ := r.collection.Remove(response.Id)
 	go r.write(r.collection)
 
-	return cursor
+	return &cursor
 }
 
 func (r *RepositoryMemory) DeleteMany(responses ...action.Response) []action.Response {
@@ -144,7 +150,7 @@ func (r *RepositoryMemory) DeleteMany(responses ...action.Response) []action.Res
 	deleted := make([]action.Response, 0)
 	for _, v := range responses {
 		cursor, _ := r.collection.Remove(v.Id)
-		deleted = append(deleted, *cursor)
+		deleted = append(deleted, cursor)
 	}
 
 	go r.write(r.collection)

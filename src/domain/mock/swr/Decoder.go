@@ -51,18 +51,18 @@ func unmarshal(cond string, opts UnmarshalOpts) ([]Step, []error) {
 		}
 
 		var step *Step
-		if _, value, ok := strings.Cut(*cursor, "$"); ok {
+		if _, value, ok := strings.Cut(cursor, "$"); ok {
 			step = NewConditionStep(StepTypeOperator, value)
-		} else if value, ok := findPosition(*cursor); ok {
+		} else if value, ok := findPosition(cursor); ok {
 			step = NewConditionStep(StepTypeArray, value)
-		} else if value, ok := findValue(*cursor); ok {
+		} else if value, ok := findValue(cursor); ok {
 			step = NewConditionStep(StepTypeValue, value)
-		} else if value, ok := findInput(*cursor, prevStep); ok {
+		} else if value, ok := findInput(cursor, prevStep); ok {
 			step = NewConditionStep(StepTypeInput, value)
-		} else if value, ok := findFormat(*cursor, prevStep); ok {
+		} else if value, ok := findFormat(cursor, prevStep); ok {
 			step = NewConditionStep(StepTypeFormat, value)
 		} else {
-			step = NewConditionStep(StepTypeField, *cursor)
+			step = NewConditionStep(StepTypeField, cursor)
 		}
 
 		steps = append(steps, *step)
@@ -88,10 +88,10 @@ func findHeaders(fragments *collection.Vector[string]) ([]Step, error) {
 		return steps, nil
 	}
 
-	step := NewConditionStep(StepTypeInput, *target)
+	step := NewConditionStep(StepTypeInput, target)
 	steps = append(steps, *step)
 
-	if *target != string(StepInputPayload) {
+	if target != string(StepInputPayload) {
 		return steps, nil
 	}
 
@@ -100,7 +100,7 @@ func findHeaders(fragments *collection.Vector[string]) ([]Step, error) {
 		return steps, errors.New("payload format is undefined")
 	}
 
-	step = NewConditionStep(StepTypeFormat, *format)
+	step = NewConditionStep(StepTypeFormat, format)
 	steps = append(steps, *step)
 
 	return steps, nil

@@ -7,11 +7,15 @@ import (
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
+	"github.com/Rafael24595/go-api-core/src/commons/system/topic"
+	topic_repository "github.com/Rafael24595/go-api-core/src/commons/system/topic/repository"
 	token_domain "github.com/Rafael24595/go-api-core/src/domain/token"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
 	"github.com/google/uuid"
 )
+
+const NameMemory = "token_memory" 
 
 type RepositoryMemory struct {
 	once       sync.Once
@@ -48,8 +52,8 @@ func (r *RepositoryMemory) watch() {
 		hub := make(chan system.SystemEvent, 1)
 		defer close(hub)
 
-		topics := []string{
-			system.SNAPSHOT_TOPIC_TOKEN.TopicSnapshotApplyOutput(),
+		topics := []topic.TopicAction{
+			topic_repository.TOPIC_TOKEN.ActionReload(),
 		}
 
 		conf.EventHub.Subcribe(repository.RepositoryListener, hub, topics...)
@@ -58,15 +62,16 @@ func (r *RepositoryMemory) watch() {
 		for {
 			select {
 			case <-r.close:
-				log.Customf(repository.SnapshotCategory, "Watcher stopped: local close signal received.")
+				log.Customf(repository.RepositoryCategory, "Watcher stopped: local close signal received.")
 				return
 			case <-hub:
 				if err := r.read(); err != nil {
-					log.Custome(repository.SnapshotCategory, err)
+					log.Custome(repository.RepositoryCategory, err)
 					return
 				}
+				log.Customf(repository.RepositoryCategory, "The repository %q has been reloaded.", NameMemory)
 			case <-conf.Signal.Done():
-				log.Customf(repository.SnapshotCategory, "Watcher stopped: global shutdown signal received.")
+				log.Customf(repository.RepositoryCategory, "Watcher stopped: global shutdown signal received.")
 				return
 			}
 		}
@@ -98,31 +103,35 @@ func (r *RepositoryMemory) FindAll(owner string) []token_domain.LiteToken {
 func (r *RepositoryMemory) Find(id string) (*token_domain.Token, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.Get(id)
+	token, ok := r.collection.Get(id)
+	return &token, ok
 }
 
 func (r *RepositoryMemory) FindByName(owner, name string) (*token_domain.Token, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.FindOne(func(s string, t token_domain.Token) bool {
+	token, ok := r.collection.FindOne(func(s string, t token_domain.Token) bool {
 		return t.Owner == owner && t.Name == name
 	})
+	return &token, ok
 }
 
 func (r *RepositoryMemory) FindByToken(owner, token string) (*token_domain.Token, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.FindOne(func(s string, t token_domain.Token) bool {
+	tkn, ok := r.collection.FindOne(func(s string, t token_domain.Token) bool {
 		return t.Owner == owner && t.Token == token
 	})
+	return &tkn, ok
 }
 
 func (r *RepositoryMemory) FindGlobal(token string) (*token_domain.Token, bool) {
 	r.muMemory.RLock()
 	defer r.muMemory.RUnlock()
-	return r.collection.FindOne(func(s string, t token_domain.Token) bool {
+	tkn, ok := r.collection.FindOne(func(s string, t token_domain.Token) bool {
 		return t.Token == token
 	})
+	return &tkn, ok
 }
 
 func (r *RepositoryMemory) Insert(owner string, token *token_domain.Token) *token_domain.Token {
@@ -168,7 +177,7 @@ func (r *RepositoryMemory) Delete(endPoint *token_domain.Token) *token_domain.To
 	cursor, _ := r.collection.Remove(endPoint.Id)
 	go r.write(r.collection)
 
-	return cursor
+	return &cursor
 }
 
 func (r *RepositoryMemory) write(snapshot collection.IDictionary[string, token_domain.Token]) {
