@@ -29,5 +29,5 @@ func (m *ManagerCsvtFile[T]) Write(items []T) error {
 		return err
 	}
 
-	return utils.WriteFile(m.path, string(result))
+	return utils.WriteFileSafe(m.path, string(result))
 }
