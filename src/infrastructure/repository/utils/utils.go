@@ -18,22 +18,22 @@ func ReadFile(filePath string) ([]byte, error) {
 		return nil, err
 	}
 
-	result, readErr  := io.ReadAll(file)
+	result, readErr := io.ReadAll(file)
 	err = file.Close()
 	if err != nil {
 		return make([]byte, 0), err
 	}
 
-	return result, readErr 
+	return result, readErr
 }
 
 func WriteFile(filePath, content string) error {
 	dir := filepath.Dir(filePath)
-    err := os.MkdirAll(dir, os.ModePerm)
-    if err != nil {
-        return err
-    }
-	
+	err := os.MkdirAll(dir, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
@@ -47,6 +47,36 @@ func WriteFile(filePath, content string) error {
 
 	if errWrite != nil {
 		return errWrite
+	}
+
+	return nil
+}
+
+func WriteFileSafe(filePath, content string) error {
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		return err
+	}
+
+	tmpFile, err := os.CreateTemp(dir, "temp-*.tmp")
+	if err != nil {
+		return err
+	}
+
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath)
+
+	if _, err := tmpFile.Write([]byte(content)); err != nil {
+		tmpFile.Close()
+		return err
+	}
+
+	if err := tmpFile.Close(); err != nil {
+		return err
+	}
+
+	if err := os.Rename(tmpPath, filePath); err != nil {
+		return err
 	}
 
 	return nil

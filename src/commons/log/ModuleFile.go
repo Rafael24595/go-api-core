@@ -66,7 +66,7 @@ func (m *moduleFile) write(records []Record) ([]Record, error) {
 
 	name := fmt.Sprintf("log-%s-%s", m.session, utils_commons.FormatMillisecondsCompact(m.timestamp))
 	path := fmt.Sprintf("%s/%s.json", m.filePath, name)
-	err = utils.WriteFile(path, string(jsonData))
+	err = utils.WriteFileSafe(path, string(jsonData))
 	if err != nil {
 		fmt.Println(err.Error())
 	}

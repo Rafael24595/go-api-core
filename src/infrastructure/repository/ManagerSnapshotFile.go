@@ -321,7 +321,7 @@ func (m *managerSnapshotFile[T]) write(name string, format format.DataFormat) er
 	}
 
 	location := filepath.Join(path, name)
-	err = utils.WriteFile(location, string(result))
+	err = utils.WriteFileSafe(location, string(result))
 	if err == nil {
 		log.Customf(SnapshotCategory, "A new snapshot %q has been defined.", location)
 	}
