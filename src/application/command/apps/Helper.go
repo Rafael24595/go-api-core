@@ -11,7 +11,7 @@ import (
 )
 
 func ResolveValueCursor(cmd *collection.Vector[string]) (string, error) {
-	value, cmd, err := TakeCursorValue(cmd, true)
+	value, _, err := TakeCursorValue(cmd, true)
 	if err != nil {
 		return "", err
 	}
@@ -24,7 +24,7 @@ func ResolveValueCursor(cmd *collection.Vector[string]) (string, error) {
 }
 
 func ResolveKeyValueCursor(cmd *collection.Vector[string], sep string, required bool) (*utils.CmdTuple, error) {
-	value, cmd, err := TakeCursorValue(cmd, required)
+	value, _, err := TakeCursorValue(cmd, required)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func ResolveKeyValueCursor(cmd *collection.Vector[string], sep string, required 
 }
 
 func ResolveChainCursor(cmd *collection.Vector[string], sep string) ([]string, error) {
-	value, cmd, err := TakeCursorValue(cmd, true)
+	value, _, err := TakeCursorValue(cmd, true)
 	if err != nil {
 		return nil, err
 	}

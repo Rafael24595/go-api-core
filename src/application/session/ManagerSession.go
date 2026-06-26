@@ -21,15 +21,15 @@ var (
 )
 
 type ManagerSession struct {
-	mut               sync.RWMutex
-	sessions          domain_session.RepositorySession
+	mut                sync.RWMutex
+	sessions           domain_session.RepositorySession
 	managerSessionData *ManagerSessionData
 }
 
 func InitializeManagerSession(conf configuration.Configuration, sessions domain_session.RepositorySession, managerSessionData *ManagerSessionData) *ManagerSession {
 	once.Do(func() {
 		raw := &ManagerSession{
-			sessions:          sessions,
+			sessions:           sessions,
 			managerSessionData: managerSessionData,
 		}
 
@@ -152,7 +152,7 @@ func (s *ManagerSession) Insert(provider *domain_session.Session, user, password
 }
 
 func (s *ManagerSession) Delete(provider, sess *domain_session.Session) (*domain_session.Session, error) {
-	provider, err := s.valideProvider(provider.Username)
+	_, err := s.valideProvider(provider.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +219,12 @@ func (s *ManagerSession) Refresh(session *domain_session.Session, refresh string
 	}
 
 	session.Refresh = refresh
-	s.update(session)
+
+	_, err := s.update(session)
+	if err != nil {
+		log.Error(err)
+	}
+
 	return session
 }
 
@@ -230,7 +235,12 @@ func (s *ManagerSession) Visited(session *domain_session.Session) *domain_sessio
 	}
 
 	session.Count += 1
-	s.update(session)
+
+	_, err := s.update(session)
+	if err != nil {
+		log.Error(err)
+	}
+
 	return session
 }
 
@@ -243,7 +253,7 @@ func (s *ManagerSession) Unlock(provider, session *domain_session.Session) (*dom
 }
 
 func (s *ManagerSession) updateStatus(provider, session *domain_session.Session, status bool) (*domain_session.Session, error) {
-	provider, err := s.valideProvider(provider.Username)
+	_, err := s.valideProvider(provider.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +264,11 @@ func (s *ManagerSession) updateStatus(provider, session *domain_session.Session,
 	}
 
 	session.Lock = status
-	s.update(session)
+
+	_, err = s.update(session)
+	if err != nil {
+		log.Error(err)
+	}
 
 	return session, nil
 }
@@ -262,7 +276,7 @@ func (s *ManagerSession) updateStatus(provider, session *domain_session.Session,
 func (s *ManagerSession) valideProvider(user string) (*domain_session.Session, error) {
 	provider, exists := s.Find(user)
 	if !exists || !provider.HasRole(domain_session.ROLE_ADMIN) || provider.Lock {
-		return nil, fmt.Errorf("Access is denied. User '%s' does not have sufficient privileges", user)
+		return nil, fmt.Errorf("access is denied. User '%s' does not have sufficient privileges", user)
 	}
 	return provider, nil
 }

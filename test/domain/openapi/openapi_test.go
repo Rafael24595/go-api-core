@@ -25,7 +25,13 @@ func makeOpenApiArguments(t *testing.T) (*openapi.OpenAPI, *map[string]any) {
 	if err != nil {
 		t.Error(err)
 	}
-	defer file.Close()
+
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			t.Error(err)
+		}
+	}()
 
 	yaml, err := io.ReadAll(file)
 	if err != nil {

@@ -252,7 +252,11 @@ func (m *managerSnapshotFile[T]) save(force bool, format format.DataFormat) erro
 	if force || now-m.last >= m.time {
 		extension := format.Extension()
 		code := fmt.Sprintf("%s_%d.%s", snpsh, now, extension)
-		m.write(code, format)
+
+		err := m.write(code, format)
+		if err != nil {
+			log.Error(err)
+		}
 	}
 
 	snapshots, err = m.collect(format)
