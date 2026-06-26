@@ -494,7 +494,7 @@ func resolveRoles(cmd *collection.Vector[string]) ([]domain_session.Role, error)
 	for _, v := range value {
 		role, ok := domain_session.RoleFromString(v)
 		if !ok {
-			return roles, fmt.Errorf("Role '%s' does not exist", v)
+			return roles, fmt.Errorf("role '%s' does not exist", v)
 		}
 
 		roles = append(roles, role)

@@ -15,7 +15,13 @@ func readRaw(t *testing.T) map[string]any {
 	if err != nil {
 		log.Panic(err)
 	}
-	defer file.Close()
+
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			t.Error(err)
+		}
+	}()
 
 	yamlFile, err := io.ReadAll(file)
 	if err != nil {
@@ -61,7 +67,7 @@ func TestFindJsonFail(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	
+
 	if schema != nil {
 		t.Errorf("Undefined Json path '%s' found.", path)
 	}

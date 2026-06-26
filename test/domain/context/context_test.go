@@ -74,12 +74,18 @@ func TestProcessRequest(t *testing.T) {
 	var dtoRequestRaw dto.DtoRequest
 	var requestExpected dto.DtoRequest
 
-	err := json.Unmarshal(readJSON("sources/request001_raw.json"), &dtoRequestRaw)
+	err := json.Unmarshal(
+		readJSON(t, "sources/request001_raw.json"), &dtoRequestRaw,
+	)
+
 	if err != nil {
 		log.Panic(err)
 	}
 
-	err = json.Unmarshal(readJSON("sources/request001_expected.json"), &requestExpected)
+	err = json.Unmarshal(
+		readJSON(t, "sources/request001_expected.json"), &requestExpected,
+	)
+	
 	if err != nil {
 		log.Panic(err)
 	}
@@ -149,12 +155,18 @@ func TestProcessRequest(t *testing.T) {
 	}
 }
 
-func readJSON(filename string) []byte {
+func readJSON(t *testing.T, filename string) []byte {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Panic(err)
 	}
-	defer file.Close()
+
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			t.Error(err)
+		}
+	}()
 
 	bytes, err := io.ReadAll(file)
 	if err != nil {

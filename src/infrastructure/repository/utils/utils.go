@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -52,7 +53,7 @@ func WriteFile(filePath, content string) error {
 	return nil
 }
 
-func WriteFileSafe(filePath, content string) error {
+func WriteFileSafe(filePath, content string) (err error) {
 	dir := filepath.Dir(filePath)
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return err
@@ -64,11 +65,12 @@ func WriteFileSafe(filePath, content string) error {
 	}
 
 	tmpPath := tmpFile.Name()
-	defer os.Remove(tmpPath)
+	defer func() {
+		err = errors.Join(err, os.Remove(tmpPath))
+	}()
 
 	if _, err := tmpFile.Write([]byte(content)); err != nil {
-		tmpFile.Close()
-		return err
+		return errors.Join(err, tmpFile.Close())
 	}
 
 	if err := tmpFile.Close(); err != nil {

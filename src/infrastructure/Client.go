@@ -2,24 +2,33 @@ package infrastructure
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
+
+	auth_strategy "github.com/Rafael24595/go-api-core/src/domain/action/auth/strategy"
+	body_strategy "github.com/Rafael24595/go-api-core/src/domain/action/body/strategy"
 
 	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/action"
-	auth_strategy "github.com/Rafael24595/go-api-core/src/domain/action/auth/strategy"
 	"github.com/Rafael24595/go-api-core/src/domain/action/body"
-	body_strategy "github.com/Rafael24595/go-api-core/src/domain/action/body/strategy"
 	"github.com/Rafael24595/go-api-core/src/domain/action/cookie"
 	"github.com/Rafael24595/go-api-core/src/domain/action/header"
 	"github.com/Rafael24595/go-api-core/src/domain/action/query"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"golang.org/x/net/html/charset"
 )
+
+var ErrValidation = errors.New("validation error")
+
+func wrap(kind error, err error) error {
+	return fmt.Errorf("%w: %w", kind, err)
+}
 
 type HttpClient struct {
 }
@@ -52,6 +61,11 @@ func (c *HttpClient) FetchWithContext(ctx *context.Context, request *action.Requ
 }
 
 func (c *HttpClient) Fetch(request *action.Request) (*action.Response, error) {
+	err := valideRequest(request)
+	if err != nil {
+		return nil, err
+	}
+
 	req, err := c.makeRequest(request)
 	if err != nil {
 		return nil, err
@@ -247,4 +261,13 @@ func (c *HttpClient) makeBody(resp *http.Response) (*body.BodyResponse, int, err
 
 	return body.NewResponseBody(contentType, string(bodyResponse)),
 		len(bodyResponse), nil
+}
+
+func valideRequest(request *action.Request) error {
+	uri := strings.TrimSpace(request.Uri)
+	if _, err := url.ParseRequestURI(uri); err != nil {
+		return wrap(ErrValidation, err)
+	}
+
+	return nil
 }

@@ -21,7 +21,12 @@ func OriginLastVersion(owner, repo string) *Release {
 		return nil
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			log.Error(err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		log.Errorf("GitHub API returned status: %s", resp.Status)
