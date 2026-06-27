@@ -1,30 +1,36 @@
 package commons
 
 import (
+	"context"
 	"maps"
 	"os"
 	"strings"
 	"time"
 
+	topic_snapshot "github.com/Rafael24595/go-api-core/src/commons/system/topic/snapshot"
+	domain_session "github.com/Rafael24595/go-api-core/src/domain/session"
+	repository_session "github.com/Rafael24595/go-api-core/src/infrastructure/repository/session"
+
 	"github.com/Rafael24595/go-api-core/src/application/session"
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/dependency"
-	"github.com/Rafael24595/go-api-core/src/commons/log"
-	topic_snapshot "github.com/Rafael24595/go-api-core/src/commons/system/topic/snapshot"
+	"github.com/Rafael24595/go-api-core/src/commons/local"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
-	domain_session "github.com/Rafael24595/go-api-core/src/domain/session"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
-	repository_session "github.com/Rafael24595/go-api-core/src/infrastructure/repository/session"
+	"github.com/Rafael24595/go-log/log"
+	"github.com/Rafael24595/go-log/log/provider/console"
+	"github.com/Rafael24595/go-log/log/provider/file"
+	"github.com/Rafael24595/go-log/log/record"
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
 
-func Initialize(kargs map[string]utils.Argument) (*configuration.Configuration, *dependency.DependencyContainer) {
+func Initialize(ctx context.Context, kargs map[string]utils.Argument) (*configuration.Configuration, *dependency.DependencyContainer) {
 	session := uuid.NewString()
 	timestamp := time.Now().UnixMilli()
 
-	log.ConfigureLog(session, timestamp, kargs)
+	store := configLog(ctx, session, kargs)
 
 	mod := ReadGoMod()
 	pkg := ReadPackage()
@@ -35,12 +41,41 @@ func Initialize(kargs map[string]utils.Argument) (*configuration.Configuration, 
 	log.Messagef("Started at: %s", utils.FormatMilliseconds(config.Timestamp()))
 	log.Messagef("Dev mode: %v", config.Dev())
 
-	container := dependency.Initialize(config)
+	container := dependency.Initialize(config, store)
 
 	repositorySession := loadRepositorySession(config)
 	initializeManagerSession(config, repositorySession, container)
 
 	return &config, container
+}
+
+func configLog(ctx context.Context, session string, kargs map[string]utils.Argument) *record.Memory {
+	store := record.NewMemory()
+
+	instance, ok := kargs["GAC_LOG_INSTANCE"]
+	if !ok {
+		instance = *utils.ArgumentFrom("")
+	}
+
+	var provider log.Provider
+
+	switch strings.ToUpper(instance.String()) {
+	case "FILE":
+		provider = file.FileProvider{
+			Session:     session,
+			RecordStore: store,
+		}
+	default:
+		provider = console.ConsoleProvider{
+			RecordStore: store,
+		}
+	}
+
+	if err := log.DefaultFromProvider(ctx, provider); err != nil {
+		panic(err.Error())
+	}
+
+	return store
 }
 
 func loadRepositorySession(config configuration.Configuration) domain_session.RepositorySession {
@@ -55,7 +90,7 @@ func loadRepositorySession(config configuration.Configuration) domain_session.Re
 
 	repository, err := repository_session.InitializeRepositoryMemory(file)
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	return repository
@@ -130,13 +165,13 @@ func manageEnv(env string) (string, *utils.Argument, bool) {
 func ReadGoMod() *configuration.Mod {
 	file, err := os.Open("go.mod")
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	result := configuration.DecodeMod(file)
 	err = file.Close()
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	return result
@@ -145,17 +180,17 @@ func ReadGoMod() *configuration.Mod {
 func ReadPackage() *configuration.Package {
 	file, err := os.Open("go.package.yml")
 	if err != nil {
-		log.Panicf("Error opening go.package.yml: %v", err)
+		local.Panicf("Error opening go.package.yml: %v", err)
 	}
 
 	var pkg configuration.Package
 	decoder := yaml.NewDecoder(file)
 	if err := decoder.Decode(&pkg); err != nil {
-		log.Panicf("Error decoding YAML: %v", err)
+		local.Panicf("Error decoding YAML: %v", err)
 	}
 
 	if err := file.Close(); err != nil {
-		log.Panicf("Error closing file: %v", err)
+		local.Panicf("Error closing file: %v", err)
 	}
 
 	return &pkg

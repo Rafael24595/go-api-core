@@ -6,9 +6,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Rafael24595/go-api-core/src/commons/configuration"
-	"github.com/Rafael24595/go-api-core/src/commons/log"
 	domain_session "github.com/Rafael24595/go-api-core/src/domain/session"
+	
+	"github.com/Rafael24595/go-log/log"
+	"github.com/Rafael24595/go-api-core/src/commons/configuration"
+	"github.com/Rafael24595/go-api-core/src/commons/local"
 	"github.com/Rafael24595/go-collections/collection"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -37,7 +39,7 @@ func InitializeManagerSession(conf configuration.Configuration, sessions domain_
 	})
 
 	if instance == nil {
-		log.Panics("The session manager is not initialized properly")
+		local.Panics("The session manager is not initialized properly")
 	}
 
 	return instance
@@ -45,7 +47,7 @@ func InitializeManagerSession(conf configuration.Configuration, sessions domain_
 
 func InstanceManagerSession() *ManagerSession {
 	if instance == nil {
-		log.Panics("The session manager is not initialized yet")
+		local.Panics("The session manager is not initialized yet")
 	}
 	return instance
 }
@@ -54,13 +56,13 @@ func resolveDefaultSessions(conf configuration.Configuration, instance *ManagerS
 	rolesAdmin := []domain_session.Role{domain_session.ROLE_ADMIN, domain_session.ROLE_PROTECTED}
 	err := instance.resolveDefaultSession(conf.Admin(), string(conf.Secret()), rolesAdmin, 0)
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	rolesAnonymous := []domain_session.Role{domain_session.ROLE_ANONYMOUS, domain_session.ROLE_PROTECTED}
 	err = instance.resolveDefaultSession("anonymous", "", rolesAnonymous, 0)
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	return instance

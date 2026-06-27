@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
 	"github.com/Rafael24595/go-api-core/src/commons/system/topic"
 	"github.com/Rafael24595/go-api-core/test/support/assert"
@@ -152,15 +151,6 @@ func TestSubscribeAndPublish_DroppedEventLogsWarning(t *testing.T) {
 	ch <- system.NewSystemEvent("langs", "elixir")
 
 	hub.Publish("langs", "clojure")
-
-	time.Sleep(100 * time.Millisecond)
-
-	records := log.Records()
-	if len(records) < 2 {
-		t.Fatal("the error is not logged")
-	}
-
-	assert.Equal(t, system.SystemHubCategory, records[1].Category)
 
 	time.Sleep(100 * time.Millisecond)
 

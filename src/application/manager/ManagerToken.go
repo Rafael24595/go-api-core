@@ -1,8 +1,8 @@
 package manager
 
 import (
+	"github.com/Rafael24595/go-log/log"
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
-	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/domain/token"
 )
 
