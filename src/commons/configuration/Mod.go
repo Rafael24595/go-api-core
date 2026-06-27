@@ -84,6 +84,10 @@ func DecodeMod(file *os.File) *Mod {
 		}
 	}
 
+	if err := scanner.Err(); err != nil {
+		local.Panic(err)
+	}
+
 	return &Mod{
 		Module:       module,
 		Version:      version,
