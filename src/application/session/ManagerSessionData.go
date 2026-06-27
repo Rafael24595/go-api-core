@@ -6,10 +6,10 @@ import (
 	"sync"
 
 	"github.com/Rafael24595/go-api-core/src/application/manager"
-	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/domain/collection"
 	"github.com/Rafael24595/go-api-core/src/domain/group"
 	"github.com/Rafael24595/go-api-core/src/domain/session"
+	"github.com/Rafael24595/go-log/log"
 )
 
 type ManagerSessionData struct {

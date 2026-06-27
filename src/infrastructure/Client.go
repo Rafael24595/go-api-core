@@ -13,7 +13,7 @@ import (
 	auth_strategy "github.com/Rafael24595/go-api-core/src/domain/action/auth/strategy"
 	body_strategy "github.com/Rafael24595/go-api-core/src/domain/action/body/strategy"
 
-	"github.com/Rafael24595/go-api-core/src/commons/log"
+	"github.com/Rafael24595/go-log/log"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/action"
 	"github.com/Rafael24595/go-api-core/src/domain/action/body"

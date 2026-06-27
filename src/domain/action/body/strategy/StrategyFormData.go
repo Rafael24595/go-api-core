@@ -6,10 +6,10 @@ import (
 	"io"
 	"mime/multipart"
 
-	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/domain"
 	"github.com/Rafael24595/go-api-core/src/domain/action/body"
 	"github.com/Rafael24595/go-api-core/src/domain/action/query"
+	"github.com/Rafael24595/go-log/log"
 )
 
 const (

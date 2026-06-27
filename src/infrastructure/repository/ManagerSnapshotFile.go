@@ -10,14 +10,15 @@ import (
 	"sync"
 	"time"
 
+	topic_snapshot "github.com/Rafael24595/go-api-core/src/commons/system/topic/snapshot"
+
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
 	"github.com/Rafael24595/go-api-core/src/commons/format"
-	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
 	"github.com/Rafael24595/go-api-core/src/commons/system/topic"
-	topic_snapshot "github.com/Rafael24595/go-api-core/src/commons/system/topic/snapshot"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/utils"
 	"github.com/Rafael24595/go-collections/collection"
+	"github.com/Rafael24595/go-log/log"
 )
 
 const SnapshotCategory = "SNAPSHOT"

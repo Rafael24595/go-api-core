@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Rafael24595/go-api-core/src/commons/log"
+	"github.com/Rafael24595/go-api-core/src/commons/local"
 )
 
 type Mod struct {
@@ -25,7 +25,7 @@ func DecodeMod(file *os.File) *Mod {
 	version := ""
 	module := ""
 	dependencies := make(map[string]Dependency)
-	
+
 	inRequireBlock := false
 
 	scanner := bufio.NewScanner(file)
@@ -56,7 +56,7 @@ func DecodeMod(file *os.File) *Mod {
 				inRequireBlock = false
 				continue
 			}
-			
+
 			dependency := makeDependency(line)
 			dependencies[dependency.Module] = *dependency
 			continue
@@ -72,7 +72,7 @@ func DecodeMod(file *os.File) *Mod {
 		if strings.HasPrefix(line, "replace ") {
 			fragments := strings.Split(strings.TrimSpace(strings.TrimPrefix(line, "replace")), "=>")
 			if len(fragments) < 2 {
-				log.Panics("go.mod bad format, replace has not valid structure")
+				local.Panics("go.mod bad format, replace has not valid structure")
 			}
 
 			module := strings.TrimSpace(fragments[0])
@@ -95,7 +95,7 @@ func makeDependency(line string) *Dependency {
 	fragments := strings.Split(strings.TrimSpace(line), " ")
 
 	if len(fragments) < 2 {
-		log.Panics("go.mod bad format, the dependency has not valid structure")
+		local.Panics("go.mod bad format, the dependency has not valid structure")
 	}
 
 	module := fragments[0]

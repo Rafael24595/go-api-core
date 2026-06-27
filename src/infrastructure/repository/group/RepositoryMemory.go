@@ -4,14 +4,15 @@ import (
 	"sync"
 	"time"
 
+	topic_repository "github.com/Rafael24595/go-api-core/src/commons/system/topic/repository"
+
 	"github.com/Rafael24595/go-api-core/src/commons/configuration"
-	"github.com/Rafael24595/go-api-core/src/commons/log"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
 	"github.com/Rafael24595/go-api-core/src/commons/system/topic"
-	topic_repository "github.com/Rafael24595/go-api-core/src/commons/system/topic/repository"
 	"github.com/Rafael24595/go-api-core/src/domain/group"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-collections/collection"
+	"github.com/Rafael24595/go-log/log"
 	"github.com/google/uuid"
 )
 

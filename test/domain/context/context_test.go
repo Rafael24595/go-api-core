@@ -8,8 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Rafael24595/go-api-core/src/commons/log"
 	body_strategy "github.com/Rafael24595/go-api-core/src/domain/action/body/strategy"
+
+	"github.com/Rafael24595/go-api-core/src/commons/local"
 	"github.com/Rafael24595/go-api-core/src/domain/context"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
 	"github.com/Rafael24595/go-collections/collection"
@@ -79,15 +80,15 @@ func TestProcessRequest(t *testing.T) {
 	)
 
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	err = json.Unmarshal(
 		readJSON(t, "sources/request001_expected.json"), &requestExpected,
 	)
-	
+
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	ctx := context.NewContext("anonymous").
@@ -158,7 +159,7 @@ func TestProcessRequest(t *testing.T) {
 func readJSON(t *testing.T, filename string) []byte {
 	file, err := os.Open(filename)
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	defer func() {
@@ -170,7 +171,7 @@ func readJSON(t *testing.T, filename string) []byte {
 
 	bytes, err := io.ReadAll(file)
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	return bytes

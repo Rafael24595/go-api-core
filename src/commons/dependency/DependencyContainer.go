@@ -3,30 +3,33 @@ package dependency
 import (
 	"sync"
 
-	"github.com/Rafael24595/go-api-core/src/application/manager"
-	"github.com/Rafael24595/go-api-core/src/application/session"
-	"github.com/Rafael24595/go-api-core/src/commons/configuration"
-	"github.com/Rafael24595/go-api-core/src/commons/log"
 	topic_snapshot "github.com/Rafael24595/go-api-core/src/commons/system/topic/snapshot"
-	"github.com/Rafael24595/go-api-core/src/domain/action"
 	collection_domain "github.com/Rafael24595/go-api-core/src/domain/collection"
-	"github.com/Rafael24595/go-api-core/src/domain/context"
-	"github.com/Rafael24595/go-api-core/src/domain/group"
 	domain_mock "github.com/Rafael24595/go-api-core/src/domain/mock"
 	domain_session "github.com/Rafael24595/go-api-core/src/domain/session"
 	domain_token "github.com/Rafael24595/go-api-core/src/domain/token"
-	"github.com/Rafael24595/go-api-core/src/infrastructure"
-	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
-	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	repository_client "github.com/Rafael24595/go-api-core/src/infrastructure/repository/client"
 	repository_collection "github.com/Rafael24595/go-api-core/src/infrastructure/repository/collection"
 	repository_context "github.com/Rafael24595/go-api-core/src/infrastructure/repository/context"
 	repository_group "github.com/Rafael24595/go-api-core/src/infrastructure/repository/group"
 	repository_mock "github.com/Rafael24595/go-api-core/src/infrastructure/repository/mock"
+	repository_token "github.com/Rafael24595/go-api-core/src/infrastructure/repository/token"
+
+	"github.com/Rafael24595/go-api-core/src/application/manager"
+	"github.com/Rafael24595/go-api-core/src/application/session"
+	"github.com/Rafael24595/go-api-core/src/commons/configuration"
+	"github.com/Rafael24595/go-api-core/src/commons/local"
+	"github.com/Rafael24595/go-api-core/src/domain/action"
+	"github.com/Rafael24595/go-api-core/src/domain/context"
+	"github.com/Rafael24595/go-api-core/src/domain/group"
+	"github.com/Rafael24595/go-api-core/src/infrastructure"
+	"github.com/Rafael24595/go-api-core/src/infrastructure/dto"
+	"github.com/Rafael24595/go-api-core/src/infrastructure/repository"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/request"
 	"github.com/Rafael24595/go-api-core/src/infrastructure/repository/response"
-	repository_token "github.com/Rafael24595/go-api-core/src/infrastructure/repository/token"
 	"github.com/Rafael24595/go-collections/collection"
+	"github.com/Rafael24595/go-log/log"
+	"github.com/Rafael24595/go-log/log/record"
 )
 
 var (
@@ -35,6 +38,7 @@ var (
 )
 
 type DependencyContainer struct {
+	RecordStore        *record.Memory
 	RepositoryContext  context.Repository
 	ManagerRequest     *manager.ManagerRequest
 	ManagerContext     *manager.ManagerContext
@@ -47,7 +51,7 @@ type DependencyContainer struct {
 	ManagerSessionData *session.ManagerSessionData
 }
 
-func Initialize(config configuration.Configuration) *DependencyContainer {
+func Initialize(config configuration.Configuration, recordStore *record.Memory) *DependencyContainer {
 	once.Do(func() {
 		_, err := infrastructure.WarmUp()
 		if err != nil {
@@ -76,6 +80,7 @@ func Initialize(config configuration.Configuration) *DependencyContainer {
 		managerSessionData := loadManagerSessionData(repositoryClient, managerCollection, managerGroup)
 
 		container := &DependencyContainer{
+			RecordStore:        recordStore,
 			RepositoryContext:  repositoryContext,
 			ManagerRequest:     managerRequest,
 			ManagerContext:     managerContext,
@@ -115,7 +120,7 @@ func loadRepositoryRequest(config configuration.Configuration) action.Repository
 	impl := collection.DictionarySyncEmpty[string, action.Request]()
 	repository, err := request.InitializeRepositoryMemory(impl, file)
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	return repository
@@ -134,7 +139,7 @@ func loadRepositoryResponse(config configuration.Configuration) action.Repositor
 	impl := collection.DictionarySyncEmpty[string, action.Response]()
 	repository, err := response.InitializeRepositoryMemory(impl, file)
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	return repository
@@ -153,7 +158,7 @@ func loadRepositoryContext(config configuration.Configuration) context.Repositor
 	impl := collection.DictionarySyncEmpty[string, context.Context]()
 	repository, err := repository_context.InitializeRepositoryMemory(impl, file)
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	return repository
@@ -172,7 +177,7 @@ func loadRepositoryCollection(config configuration.Configuration) collection_dom
 	impl := collection.DictionarySyncEmpty[string, collection_domain.Collection]()
 	repository, err := repository_collection.InitializeRepositoryMemory(impl, file)
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	return repository
@@ -191,7 +196,7 @@ func loadRepositoryGroup(config configuration.Configuration) group.Repository {
 	impl := collection.DictionarySyncEmpty[string, group.Group]()
 	repository, err := repository_group.InitializeRepositoryMemory(impl, file)
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	return repository
@@ -210,7 +215,7 @@ func loadRepositoryEndPoint(config configuration.Configuration) domain_mock.Repo
 	impl := collection.DictionarySyncEmpty[string, domain_mock.EndPoint]()
 	repository, err := repository_mock.InitializeEndPointRepositoryMemory(impl, file)
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	return repository
@@ -229,7 +234,7 @@ func loadRepositoryMetrics(config configuration.Configuration) domain_mock.Repos
 	impl := collection.DictionarySyncEmpty[string, domain_mock.Metrics]()
 	repository, err := repository_mock.InitializeMetricsRepositoryMemory(impl, file)
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	return repository
@@ -248,7 +253,7 @@ func loadRepositoryToken(config configuration.Configuration) domain_token.Reposi
 	impl := collection.DictionarySyncEmpty[string, domain_token.Token]()
 	repository, err := repository_token.InitializeRepositoryMemory(impl, file)
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	return repository
@@ -267,7 +272,7 @@ func loadRepositoryClientData(config configuration.Configuration) domain_session
 	impl := collection.DictionarySyncEmpty[string, domain_session.ClientData]()
 	repository, err := repository_client.InitializeRepositoryMemory(impl, file)
 	if err != nil {
-		log.Panic(err)
+		local.Panic(err)
 	}
 
 	return repository

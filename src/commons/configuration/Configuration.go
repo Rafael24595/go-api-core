@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/Rafael24595/go-api-core/src/commons/format"
-	"github.com/Rafael24595/go-api-core/src/commons/log"
+	"github.com/Rafael24595/go-api-core/src/commons/local"
 	"github.com/Rafael24595/go-api-core/src/commons/system"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 )
@@ -39,12 +39,12 @@ func Initialize(session string, timestamp int64, kargs map[string]utils.Argument
 	once.Do(func() {
 		admin := kargs["GAC_ADMIN_USER"].String()
 		if admin == "" {
-			log.Panics("Admin username is not defined")
+			local.Panics("Admin username is not defined")
 		}
 
 		secret := kargs["GAC_ADMIN_SECRET"].String()
 		if secret == "" {
-			log.Panics("Admin secret is not defined")
+			local.Panics("Admin secret is not defined")
 		}
 
 		dev := kargs["GAC_DEV"].Boold(false)
@@ -66,7 +66,7 @@ func Initialize(session string, timestamp int64, kargs map[string]utils.Argument
 	})
 
 	if instance == nil {
-		log.Panics("The configuration is not initialized properly")
+		local.Panics("The configuration is not initialized properly")
 	}
 
 	return *instance
@@ -74,7 +74,7 @@ func Initialize(session string, timestamp int64, kargs map[string]utils.Argument
 
 func Instance() Configuration {
 	if instance == nil {
-		log.Panics("The configuration is not initialized yet")
+		local.Panics("The configuration is not initialized yet")
 	}
 	return *instance
 }

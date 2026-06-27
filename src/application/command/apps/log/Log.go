@@ -4,9 +4,12 @@ import (
 	"fmt"
 
 	"github.com/Rafael24595/go-api-core/src/application/command/apps"
-	"github.com/Rafael24595/go-api-core/src/commons/log"
+	"github.com/Rafael24595/go-api-core/src/commons/dependency"
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-collections/collection"
+	"github.com/Rafael24595/go-log/log"
+	"github.com/Rafael24595/go-log/log/format/text"
+	"github.com/Rafael24595/go-log/log/record"
 )
 
 const Command apps.SnapshotFlag = "log"
@@ -97,20 +100,22 @@ func help() *apps.CmdExecResult {
 }
 
 func list(tuple *utils.CmdTuple) *apps.CmdExecResult {
-	records := collection.VectorFromList(log.Records())
+	store := dependency.Instance().RecordStore
+	records := collection.VectorFromList(store.All())
 
 	if tuple != nil {
 		switch tuple.Flag {
 		case "category":
-			records.FilterSelf(func(r log.Record) bool {
+			records.FilterSelf(func(r record.Record) bool {
 				return string(r.Category) == tuple.Data
 			})
 		}
 	}
 
 	result := collection.VectorMap(records,
-		func(r log.Record) string {
-			return log.Formatter{}.Format(r)
+		func(r record.Record) string {
+			fmt, _ := text.TextFormat.Format(r)
+			return fmt 
 		}).Join("\n")
 
 	return apps.NewResult(result)

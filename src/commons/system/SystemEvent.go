@@ -5,10 +5,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Rafael24595/go-api-core/src/commons/log"
 	str_topic "github.com/Rafael24595/go-api-core/src/commons/system/topic"
+
 	"github.com/Rafael24595/go-api-core/src/commons/utils"
 	"github.com/Rafael24595/go-collections/collection"
+	"github.com/Rafael24595/go-log/log"
 )
 
 const SystemHubCategory = "SYSTEMHUB"
